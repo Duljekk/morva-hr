@@ -1,6 +1,8 @@
 'use client';
 
-import { CheckInIcon, CheckOutIcon, CalendarIcon } from './Icons';
+import CheckInNeutralIcon from '@/app/assets/icons/check-in-neutral.svg';
+import CheckOutNeutralIcon from '@/app/assets/icons/check-out-neutral.svg';
+import CalendarIcon from '@/app/assets/icons/calendar-1.svg';
 
 interface Activity {
   type: 'checkin' | 'checkout' | 'leave';
@@ -29,7 +31,7 @@ export default function RecentActivities({ activities }: RecentActivitiesProps) 
           <div key={dayIndex} className="flex flex-col gap-3">
             {/* Date Badge */}
             <div className="w-fit flex items-center gap-0.5 rounded-3xl bg-[rgba(255,255,255,0.6)] px-2 py-1 shadow-[0px_1px_2px_0px_rgba(164,172,185,0.24),0px_0px_0.5px_0.5px_rgba(28,28,28,0.08)]">
-              <CalendarIcon className="h-3.5 w-3.5 text-neutral-500" />
+              <CalendarIcon className="h-3.5 w-3.5 shrink-0" />
               <p className="text-xs font-semibold text-neutral-700">
                 {day.date}
               </p>
@@ -37,20 +39,18 @@ export default function RecentActivities({ activities }: RecentActivitiesProps) 
 
             {/* Activity Card */}
             <div className="flex justify-end">
-              <div className={`w-[339px] ${dayIndex < activities.length - 1 ? 'border-l border-dashed border-neutral-300' : ''} pl-3.5`}>
+              <div className={`w-[339px] ${dayIndex < activities.length - 1 ? 'border-l-2 border-dashed border-neutral-300' : ''} pl-3.5`}>
                 <div className="flex flex-col rounded-xl bg-[rgba(255,255,255,0.6)] px-3 py-2.5 shadow-[0px_1px_2px_0px_rgba(164,172,185,0.24),0px_0px_0.5px_0.5px_rgba(28,28,28,0.05)]">
                   {day.activities.map((activity, actIndex) => (
                     <div key={actIndex}>
                       {/* Activity Item */}
                       <div className={`flex items-center gap-2 ${actIndex > 0 ? 'pt-2.5' : ''} ${actIndex < day.activities.length - 1 ? 'pb-3' : ''}`}>
                         {/* Icon */}
-                        <div className={`h-8 w-8 flex items-center justify-center rounded-[9px] bg-neutral-100`}>
-                          {activity.type === 'checkin' ? (
-                            <CheckInIcon className="h-[18px] w-[19.6px] stroke-[#737373]" />
-                          ) : (
-                            <CheckOutIcon className="h-[18px] w-[18.5px] stroke-[#737373]" />
-                          )}
-                        </div>
+                        {activity.type === 'checkin' ? (
+                          <CheckInNeutralIcon className="h-8 w-8 shrink-0" />
+                        ) : (
+                          <CheckOutNeutralIcon className="h-8 w-8 shrink-0" />
+                        )}
 
                         {/* Text and Badge */}
                         <div className="flex flex-1 items-start">

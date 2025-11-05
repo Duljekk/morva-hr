@@ -59,7 +59,7 @@ export default function CheckInOutWidget({
         </button>
         <button
           onClick={onRequestLeave}
-          className="flex h-12 w-full items-center justify-center rounded-xl bg-neutral-100 px-5 py-1.5 text-sm font-semibold text-neutral-600 tracking-tight hover:bg-neutral-200 transition-colors"
+          className="flex h-12 w-full items-center justify-center rounded-xl bg-neutral-100 px-5 py-1.5 text-base font-semibold text-neutral-600 tracking-tight hover:bg-neutral-200 transition-colors"
         >
           Request Leave
         </button>

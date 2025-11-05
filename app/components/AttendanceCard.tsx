@@ -1,6 +1,9 @@
 'use client';
 
-import { CheckInIcon, CheckOutIcon, ClockIcon, WarningIcon } from './Icons';
+import CheckInColoredIcon from '@/app/assets/icons/check-in-colored.svg';
+import CheckOutColoredIcon from '@/app/assets/icons/check-out-colored.svg';
+import TimerIcon from '@/app/assets/icons/timer.svg';
+import WarningTriangleIcon from '@/app/assets/icons/warning-triangle.svg';
 
 type AttendanceStatus = 'late' | 'ontime' | 'remaining';
 
@@ -20,15 +23,11 @@ export default function AttendanceCard({ type, time, status, duration }: Attenda
       {/* Top Section */}
       <div className="flex items-start gap-2 bg-white px-2.5 py-2.5 pb-3 rounded-[10px] shadow-[0px_0px_0.5px_0.5px_rgba(229,229,229,1)]">
         {/* Icon */}
-        <div className={`h-9 w-9 flex items-center justify-center rounded-[9px] ${
-          isCheckIn ? 'bg-yellow-50' : 'bg-purple-100'
-        }`}>
-          {isCheckIn ? (
-            <CheckInIcon className={`h-5 w-5 ${isCheckIn ? 'stroke-[#d4a800]' : 'stroke-[#9333ea]'}`} />
-          ) : (
-            <CheckOutIcon className="h-5 w-5 stroke-[#9333ea]" />
-          )}
-        </div>
+        {isCheckIn ? (
+          <CheckInColoredIcon className="h-9 w-9 shrink-0" />
+        ) : (
+          <CheckOutColoredIcon className="h-9 w-9 shrink-0" />
+        )}
 
         {/* Text */}
         <div className="flex flex-col">
@@ -49,7 +48,7 @@ export default function AttendanceCard({ type, time, status, duration }: Attenda
         <div className="flex items-center gap-1">
           {status === 'late' && (
             <>
-              <WarningIcon className="h-3.5 w-3.5 text-amber-600" />
+              <WarningTriangleIcon className="h-3.5 w-3.5 shrink-0" />
               <p className="text-xs font-semibold text-amber-600 tracking-tight">
                 Late
               </p>
@@ -57,7 +56,7 @@ export default function AttendanceCard({ type, time, status, duration }: Attenda
           )}
           {status === 'remaining' && (
             <>
-              <ClockIcon className="h-3.5 w-3.5 text-neutral-500" />
+              <TimerIcon className="h-3.5 w-3.5 shrink-0" />
               <p className="text-xs font-semibold text-neutral-500 tracking-tight">
                 Remaining
               </p>

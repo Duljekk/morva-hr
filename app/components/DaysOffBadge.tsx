@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { InfoBubbleIcon } from './Icons';
+import BubbleInfoIcon from '@/app/assets/icons/bubble-info.svg';
 
 interface DaysOffBadgeProps {
   days: number;
@@ -21,7 +21,7 @@ export default function DaysOffBadge({ days, className = '' }: DaysOffBadgeProps
         boxShadow: '0px 1px 2px rgba(164, 172, 185, 0.12)',
       }}
     >
-      <InfoBubbleIcon className="h-4 w-4 text-neutral-700 shrink-0" />
+      <BubbleInfoIcon className="h-4 w-4 shrink-0" />
       <p className="text-sm font-medium text-neutral-700 tracking-tight">
         You are requesting <span className="font-semibold">{days} day{days > 1 ? 's' : ''} off</span>
       </p>
