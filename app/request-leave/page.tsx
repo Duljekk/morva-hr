@@ -21,25 +21,9 @@ export default function RequestLeavePage() {
   const router = useRouter();
   const [selectedLeaveType, setSelectedLeaveType] = useState<LeaveType>(leaveTypes[0]);
   
-  // Initialize dates: Oct 27 and Oct 29, 2024
-  const getInitialStartDate = () => {
-    const date = new Date();
-    date.setMonth(9); // October (0-indexed)
-    date.setDate(27);
-    date.setFullYear(2024);
-    return date;
-  };
-  
-  const getInitialEndDate = () => {
-    const date = new Date();
-    date.setMonth(9); // October (0-indexed)
-    date.setDate(29);
-    date.setFullYear(2024);
-    return date;
-  };
-  
-  const [startDate, setStartDate] = useState<Date>(getInitialStartDate());
-  const [endDate, setEndDate] = useState<Date>(getInitialEndDate());
+  // Initialize dates to current date
+  const [startDate, setStartDate] = useState<Date>(new Date());
+  const [endDate, setEndDate] = useState<Date>(new Date());
   const [reason, setReason] = useState('Experiencing a severe migraine and light sensitivity, making it impossible to look at the screen.');
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFileData[]>([
     {
@@ -56,8 +40,26 @@ export default function RequestLeavePage() {
     },
   ]);
   
-  // Calculate days difference
-  const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  // Handle start date change with validation
+  const handleStartDateChange = (date: Date) => {
+    setStartDate(date);
+    // If new start date is after end date, adjust end date to match start date
+    if (date > endDate) {
+      setEndDate(date);
+    }
+  };
+
+  // Handle end date change with validation
+  const handleEndDateChange = (date: Date) => {
+    setEndDate(date);
+    // If new end date is before start date, adjust start date to match end date
+    if (date < startDate) {
+      setStartDate(date);
+    }
+  };
+  
+  // Calculate days difference (ensure it's never negative)
+  const days = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
 
   const handleFileSelect = (file: File) => {
     const fileSize = (file.size / 1024).toFixed(0) + ' KB';
@@ -104,7 +106,7 @@ export default function RequestLeavePage() {
             {/* From Date */}
             <div className="flex flex-1 flex-col gap-2">
               <p className="text-sm font-semibold text-neutral-600 tracking-tight">From</p>
-              <Calendar value={startDate} onChange={setStartDate} />
+              <Calendar value={startDate} onChange={handleStartDateChange} />
             </div>
 
             {/* Arrow */}
@@ -115,7 +117,7 @@ export default function RequestLeavePage() {
             {/* Until Date */}
             <div className="flex flex-1 flex-col gap-2">
               <p className="text-sm font-semibold text-neutral-600 tracking-tight text-left">Until</p>
-              <Calendar value={endDate} onChange={setEndDate} />
+              <Calendar value={endDate} onChange={handleEndDateChange} />
             </div>
           </div>
 

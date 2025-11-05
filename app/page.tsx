@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { BellIcon } from './components/Icons';
 import AnnouncementBanner from './components/AnnouncementBanner';
@@ -12,6 +12,27 @@ export default function Home() {
   const router = useRouter();
   const [isCheckedIn, setIsCheckedIn] = useState(false);
   const [checkInTime, setCheckInTime] = useState('--:--');
+
+  // Dynamic date formatting
+  const formattedDate = useMemo(() => {
+    const today = new Date();
+    const dayName = today.toLocaleDateString('en-US', { weekday: 'long' });
+    const day = today.getDate();
+    const month = today.toLocaleDateString('en-US', { month: 'long' });
+    const year = today.getFullYear();
+    
+    // Get ordinal suffix (1st, 2nd, 3rd, 4th, etc.)
+    const getOrdinalSuffix = (num: number) => {
+      const j = num % 10;
+      const k = num % 100;
+      if (j === 1 && k !== 11) return num + 'st';
+      if (j === 2 && k !== 12) return num + 'nd';
+      if (j === 3 && k !== 13) return num + 'rd';
+      return num + 'th';
+    };
+    
+    return `It's ${dayName}, ${getOrdinalSuffix(day)} ${month} ${year}`;
+  }, []);
 
   const handleCheckIn = () => {
     if (!isCheckedIn) {
@@ -66,7 +87,7 @@ export default function Home() {
                 Welcome, Duljek
               </p>
               <p className="text-sm text-neutral-500 tracking-tight leading-5">
-                It&apos;s Wednesday, 29th October 2025
+                {formattedDate}
               </p>
             </div>
             <button 

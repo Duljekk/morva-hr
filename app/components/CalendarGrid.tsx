@@ -35,6 +35,10 @@ export default function CalendarGrid({
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
   const daysInPreviousMonth = new Date(currentYear, currentMonth, 0).getDate();
 
+  // Check if we're viewing the current month
+  const today = new Date();
+  const isCurrentMonth = currentMonth === today.getMonth() && currentYear === today.getFullYear();
+
   const handlePrevMonth = () => {
     if (currentMonth === 0) {
       setCurrentMonth(11);
@@ -104,6 +108,7 @@ export default function CalendarGrid({
       const day = daysInPreviousMonth - i;
       days.push(
         <button
+          type="button"
           key={`prev-${day}`}
           disabled
           className="flex h-10 w-10 items-center justify-center text-sm text-neutral-300"
@@ -120,6 +125,7 @@ export default function CalendarGrid({
       
       days.push(
         <button
+          type="button"
           key={day}
           onClick={() => handleDateClick(day)}
           disabled={disabled}
@@ -141,6 +147,7 @@ export default function CalendarGrid({
     for (let day = 1; day <= remainingCells; day++) {
       days.push(
         <button
+          type="button"
           key={`next-${day}`}
           disabled
           className="flex h-10 w-10 items-center justify-center text-sm text-neutral-300"
@@ -158,10 +165,16 @@ export default function CalendarGrid({
       {/* Header */}
       <div className="mb-4 flex items-center justify-between">
         <button
+          type="button"
           onClick={handlePrevMonth}
-          className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-neutral-100 transition-colors"
+          disabled={isCurrentMonth}
+          className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
+            isCurrentMonth
+              ? 'cursor-not-allowed opacity-50'
+              : 'hover:bg-neutral-100'
+          }`}
         >
-          <ChevronLeftIcon className="h-5 w-5 text-neutral-600" />
+          <ChevronLeftIcon className={`h-5 w-5 ${isCurrentMonth ? 'text-neutral-400' : 'text-neutral-600'}`} />
         </button>
         
         <div className="text-center">
@@ -171,6 +184,7 @@ export default function CalendarGrid({
         </div>
 
         <button
+          type="button"
           onClick={handleNextMonth}
           className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-neutral-100 transition-colors"
         >
