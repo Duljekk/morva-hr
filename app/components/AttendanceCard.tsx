@@ -5,7 +5,7 @@ import CheckOutColoredIcon from '@/app/assets/icons/check-out-colored.svg';
 import TimerIcon from '@/app/assets/icons/timer.svg';
 import WarningTriangleIcon from '@/app/assets/icons/warning-triangle.svg';
 
-type AttendanceStatus = 'late' | 'ontime' | 'remaining';
+type AttendanceStatus = 'late' | 'ontime' | 'remaining' | 'overtime';
 
 interface AttendanceCardProps {
   type: 'checkin' | 'checkout';
@@ -51,6 +51,14 @@ export default function AttendanceCard({ type, time, status, duration }: Attenda
               <WarningTriangleIcon className="h-3.5 w-3.5 shrink-0" />
               <p className="text-xs font-semibold text-amber-600 tracking-tight">
                 Late
+              </p>
+            </>
+          )}
+          {status === 'overtime' && (
+            <>
+              <TimerIcon className="h-3.5 w-3.5 shrink-0" />
+              <p className="text-xs font-semibold text-emerald-600 tracking-tight">
+                Overtime
               </p>
             </>
           )}

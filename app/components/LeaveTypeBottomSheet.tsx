@@ -80,7 +80,7 @@ export default function LeaveTypeBottomSheet({ selected, onSelect }: LeaveTypeBo
         <div className="shrink-0 overflow-visible" style={{ width: '36px', height: '36px' }}>
           <selected.icon className="w-full h-full" />
         </div>
-        <span className="text-sm font-semibold text-neutral-800 flex-1 text-left">{selected.name}</span>
+        <span className="text-sm font-semibold text-neutral-600 flex-1 text-left">{selected.name}</span>
         <ChevronRightIcon className="h-4 w-4 text-neutral-600 rotate-90 shrink-0 ml-auto" />
       </button>
 
@@ -124,7 +124,7 @@ export default function LeaveTypeBottomSheet({ selected, onSelect }: LeaveTypeBo
                     key={leaveType.id}
                     type="button"
                     onClick={() => handleCardClick(leaveType)}
-                    className={`flex items-center gap-3 rounded-xl transition-colors ${
+                    className={`flex items-center gap-[10px] rounded-xl transition-colors ${
                       isSelected 
                         ? 'bg-neutral-100 border border-neutral-100' 
                         : 'bg-white border border-neutral-100 hover:bg-neutral-50'
@@ -141,7 +141,7 @@ export default function LeaveTypeBottomSheet({ selected, onSelect }: LeaveTypeBo
 
                     {/* Text */}
                     <div className="flex-1 text-left min-w-0">
-                      <p className="text-base font-semibold text-neutral-800 leading-tight">
+                      <p className="text-base font-semibold text-neutral-600 leading-tight">
                         {leaveType.name}
                       </p>
                     </div>
