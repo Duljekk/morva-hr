@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import ButtonLarge from './ButtonLarge';
 
 interface CheckInOutWidgetProps {
   shiftStart: string;
@@ -50,19 +51,19 @@ export default function CheckInOutWidget({
 
       {/* Bottom Container */}
       <div className="flex flex-col gap-2 px-[18px] pb-[30px] pt-5">
-        <button
+        <ButtonLarge
           onClick={onCheckIn}
           disabled={isCheckedIn}
-          className="flex h-12 w-full items-center justify-center rounded-[14px] bg-neutral-800 px-5 py-1.5 text-base font-semibold text-white tracking-tight shadow-[inset_0.5px_0.7px_0.4px_0px_rgba(255,255,255,0.5),inset_-0.5px_-0.5px_0.2px_0px_rgba(0,0,0,0.6)] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-neutral-700 transition-colors"
+          variant="primary"
         >
           {isCheckedIn ? 'Check-Out' : 'Check-In'}
-        </button>
-        <button
+        </ButtonLarge>
+        <ButtonLarge
           onClick={onRequestLeave}
-          className="flex h-12 w-full items-center justify-center rounded-xl bg-neutral-100 px-5 py-1.5 text-base font-semibold text-neutral-600 tracking-tight hover:bg-neutral-200 transition-colors"
+          variant="secondary"
         >
           Request Leave
-        </button>
+        </ButtonLarge>
       </div>
     </div>
   );

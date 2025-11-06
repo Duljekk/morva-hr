@@ -226,7 +226,7 @@ export const CheckOutIcon = ({ className = "" }: { className?: string }) => (
       strokeLinecap="round"
       strokeLinejoin="round"
     />
-  </svg>
+    </svg>
 );
 
 export const InfoIcon = ({ className = "" }: { className?: string }) => (
@@ -251,7 +251,7 @@ export const InfoIcon = ({ className = "" }: { className?: string }) => (
       strokeWidth="1.5"
       strokeLinecap="round"
     />
-  </svg>
+    </svg>
 );
 
 export const InfoBubbleIcon = ({ className = "" }: { className?: string }) => (

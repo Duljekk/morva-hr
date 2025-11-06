@@ -8,7 +8,11 @@ import LeaveTypeBottomSheet, { leaveTypes, LeaveType } from '../components/Leave
 import DocumentAttachment from '../components/DocumentAttachment';
 import UploadedFile from '../components/UploadedFile';
 import DaysOffBadge from '../components/DaysOffBadge';
+import ButtonLarge from '../components/ButtonLarge';
+import Chip from '../components/Chip';
 import ArrowCalendarIcon from '@/app/assets/icons/arrow-calendar.svg';
+import LeaveFullDayIcon from '@/app/assets/icons/leave-fullday.svg';
+import LeaveHalfDayIcon from '@/app/assets/icons/leave-halfday.svg';
 
 interface UploadedFileData {
   id: string;
@@ -24,6 +28,7 @@ export default function RequestLeavePage() {
   // Initialize dates to current date
   const [startDate, setStartDate] = useState<Date>(new Date());
   const [endDate, setEndDate] = useState<Date>(new Date());
+  const [dayType, setDayType] = useState<'full' | 'half'>('full');
   const [reason, setReason] = useState('Experiencing a severe migraine and light sensitivity, making it impossible to look at the screen.');
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFileData[]>([
     {
@@ -60,6 +65,9 @@ export default function RequestLeavePage() {
   
   // Calculate days difference (ensure it's never negative)
   const days = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+  
+  // Check if both dates are the same
+  const isSameDate = startDate.toDateString() === endDate.toDateString();
 
   const handleFileSelect = (file: File) => {
     const fileSize = (file.size / 1024).toFixed(0) + ' KB';
@@ -121,8 +129,27 @@ export default function RequestLeavePage() {
             </div>
           </div>
 
-          {/* Duration Badge */}
-          <DaysOffBadge days={days} />
+          {/* Duration Badge or Day Type Selection */}
+          {isSameDate ? (
+            <div className="flex gap-2">
+              <Chip
+                icon={<LeaveFullDayIcon className="h-3 w-3" style={{ color: 'currentColor' }} />}
+                selected={dayType === 'full'}
+                onClick={() => setDayType('full')}
+              >
+                Full Day
+              </Chip>
+              <Chip
+                icon={<LeaveHalfDayIcon className="h-3 w-3" style={{ color: 'currentColor' }} />}
+                selected={dayType === 'half'}
+                onClick={() => setDayType('half')}
+              >
+                Half Day
+              </Chip>
+            </div>
+          ) : (
+            <DaysOffBadge days={days} />
+          )}
 
           {/* Leave Type */}
           <div className="flex flex-col gap-2">
@@ -166,12 +193,13 @@ export default function RequestLeavePage() {
           </div>
 
           {/* Submit Button */}
-          <button
+          <ButtonLarge
             type="submit"
-            className="flex h-12 w-full items-center justify-center rounded-[14px] bg-neutral-800 px-5 py-1.5 text-base font-semibold text-white tracking-tight shadow-[inset_0.5px_0.7px_0.4px_0px_rgba(255,255,255,0.5),inset_-0.5px_-0.5px_0.2px_0px_rgba(0,0,0,0.6)] hover:bg-neutral-700 transition-colors mt-8"
+            variant="primary"
+            className="mt-3"
           >
             Send Request
-          </button>
+          </ButtonLarge>
         </form>
       </div>
     </div>

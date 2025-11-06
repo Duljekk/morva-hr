@@ -96,7 +96,7 @@ export default function Home() {
             >
               <BellIcon className="h-5 w-5 text-neutral-800" />
             </button>
-          </div>
+        </div>
 
           {/* Main Content */}
           <div className="flex w-full flex-col gap-[18px]">

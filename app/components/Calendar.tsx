@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import CalendarGrid from './CalendarGrid';
+import useLockBodyScroll from '../hooks/useLockBodyScroll';
 
 interface CalendarProps {
   value?: Date;
@@ -33,6 +34,8 @@ export default function Calendar({ value, onChange, className = '' }: CalendarPr
     setIsOpen(false);
   };
 
+  useLockBodyScroll(isOpen);
+
   const day = selectedDate.getDate();
   const month = shortMonthNames[selectedDate.getMonth()];
 
@@ -56,23 +59,32 @@ export default function Calendar({ value, onChange, className = '' }: CalendarPr
           className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
           onClick={() => setIsOpen(false)}
         >
-          {/* Bottom Sheet */}
-          <div
-            className="absolute bottom-0 left-0 right-0 animate-slide-up rounded-t-3xl bg-white shadow-2xl max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
+          {/* Bottom Sheet Container */}
+          <div className="absolute inset-x-0 bottom-0 flex justify-center">
+            {/* Bottom Sheet */}
+            <div
+              className="w-full max-w-[402px] animate-slide-up rounded-t-3xl bg-white shadow-2xl max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                paddingTop: '20px',
+                paddingBottom: '20px',
+                paddingLeft: '24px',
+                paddingRight: '24px'
+              }}
+            >
             {/* Handle Bar */}
-            <div className="flex justify-center pt-3 pb-4 sticky top-0 bg-white z-10">
+            <div className="flex justify-center pb-4 sticky top-0 bg-white z-10">
               <div className="h-1 w-12 rounded-full bg-neutral-300"></div>
             </div>
 
             {/* Calendar Grid */}
-            <div className="px-4 pb-8">
+            <div>
               <CalendarGrid
                 selectedDate={selectedDate}
                 onDateSelect={handleDateSelect}
               />
             </div>
+          </div>
           </div>
         </div>
       )}
