@@ -7,6 +7,7 @@ import AnnouncementBanner from './components/AnnouncementBanner';
 import CheckInOutWidget from './components/CheckInOutWidget';
 import AttendanceCard from './components/AttendanceCard';
 import RecentActivities from './components/RecentActivities';
+import ConfirmationModal from './components/ConfirmationModal';
 
 const SHIFT_START_HOUR = 11;
 const SHIFT_END_HOUR = 19;
@@ -42,6 +43,7 @@ export default function Home() {
   const [checkInDateTime, setCheckInDateTime] = useState<Date | null>(null);
   const [checkOutDateTime, setCheckOutDateTime] = useState<Date | null>(null);
   const [testMode, setTestMode] = useState(false);
+  const [showCheckOutConfirm, setShowCheckOutConfirm] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 1000);
@@ -94,13 +96,18 @@ export default function Home() {
     setCheckOutDateTime(null);
   };
 
+  const handleCheckOutRequest = () => {
+    setShowCheckOutConfirm(true);
+  };
+
   const handleCheckOut = () => {
     const instant = new Date();
-    if (!checkInDateTime || checkOutDateTime || instant.getTime() < shiftEnd.getTime()) {
+    if (!checkInDateTime || checkOutDateTime) {
       return;
     }
 
     setCheckOutDateTime(instant);
+    setShowCheckOutConfirm(false);
   };
 
   const handleRequestLeave = () => {
@@ -113,7 +120,9 @@ export default function Home() {
 
   // Check-in card data
   const checkInCardTime = checkInDateTime ? formatClockTime(checkInDateTime) : '--:--';
-  const checkInStatus = checkInDateTime && checkInDateTime.getTime() > shiftStart.getTime() ? 'late' : undefined;
+  const checkInStatus = checkInDateTime 
+    ? (checkInDateTime.getTime() > shiftStart.getTime() ? 'late' : 'ontime')
+    : undefined;
   const checkInDuration = checkInDateTime && checkInDateTime.getTime() > shiftStart.getTime()
     ? formatDurationFromMs(checkInDateTime.getTime() - shiftStart.getTime())
     : undefined;
@@ -125,16 +134,32 @@ export default function Home() {
 
   const checkoutCardTime = checkOutDateTime ? formatClockTime(checkOutDateTime) : '--:--';
   const checkoutStatus = checkOutDateTime
-    ? (checkOutDateTime.getTime() > shiftEnd.getTime() ? 'overtime' : 'ontime')
+    ? (checkOutDateTime.getTime() > shiftEnd.getTime() 
+        ? 'overtime' 
+        : checkOutDateTime.getTime() < shiftEnd.getTime() 
+          ? 'leftearly' 
+          : 'ontime')
     : isCheckedIn && now.getTime() >= shiftEnd.getTime()
       ? 'overtime'
-      : 'remaining';
+      : isCheckedIn
+        ? 'remaining'
+        : undefined;
+
+  const checkoutLeftEarlyMs = checkOutDateTime && checkOutDateTime.getTime() < shiftEnd.getTime()
+    ? shiftEnd.getTime() - checkOutDateTime.getTime()
+    : 0;
 
   const checkoutDuration = checkOutDateTime
-    ? (checkoutOvertimeMs > 0 ? formatDurationFromMs(checkoutOvertimeMs) : undefined)
+    ? (checkOutDateTime.getTime() > shiftEnd.getTime()
+        ? formatDurationFromMs(checkoutOvertimeMs)
+        : checkOutDateTime.getTime() < shiftEnd.getTime()
+          ? formatDurationFromMs(checkoutLeftEarlyMs)
+          : undefined)
     : isCheckedIn && now.getTime() >= shiftEnd.getTime()
       ? formatDurationFromMs(overtimeMs)
-      : formatDurationFromMs(remainingToShiftEndMs);
+      : isCheckedIn
+        ? formatDurationFromMs(remainingToShiftEndMs)
+        : undefined;
 
   // Sample data for recent activities
   const recentActivities = [
@@ -198,6 +223,7 @@ export default function Home() {
               canCheckOut={canCheckOut}
               onCheckIn={handleCheckIn}
               onCheckOut={handleCheckOut}
+              onCheckOutRequest={handleCheckOutRequest}
               onRequestLeave={handleRequestLeave}
             />
 
@@ -246,8 +272,8 @@ export default function Home() {
                         <AttendanceCard
                           type="checkout"
                           time="--:--"
-                          status="remaining"
-                          duration="5h 30m"
+                          status={undefined}
+                          duration={undefined}
                         />
                       </div>
                     </div>
@@ -259,9 +285,9 @@ export default function Home() {
                         <AttendanceCard
                           type="checkin"
                           time="10:58"
-                          status={undefined}
+                          status="ontime"
                           duration={undefined}
-                        />
+            />
                         <AttendanceCard
                           type="checkout"
                           time="--:--"
@@ -297,7 +323,7 @@ export default function Home() {
                         <AttendanceCard
                           type="checkin"
                           time="11:00"
-                          status={undefined}
+                          status="ontime"
                           duration={undefined}
                         />
                         <AttendanceCard
@@ -316,7 +342,7 @@ export default function Home() {
                         <AttendanceCard
                           type="checkin"
                           time="11:00"
-                          status={undefined}
+                          status="ontime"
                           duration={undefined}
                         />
                         <AttendanceCard
@@ -328,14 +354,33 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* Test: Checked out with overtime */}
+                    {/* Test: Checked out early */}
                     <div className="flex flex-col gap-2">
-                      <p className="text-xs font-semibold text-neutral-500">State 6: Checked Out (Overtime)</p>
+                      <p className="text-xs font-semibold text-neutral-500">State 6: Checked Out (Left Early)</p>
                       <div className="flex w-full gap-2">
                         <AttendanceCard
                           type="checkin"
                           time="11:00"
-                          status={undefined}
+                          status="ontime"
+                          duration={undefined}
+                        />
+                        <AttendanceCard
+                          type="checkout"
+                          time="17:30"
+                          status="leftearly"
+                          duration="1h 30m"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Test: Checked out with overtime */}
+                    <div className="flex flex-col gap-2">
+                      <p className="text-xs font-semibold text-neutral-500">State 7: Checked Out (Overtime)</p>
+                      <div className="flex w-full gap-2">
+                        <AttendanceCard
+                          type="checkin"
+                          time="11:00"
+                          status="ontime"
                           duration={undefined}
                         />
                         <AttendanceCard
@@ -356,6 +401,17 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Check-Out Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showCheckOutConfirm}
+        onClose={() => setShowCheckOutConfirm(false)}
+        onConfirm={handleCheckOut}
+        title="Confirm Check-Out"
+        message="Are you sure you want to check out now?"
+        confirmText="Check Out"
+        cancelText="Cancel"
+      />
     </div>
   );
 }

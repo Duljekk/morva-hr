@@ -44,7 +44,7 @@ export default function Calendar({ value, onChange, className = '' }: CalendarPr
       {/* Date Card */}
       <div
         onClick={() => setIsOpen(true)}
-        className={`flex flex-col items-start rounded-2xl border border-neutral-200 bg-white px-4 py-3 cursor-pointer transition-all hover:shadow-md ${className}`}
+        className={`flex flex-col items-start rounded-2xl border border-neutral-200 bg-white px-4 py-3 cursor-pointer transition-all hover:bg-neutral-50 hover:shadow-md ${className}`}
         style={{
           boxShadow: '0px 1px 2px rgba(164, 172, 185, 0.16)'
         }}

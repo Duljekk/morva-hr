@@ -14,6 +14,7 @@ interface CheckInOutWidgetProps {
   canCheckOut: boolean;
   onCheckIn: () => void;
   onCheckOut: () => void;
+  onCheckOutRequest: () => void;
   onRequestLeave: () => void;
 }
 
@@ -54,6 +55,7 @@ export default function CheckInOutWidget({
   canCheckOut,
   onCheckIn,
   onCheckOut,
+  onCheckOutRequest,
   onRequestLeave,
 }: CheckInOutWidgetProps) {
   const heading = state === 'checkedOut'
@@ -105,9 +107,9 @@ export default function CheckInOutWidget({
       case 'preCheckIn':
         return !canCheckIn;
       case 'onClock':
-        return !canCheckOut;
+        return false; // Always enable checkout button
       case 'overtime':
-        return !canCheckOut;
+        return false; // Always enable checkout button
       case 'checkedOut':
       default:
         return true;
@@ -125,7 +127,7 @@ export default function CheckInOutWidget({
     }
 
     if (state === 'onClock' || state === 'overtime') {
-      onCheckOut();
+      onCheckOutRequest(); // Show confirmation modal instead of direct checkout
     }
   };
 
