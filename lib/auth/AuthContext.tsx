@@ -87,17 +87,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     console.log('🔵 AuthContext: signOut called');
     try {
-      const { error } = await supabase.auth.signOut();
-      console.log('🔵 AuthContext: Supabase signOut result:', error ? 'ERROR' : 'SUCCESS');
-      if (error) {
-        console.error('🔵 AuthContext: SignOut error:', error);
+      console.log('🔵 AuthContext: About to call supabase.auth.signOut()...');
+      
+      // Create a timeout promise
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('SignOut timeout')), 3000)
+      );
+      
+      // Race between signOut and timeout
+      const signOutPromise = supabase.auth.signOut();
+      
+      try {
+        const result = await Promise.race([signOutPromise, timeoutPromise]);
+        console.log('🔵 AuthContext: Supabase signOut completed:', result);
+      } catch (timeoutError) {
+        console.warn('🔵 AuthContext: SignOut timed out, continuing anyway:', timeoutError);
       }
+      
+      console.log('🔵 AuthContext: Clearing local state...');
+      // Clear local state regardless of API result
       setUser(null);
       setProfile(null);
       setSession(null);
-      console.log('🔵 AuthContext: State cleared, user should be logged out');
+      console.log('🔵 AuthContext: State cleared successfully');
+      
     } catch (error) {
       console.error('🔵 AuthContext: Exception during signOut:', error);
+      // Clear state even on error
+      setUser(null);
+      setProfile(null);
+      setSession(null);
+      console.log('🔵 AuthContext: State cleared after error');
     }
   };
 
@@ -119,12 +139,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔵 AuthContext: Auth state changed -', event, 'Session:', session ? 'EXISTS' : 'NULL');
+      
       setSession(session);
       setUser(session?.user ?? null);
 
       if (session?.user) {
+        console.log('🔵 AuthContext: User logged in, fetching profile...');
         await fetchProfile(session.user.id);
       } else {
+        console.log('🔵 AuthContext: No session, clearing profile');
         setProfile(null);
       }
 

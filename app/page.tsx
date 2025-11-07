@@ -405,14 +405,24 @@ export default function Home() {
             <button
               onClick={async () => {
                 console.log('🔴 Logout button clicked!');
+                
+                // Set a safety timeout to redirect even if signOut hangs
+                const redirectTimeout = setTimeout(() => {
+                  console.log('🔴 Safety timeout triggered, forcing redirect...');
+                  window.location.replace('/login');
+                }, 4000);
+                
                 try {
                   console.log('🔴 Calling signOut...');
                   await signOut();
-                  console.log('🔴 SignOut completed, redirecting to login...');
-                  // Force redirect to login after signout
-                  window.location.href = '/login';
+                  console.log('🔴 SignOut completed successfully');
                 } catch (error) {
                   console.error('🔴 Error during logout:', error);
+                } finally {
+                  clearTimeout(redirectTimeout);
+                  console.log('🔴 Forcing page reload and redirect to login...');
+                  // Force a hard reload to /login to clear all state
+                  window.location.replace('/login');
                 }
               }}
               className="mt-6 w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-50 active:bg-neutral-100"
