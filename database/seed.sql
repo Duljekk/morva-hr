@@ -19,3 +19,4 @@ INSERT INTO leave_types (id, name, requires_approval, requires_attachment, max_d
 -- Annual Leave: Requires approval, limited to 20 days per year
 -- Unpaid Leave: Requires approval, no limits
 
+

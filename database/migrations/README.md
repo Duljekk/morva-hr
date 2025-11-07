@@ -84,3 +84,4 @@ To rollback a migration, create a new migration that reverses the changes. Never
 - Document any data transformations
 - Back up production database before applying migrations
 
+

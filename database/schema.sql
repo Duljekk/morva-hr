@@ -329,3 +329,4 @@ COMMENT ON TABLE announcements IS 'Company-wide announcements';
 COMMENT ON TABLE announcement_views IS 'Tracks which users viewed which announcements';
 COMMENT ON TABLE payslips IS 'Employee payslip records for download';
 
+

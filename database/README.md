@@ -262,3 +262,4 @@ This database schema is part of the MorvaHR project. All rights reserved.
 **Last Updated**: 2025-01-07  
 **Database**: PostgreSQL 15+ (Supabase)
 
+

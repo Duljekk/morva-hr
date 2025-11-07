@@ -13,11 +13,13 @@ A mobile-first HR application built with Next.js, React, and Tailwind CSS, based
 
 ## Tech Stack
 
-- **Framework**: Next.js 16.0.1
+- **Framework**: Next.js 16.0.1 (App Router)
 - **UI Library**: React 19.2.0
 - **Styling**: Tailwind CSS v4
 - **Font**: Mona Sans (400, 500, 600, 700 weights)
 - **TypeScript**: Type-safe development
+- **Database**: Supabase (PostgreSQL)
+- **Authentication**: Supabase Auth
 
 ## Design System
 
@@ -58,12 +60,27 @@ cd morvahr
 npm install
 ```
 
-3. Run the development server:
+3. Set up environment variables:
+   - Create a `.env.local` file in the project root
+   - Add your Supabase credentials (see [ENVIRONMENT_SETUP.md](ENVIRONMENT_SETUP.md))
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
+
+4. Run the development server:
 ```bash
 npm run dev
 ```
 
-4. Open [http://localhost:3000](http://localhost:3000) in your browser
+5. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+### Quick Start with Authentication
+
+For detailed authentication setup, see:
+- **Quick Start**: [lib/auth/QUICKSTART.md](lib/auth/QUICKSTART.md)
+- **Full Documentation**: [lib/auth/README.md](lib/auth/README.md)
+- **Environment Setup**: [ENVIRONMENT_SETUP.md](ENVIRONMENT_SETUP.md)
 
 ## Project Structure
 
@@ -76,9 +93,26 @@ morvahr/
 │   │   ├── CheckInOutWidget.tsx   # Main check-in/out widget
 │   │   ├── AttendanceCard.tsx     # Attendance log card
 │   │   └── RecentActivities.tsx   # Activity timeline
+│   ├── login/
+│   │   └── page.tsx               # Login page
 │   ├── globals.css                # Global styles & Tailwind config
-│   ├── layout.tsx                 # Root layout
+│   ├── layout.tsx                 # Root layout (with AuthProvider)
 │   └── page.tsx                   # Main homepage
+├── lib/
+│   ├── auth/
+│   │   ├── AuthContext.tsx        # React Context for auth state
+│   │   ├── utils.ts               # Auth utility functions
+│   │   ├── README.md              # Authentication documentation
+│   │   ├── QUICKSTART.md          # Quick start guide
+│   │   └── examples.tsx           # Usage examples
+│   └── supabase/
+│       ├── client.ts              # Client-side Supabase client
+│       ├── server.ts              # Server-side Supabase client
+│       └── types.ts               # Database TypeScript types
+├── database/
+│   └── schema.sql                 # Database schema for Supabase
+├── middleware.ts                  # Route protection middleware
+├── ENVIRONMENT_SETUP.md           # Environment variables guide
 ├── public/                        # Static assets
 └── package.json                   # Dependencies
 ```
@@ -135,16 +169,32 @@ The app is optimized for mobile devices:
 - Touch-friendly buttons
 - Optimized spacing and typography
 
-## Future Enhancements
+## Features Status
 
-- [ ] Backend integration for data persistence
+- [x] User authentication (Supabase Auth)
+- [x] User profiles with roles (Employee, HR Admin)
+- [x] Protected routes (Middleware)
+- [x] Database integration (Supabase)
+- [ ] Backend integration for data persistence (attendance, leaves)
 - [ ] Real leave request form
 - [ ] Notification system
-- [ ] User authentication
 - [ ] Calendar integration
 - [ ] Report generation
 - [ ] Bottom navigation bar
 - [ ] Settings page
+
+## Authentication Features
+
+The app includes a complete authentication system:
+
+- ✅ **Email/Password Authentication** - Secure login via Supabase
+- ✅ **User Profiles** - Extended user data with roles and permissions
+- ✅ **Role-Based Access** - Employee and HR Admin roles
+- ✅ **Protected Routes** - Automatic redirects via middleware
+- ✅ **Session Management** - Cookie-based sessions with auto-refresh
+- ✅ **Type Safety** - Full TypeScript support for auth and database
+
+See [lib/auth/README.md](lib/auth/README.md) for detailed documentation.
 
 ## Design Reference
 

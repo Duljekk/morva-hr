@@ -324,3 +324,4 @@ This ERD can be visualized using:
 - Created: 2025-01-07
 - Database: PostgreSQL 15+ (Supabase)
 
+

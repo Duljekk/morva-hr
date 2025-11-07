@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth/AuthContext';
 import { BellIcon } from './components/Icons';
 import AnnouncementBanner from './components/AnnouncementBanner';
 import CheckInOutWidget from './components/CheckInOutWidget';
@@ -39,6 +40,7 @@ const formatDurationFromMs = (ms: number) => {
 
 export default function Home() {
   const router = useRouter();
+  const { signOut, profile } = useAuth();
   const [now, setNow] = useState(new Date());
   const [checkInDateTime, setCheckInDateTime] = useState<Date | null>(null);
   const [checkOutDateTime, setCheckOutDateTime] = useState<Date | null>(null);
@@ -189,7 +191,7 @@ export default function Home() {
           <div className="flex w-full items-start justify-between">
             <div className="flex flex-col">
               <p className="text-xl font-semibold text-neutral-800 tracking-tight leading-[30px]">
-                Welcome, Duljek
+                Welcome, {profile?.full_name?.split(' ')[0] || profile?.username || 'User'}
               </p>
               <p className="text-sm text-neutral-500 tracking-tight leading-5">
                 {formattedDate}
@@ -398,6 +400,25 @@ export default function Home() {
               {/* Recent Activities */}
               <RecentActivities activities={recentActivities} />
             </div>
+
+            {/* Logout Button */}
+            <button
+              onClick={async () => {
+                console.log('🔴 Logout button clicked!');
+                try {
+                  console.log('🔴 Calling signOut...');
+                  await signOut();
+                  console.log('🔴 SignOut completed, redirecting to login...');
+                  // Force redirect to login after signout
+                  window.location.href = '/login';
+                } catch (error) {
+                  console.error('🔴 Error during logout:', error);
+                }
+              }}
+              className="mt-6 w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-50 active:bg-neutral-100"
+            >
+              Log Out
+            </button>
           </div>
         </div>
       </div>
