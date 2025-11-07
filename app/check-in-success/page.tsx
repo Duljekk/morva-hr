@@ -5,6 +5,8 @@ import ButtonLarge from '../components/ButtonLarge';
 import CheckInClockIcon from '@/app/assets/icons/check-in-clock.svg';
 import CheckInBadgeIcon from '@/app/assets/icons/check-in-badge.svg';
 import SparkleStarIcon from '@/app/assets/icons/sparkle-star.svg';
+import SparkleStarIcon32px from '@/app/assets/icons/sparkle-star-32px.svg';
+import SparkleStarIcon24px from '@/app/assets/icons/sparkle-star-24px.svg';
 
 export default function CheckInSuccessPage() {
   const router = useRouter();
@@ -23,7 +25,7 @@ export default function CheckInSuccessPage() {
           <div className="absolute inset-0 overflow-hidden rounded-full bg-gradient-to-b from-[rgba(240,249,255,0.6)] to-[#b8e6fe]">
             {/* Main Clock Illustration - Positioned at 52, 52.5 within 200px container */}
             <div className="absolute left-[52px] top-[52.5px] h-24 w-24">
-              <CheckInClockIcon className="h-full w-full" />
+              <CheckInClockIcon style={{ width: '96px', height: '96px', display: 'block' }} />
             </div>
           </div>
 
@@ -40,12 +42,12 @@ export default function CheckInSuccessPage() {
 
           {/* Top Left - 32px */}
           <div className="absolute left-[14.8px] top-[-29.5px] h-8 w-8">
-            <SparkleStarIcon className="h-full w-full" />
+            <SparkleStarIcon32px className="h-full w-full" />
           </div>
 
           {/* Bottom Left - 24px */}
           <div className="absolute left-[-2.644px] top-[-0.5px] h-6 w-6">
-            <SparkleStarIcon className="h-full w-full" />
+            <SparkleStarIcon24px className="h-full w-full" />
           </div>
         </div>
 

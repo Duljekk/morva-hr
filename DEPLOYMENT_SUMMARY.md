@@ -224,3 +224,5 @@ Your MorvaHR database is now fully deployed and ready to use! All tables, polici
 **Deployment completed via Supabase MCP** ✨
 
 
+
+

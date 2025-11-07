@@ -325,3 +325,5 @@ This ERD can be visualized using:
 - Database: PostgreSQL 15+ (Supabase)
 
 
+
+

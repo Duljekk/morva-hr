@@ -10,6 +10,7 @@ import LogoMorvahrIcon from '@/app/assets/icons/logo-morvahr.svg';
 import UserIcon from '@/app/assets/icons/user.svg';
 import LockIcon from '@/app/assets/icons/lock.svg';
 import EyeOpenIcon from '@/app/assets/icons/eye-open.svg';
+import EyeClosedIcon from '@/app/assets/icons/eye-closed.svg';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -153,7 +154,7 @@ export default function LoginPage() {
                   hasLeadIcon={true}
                   hasTrailIcon={true}
                   LeadIcon={<LockIcon />}
-                  TrailIcon={<EyeOpenIcon />}
+                  TrailIcon={showPassword ? <EyeOpenIcon /> : <EyeClosedIcon />}
                   onTrailIconClick={togglePasswordVisibility}
                   type={showPassword ? 'text' : 'password'}
                   bgColor="white"

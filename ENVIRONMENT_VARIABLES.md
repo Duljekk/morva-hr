@@ -114,3 +114,5 @@ Need help? Check:
 - Supabase Dashboard: https://supabase.com/dashboard/project/kvwmlhalbsiywjjzvoje
 - API Settings: https://supabase.com/dashboard/project/kvwmlhalbsiywjjzvoje/settings/api
 
+
+

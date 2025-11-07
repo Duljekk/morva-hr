@@ -93,7 +93,7 @@ export default function RequestLeavePage() {
   return (
     <div className="relative min-h-screen w-full bg-white">
       {/* Main Content Container */}
-      <div className="mx-auto w-full max-w-[402px] pb-8">
+      <div className="mx-auto w-full max-w-[402px] pb-8 overflow-visible">
         {/* Header */}
         <div className="flex items-center justify-center px-6 pt-[74px] pb-7">
           <button
@@ -108,7 +108,7 @@ export default function RequestLeavePage() {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3 px-6">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3 px-6 overflow-visible">
           {/* Date Range Cards */}
           <div className="flex items-center gap-3 mb-[2px]">
             {/* From Date */}
@@ -173,13 +173,13 @@ export default function RequestLeavePage() {
           </div>
 
           {/* Attachment Section */}
-          <div className="flex flex-col gap-2.5">
+          <div className="flex flex-col gap-2.5 overflow-visible">
             <p className="text-sm font-semibold text-neutral-600 tracking-tight">Attachment</p>
             <DocumentAttachment onFileSelect={handleFileSelect} />
             
             {/* Uploaded Files */}
             {uploadedFiles.length > 0 && (
-              <div className="flex flex-col gap-2">
+              <div className="flex gap-1 overflow-x-auto overflow-y-visible py-1">
                 {uploadedFiles.map((file) => (
                   <UploadedFile
                     key={file.id}

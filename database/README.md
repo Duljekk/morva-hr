@@ -263,3 +263,5 @@ This database schema is part of the MorvaHR project. All rights reserved.
 **Database**: PostgreSQL 15+ (Supabase)
 
 
+
+
