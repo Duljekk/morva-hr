@@ -12,7 +12,7 @@ CREATE TYPE user_role AS ENUM ('employee', 'hr_admin');
 CREATE TYPE check_in_status AS ENUM ('ontime', 'late');
 
 -- Check-out status enumeration
-CREATE TYPE check_out_status AS ENUM ('ontime', 'overtime');
+CREATE TYPE check_out_status AS ENUM ('ontime', 'overtime', 'leftearly');
 
 -- Day type for leave requests
 CREATE TYPE day_type AS ENUM ('full', 'half');
@@ -328,6 +328,7 @@ COMMENT ON TABLE leave_request_attachments IS 'File attachments for leave reques
 COMMENT ON TABLE announcements IS 'Company-wide announcements';
 COMMENT ON TABLE announcement_views IS 'Tracks which users viewed which announcements';
 COMMENT ON TABLE payslips IS 'Employee payslip records for download';
+
 
 
 

@@ -7,7 +7,7 @@ import CalendarIcon from '@/app/assets/icons/calendar-1.svg';
 interface Activity {
   type: 'checkin' | 'checkout' | 'leave';
   time: string;
-  status?: 'late' | 'ontime' | 'overtime';
+  status?: 'late' | 'ontime' | 'overtime' | 'leftearly';
 }
 
 interface DayActivity {
@@ -66,20 +66,30 @@ export default function RecentActivities({ activities }: RecentActivitiesProps) 
                           {/* Status Badge */}
                           {activity.status && (
                             <div className={`rounded-xl px-2 py-0.5 ${
-                              activity.status === 'late' 
-                                ? 'bg-amber-100' 
+                              activity.status === 'late'
+                                ? 'bg-amber-100'
                                 : activity.status === 'ontime'
                                 ? 'bg-green-100'
-                                : 'bg-neutral-100'
+                                : activity.status === 'overtime'
+                                ? 'bg-neutral-100'
+                                : 'bg-amber-50'
                             }`}>
                               <p className={`text-xs font-semibold tracking-tight ${
                                 activity.status === 'late'
                                   ? 'text-amber-700'
                                   : activity.status === 'ontime'
                                   ? 'text-green-700'
-                                  : 'text-neutral-600'
+                                  : activity.status === 'overtime'
+                                  ? 'text-neutral-600'
+                                  : 'text-amber-600'
                               }`}>
-                                {activity.status === 'late' ? 'Late' : activity.status === 'ontime' ? 'On Time' : 'Overtime'}
+                                {activity.status === 'late'
+                                  ? 'Late'
+                                  : activity.status === 'ontime'
+                                  ? 'On Time'
+                                  : activity.status === 'overtime'
+                                  ? 'Overtime'
+                                  : 'Left Early'}
                               </p>
                             </div>
                           )}

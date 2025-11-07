@@ -22,3 +22,5 @@ INSERT INTO leave_types (id, name, requires_approval, requires_attachment, max_d
 
 
 
+
+

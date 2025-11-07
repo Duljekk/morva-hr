@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { BellIcon } from './components/Icons';
+import NotificationButton from './components/NotificationButton';
 import AnnouncementBanner from './components/AnnouncementBanner';
 import CheckInOutWidget from './components/CheckInOutWidget';
 import AttendanceCard from './components/AttendanceCard';
@@ -80,7 +80,7 @@ export default function Home() {
   // Determine widget state
   const isCheckedIn = !!checkInDateTime && !checkOutDateTime;
   const canCheckIn = !checkInDateTime && now.getTime() >= shiftStart.getTime();
-  const canCheckOut = isCheckedIn && now.getTime() >= shiftEnd.getTime();
+  const canCheckOut = isCheckedIn;
   
   const widgetState: 'preCheckIn' | 'onClock' | 'overtime' | 'checkedOut' = checkOutDateTime
     ? 'checkedOut'
@@ -176,7 +176,7 @@ export default function Home() {
       date: 'October 29',
       activities: [
         { type: 'checkin' as const, time: '10:58', status: 'ontime' as const },
-        { type: 'checkout' as const, time: '19:15', status: 'ontime' as const },
+        { type: 'checkout' as const, time: '18:15', status: 'leftearly' as const },
       ],
     },
   ];
@@ -197,12 +197,10 @@ export default function Home() {
                 {formattedDate}
               </p>
             </div>
-            <button 
-              className="flex h-7 w-7 items-center justify-center"
+            <NotificationButton
+              hasNotification={true}
               onClick={() => alert('Notifications would open here')}
-            >
-              <BellIcon className="h-5 w-5 text-neutral-800" />
-            </button>
+            />
         </div>
 
           {/* Main Content */}
