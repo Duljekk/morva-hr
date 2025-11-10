@@ -66,8 +66,8 @@ export default function RecentActivities({ activities }: RecentActivitiesProps) 
                           {/* Status Badge */}
                           {activity.status && (
                             <div className={`rounded-xl px-2 py-0.5 ${
-                              activity.status === 'late'
-                                ? 'bg-amber-100'
+                              activity.status === 'late' 
+                                ? 'bg-amber-100' 
                                 : activity.status === 'ontime'
                                 ? 'bg-green-100'
                                 : activity.status === 'overtime'

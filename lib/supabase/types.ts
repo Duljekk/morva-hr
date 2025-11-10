@@ -173,33 +173,71 @@ export interface Database {
           updated_at?: string;
         };
       };
-      leave_attachments: {
+      leave_request_attachments: {
         Row: {
           id: string;
           leave_request_id: string;
           file_name: string;
-          file_path: string;
           file_size: number;
-          mime_type: string;
-          uploaded_at: string;
+          file_url: string;
+          file_type: string | null;
+          uploaded_by: string;
+          created_at: string;
         };
         Insert: {
           id?: string;
           leave_request_id: string;
           file_name: string;
-          file_path: string;
           file_size: number;
-          mime_type: string;
-          uploaded_at?: string;
+          file_url: string;
+          file_type?: string | null;
+          uploaded_by: string;
+          created_at?: string;
         };
         Update: {
           id?: string;
           leave_request_id?: string;
           file_name?: string;
-          file_path?: string;
           file_size?: number;
-          mime_type?: string;
-          uploaded_at?: string;
+          file_url?: string;
+          file_type?: string | null;
+          uploaded_by?: string;
+          created_at?: string;
+        };
+      };
+      leave_balances: {
+        Row: {
+          id: string;
+          user_id: string;
+          leave_type_id: string;
+          balance: number;
+          allocated: number;
+          used: number;
+          year: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          leave_type_id: string;
+          balance?: number;
+          allocated?: number;
+          used?: number;
+          year: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          leave_type_id?: string;
+          balance?: number;
+          allocated?: number;
+          used?: number;
+          year?: number;
+          created_at?: string;
+          updated_at?: string;
         };
       };
       announcements: {

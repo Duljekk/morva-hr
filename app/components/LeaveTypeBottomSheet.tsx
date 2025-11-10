@@ -119,6 +119,7 @@ export default function LeaveTypeBottomSheet({ selected, onSelect }: LeaveTypeBo
             <div className="flex flex-col gap-[10px]">
               {leaveTypes.map((leaveType) => {
                 const isSelected = pendingSelection.id === leaveType.id;
+                
                 return (
                   <button
                     key={leaveType.id}

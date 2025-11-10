@@ -1,6 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Increase body size limit for Server Actions to support file uploads
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb', // Allow up to 10MB (5MB files + form data overhead)
+    },
+  },
   // Use webpack for SVG handling via SVGR
   webpack(config) {
     // Grab the existing rule that handles SVG imports

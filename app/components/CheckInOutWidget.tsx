@@ -6,12 +6,14 @@ type WidgetState = 'preCheckIn' | 'onClock' | 'overtime' | 'checkedOut';
 
 interface CheckInOutWidgetProps {
   shiftStart: Date;
+  shiftEnd: Date;
   currentTime: Date;
   checkInTime: Date | null;
   checkOutTime: Date | null;
   state: WidgetState;
   canCheckIn: boolean;
   canCheckOut: boolean;
+  isLoading?: boolean;
   onCheckIn: () => void;
   onCheckOut: () => void;
   onCheckOutRequest: () => void;
@@ -47,12 +49,14 @@ const diffInMs = (start: Date | null, end: Date | null) => {
 
 export default function CheckInOutWidget({
   shiftStart,
+  shiftEnd,
   currentTime,
   checkInTime,
   checkOutTime,
   state,
   canCheckIn,
   canCheckOut,
+  isLoading = false,
   onCheckIn,
   onCheckOut,
   onCheckOutRequest,
@@ -100,9 +104,15 @@ export default function CheckInOutWidget({
 
   const metricColor = state === 'overtime' ? 'text-emerald-600' : 'text-neutral-800';
 
-  const primaryLabel = state === 'preCheckIn' || state === 'checkedOut' ? 'Check-In' : 'Check-Out';
+  const primaryLabel = isLoading 
+    ? 'Processing...' 
+    : state === 'preCheckIn' || state === 'checkedOut' 
+      ? 'Check-In' 
+      : 'Check-Out';
 
   const primaryDisabled = (() => {
+    if (isLoading) return true; // Disable during operations
+    
     switch (state) {
       case 'preCheckIn':
         return !canCheckIn;
@@ -127,7 +137,14 @@ export default function CheckInOutWidget({
     }
 
     if (state === 'onClock' || state === 'overtime') {
-      onCheckOutRequest(); // Show confirmation modal instead of direct checkout
+      // Only show confirmation modal if checking out early (before shift end)
+      const isCheckingOutEarly = currentTime.getTime() < shiftEnd.getTime();
+      
+      if (isCheckingOutEarly) {
+        onCheckOutRequest(); // Show confirmation modal for early check-out
+      } else {
+        onCheckOut(); // Direct check-out for on-time or overtime
+      }
     }
   };
 

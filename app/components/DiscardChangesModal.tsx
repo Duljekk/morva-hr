@@ -3,29 +3,19 @@
 import { useEffect } from 'react';
 import ButtonLarge from './ButtonLarge';
 import useLockBodyScroll from '../hooks/useLockBodyScroll';
-import WarningModalIcon from '@/app/assets/icons/warning-modal.svg';
+import NeutralModalIcon from '@/app/assets/icons/neutral-modal.svg';
 
-interface ConfirmationModalProps {
+interface DiscardChangesModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => void;
-  title: string;
-  shiftEndTime?: string;
-  earlyDuration?: string;
-  confirmText?: string;
-  cancelText?: string;
+  onDiscard: () => void;
 }
 
-export default function ConfirmationModal({
+export default function DiscardChangesModal({
   isOpen,
   onClose,
-  onConfirm,
-  title,
-  shiftEndTime,
-  earlyDuration,
-  confirmText = 'Check Out',
-  cancelText = 'Cancel',
-}: ConfirmationModalProps) {
+  onDiscard,
+}: DiscardChangesModalProps) {
   useLockBodyScroll(isOpen);
 
   useEffect(() => {
@@ -47,8 +37,8 @@ export default function ConfirmationModal({
     }
   };
 
-  const handleConfirm = () => {
-    onConfirm();
+  const handleDiscard = () => {
+    onDiscard();
     onClose();
   };
 
@@ -69,9 +59,9 @@ export default function ConfirmationModal({
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Warning Icon */}
+        {/* Neutral Icon */}
         <div className="shrink-0">
-          <WarningModalIcon className="h-10 w-10" />
+          <NeutralModalIcon className="h-10 w-10" />
         </div>
 
         {/* Content */}
@@ -79,36 +69,24 @@ export default function ConfirmationModal({
           {/* Title and Message */}
           <div className="flex flex-col gap-1">
             <h2 className="text-lg font-semibold text-neutral-700 leading-7 tracking-[-0.18px]">
-              {title}
+              Discard Changes?
             </h2>
-            
-            {shiftEndTime && earlyDuration && (
-              <div className="flex flex-col text-base text-neutral-500 tracking-[-0.16px]">
-                <div className="flex items-center gap-1 flex-wrap">
-                  <span className="font-normal leading-6">Your shift ends at</span>
-                  <span className="font-semibold leading-5">{shiftEndTime}</span>
-                  <span className="font-normal leading-6">If you check out</span>
-                </div>
-                <div className="flex items-center gap-1 flex-wrap">
-                  <span className="font-normal leading-6">now, you'll be</span>
-                  <span className="font-semibold leading-5">{earlyDuration}</span>
-                  <span className="font-normal leading-6">early.</span>
-                </div>
-              </div>
-            )}
+            <p className="text-base font-normal text-neutral-500 leading-6 tracking-[-0.16px]">
+              This request isn't finished. All your information will be lost if you leave.
+            </p>
           </div>
 
           {/* Buttons */}
           <div className="flex flex-col gap-2">
-            <ButtonLarge onClick={handleConfirm} variant="primary">
-              {confirmText}
+            <ButtonLarge onClick={handleDiscard} variant="primary">
+              Discard
             </ButtonLarge>
             <button
               onClick={onClose}
               className="h-12 px-5 py-1.5 rounded-[14px] flex items-center justify-center transition-colors hover:bg-neutral-50"
             >
               <span className="text-base font-semibold text-neutral-600 tracking-[-0.16px]">
-                {cancelText}
+                Keep Editing
               </span>
             </button>
           </div>

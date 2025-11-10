@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { getTodaysAttendance, checkIn, checkOut } from '@/lib/actions/attendance';
 import NotificationButton from './components/NotificationButton';
 import AnnouncementBanner from './components/AnnouncementBanner';
 import CheckInOutWidget from './components/CheckInOutWidget';
@@ -44,12 +45,29 @@ export default function Home() {
   const [now, setNow] = useState(new Date());
   const [checkInDateTime, setCheckInDateTime] = useState<Date | null>(null);
   const [checkOutDateTime, setCheckOutDateTime] = useState<Date | null>(null);
-  const [testMode, setTestMode] = useState(false);
   const [showCheckOutConfirm, setShowCheckOutConfirm] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
+  // Fetch today's attendance from database on mount
+  useEffect(() => {
+    async function loadAttendance() {
+      const result = await getTodaysAttendance();
+      if (result.data) {
+        // Convert ISO strings back to Date objects
+        if (result.data.check_in_time) {
+          setCheckInDateTime(new Date(result.data.check_in_time));
+        }
+        if (result.data.check_out_time) {
+          setCheckOutDateTime(new Date(result.data.check_out_time));
+        }
+      }
+    }
+    loadAttendance();
+  }, []);
+
+  // Update clock every second
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 1000);
-
     return () => clearInterval(interval);
   }, []);
 
@@ -88,28 +106,65 @@ export default function Home() {
       ? (now.getTime() >= shiftEnd.getTime() ? 'overtime' : 'onClock')
       : 'preCheckIn';
 
-  const handleCheckIn = () => {
-    const instant = new Date();
-    if (checkInDateTime || instant.getTime() < shiftStart.getTime()) {
+  const handleCheckIn = async () => {
+    if (isLoading || checkInDateTime) {
       return;
     }
 
-    setCheckInDateTime(instant);
+    setIsLoading(true);
+    try {
+      const result = await checkIn();
+      
+      if (result.error) {
+        alert(result.error);
+      return;
+    }
+
+      // Update UI with returned data
+      if (result.data?.check_in_time) {
+        setCheckInDateTime(new Date(result.data.check_in_time));
     setCheckOutDateTime(null);
+      }
+    } catch (error) {
+      console.error('Check-in error:', error);
+      alert('Failed to check in. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleCheckOutRequest = () => {
     setShowCheckOutConfirm(true);
   };
 
-  const handleCheckOut = () => {
-    const instant = new Date();
-    if (!checkInDateTime || checkOutDateTime) {
+  const handleCheckOut = async () => {
+    if (isLoading || !checkInDateTime || checkOutDateTime) {
       return;
     }
 
-    setCheckOutDateTime(instant);
+    setIsLoading(true);
+    try {
+      const result = await checkOut();
+      
+      if (result.error) {
+        alert(result.error);
+        setShowCheckOutConfirm(false);
+      return;
+    }
+
+      // Update UI with returned data
+      if (result.data?.check_out_time) {
+        setCheckOutDateTime(new Date(result.data.check_out_time));
+      }
+      
+      setShowCheckOutConfirm(false);
+    } catch (error) {
+      console.error('Check-out error:', error);
+      alert('Failed to check out. Please try again.');
     setShowCheckOutConfirm(false);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleRequestLeave = () => {
@@ -215,12 +270,14 @@ export default function Home() {
             {/* Check In/Out Widget */}
             <CheckInOutWidget
               shiftStart={shiftStart}
+              shiftEnd={shiftEnd}
               currentTime={now}
               checkInTime={checkInDateTime}
               checkOutTime={checkOutDateTime}
               state={widgetState}
               canCheckIn={canCheckIn}
               canCheckOut={canCheckOut}
+              isLoading={isLoading}
               onCheckIn={handleCheckIn}
               onCheckOut={handleCheckOut}
               onCheckOutRequest={handleCheckOutRequest}
@@ -230,19 +287,10 @@ export default function Home() {
             {/* Attendance Log Section */}
             <div className="flex w-full flex-col gap-4">
               <div className="flex w-full flex-col gap-2.5">
-                <div className="flex items-center justify-between">
                   <p className="text-base font-semibold text-neutral-700 tracking-tight">
                     Attendance Log
                   </p>
-                  <button
-                    onClick={() => setTestMode(!testMode)}
-                    className="text-xs font-semibold text-neutral-600 px-2 py-1 rounded bg-neutral-100 hover:bg-neutral-200 transition-colors"
-                  >
-                    {testMode ? 'Live Mode' : 'Test Mode'}
-                  </button>
-                </div>
                 
-                {!testMode ? (
                   <div className="flex w-full gap-2">
                     <AttendanceCard
                       type="checkin"
@@ -257,142 +305,6 @@ export default function Home() {
                       duration={checkoutDuration}
                     />
                   </div>
-                ) : (
-                  <div className="flex flex-col gap-4">
-                    {/* Test: Not checked in yet */}
-                    <div className="flex flex-col gap-2">
-                      <p className="text-xs font-semibold text-neutral-500">State 1: Not Checked In</p>
-                      <div className="flex w-full gap-2">
-                        <AttendanceCard
-                          type="checkin"
-                          time="--:--"
-                          status={undefined}
-                          duration={undefined}
-                        />
-                        <AttendanceCard
-                          type="checkout"
-                          time="--:--"
-                          status={undefined}
-                          duration={undefined}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Test: Checked in on time */}
-                    <div className="flex flex-col gap-2">
-                      <p className="text-xs font-semibold text-neutral-500">State 2: Checked In (On Time)</p>
-                      <div className="flex w-full gap-2">
-                        <AttendanceCard
-                          type="checkin"
-                          time="10:58"
-                          status="ontime"
-                          duration={undefined}
-            />
-                        <AttendanceCard
-                          type="checkout"
-                          time="--:--"
-                          status="remaining"
-                          duration="3h 15m"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Test: Checked in late */}
-                    <div className="flex flex-col gap-2">
-                      <p className="text-xs font-semibold text-neutral-500">State 3: Checked In (Late)</p>
-                      <div className="flex w-full gap-2">
-                        <AttendanceCard
-                          type="checkin"
-                          time="11:12"
-                          status="late"
-                          duration="12m"
-                        />
-                        <AttendanceCard
-                          type="checkout"
-                          time="--:--"
-                          status="remaining"
-                          duration="2h 45m"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Test: Working overtime */}
-                    <div className="flex flex-col gap-2">
-                      <p className="text-xs font-semibold text-neutral-500">State 4: Working (Overtime)</p>
-                      <div className="flex w-full gap-2">
-                        <AttendanceCard
-                          type="checkin"
-                          time="11:00"
-                          status="ontime"
-                          duration={undefined}
-                        />
-                        <AttendanceCard
-                          type="checkout"
-                          time="--:--"
-                          status="overtime"
-                          duration="1h 30m"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Test: Checked out on time */}
-                    <div className="flex flex-col gap-2">
-                      <p className="text-xs font-semibold text-neutral-500">State 5: Checked Out (On Time)</p>
-                      <div className="flex w-full gap-2">
-                        <AttendanceCard
-                          type="checkin"
-                          time="11:00"
-                          status="ontime"
-                          duration={undefined}
-                        />
-                        <AttendanceCard
-                          type="checkout"
-                          time="19:00"
-                          status="ontime"
-                          duration={undefined}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Test: Checked out early */}
-                    <div className="flex flex-col gap-2">
-                      <p className="text-xs font-semibold text-neutral-500">State 6: Checked Out (Left Early)</p>
-                      <div className="flex w-full gap-2">
-                        <AttendanceCard
-                          type="checkin"
-                          time="11:00"
-                          status="ontime"
-                          duration={undefined}
-                        />
-                        <AttendanceCard
-                          type="checkout"
-                          time="17:30"
-                          status="leftearly"
-                          duration="1h 30m"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Test: Checked out with overtime */}
-                    <div className="flex flex-col gap-2">
-                      <p className="text-xs font-semibold text-neutral-500">State 7: Checked Out (Overtime)</p>
-                      <div className="flex w-full gap-2">
-                        <AttendanceCard
-                          type="checkin"
-                          time="11:00"
-                          status="ontime"
-                          duration={undefined}
-                        />
-                        <AttendanceCard
-                          type="checkout"
-                          time="20:30"
-                          status="overtime"
-                          duration="1h 30m"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Recent Activities */}
@@ -436,8 +348,13 @@ export default function Home() {
         isOpen={showCheckOutConfirm}
         onClose={() => setShowCheckOutConfirm(false)}
         onConfirm={handleCheckOut}
-        title="Confirm Check-Out"
-        message="Are you sure you want to check out now?"
+        title="Check-Out Early?"
+        shiftEndTime={formatTimeWithPeriod(setToHour(now, SHIFT_END_HOUR))}
+        earlyDuration={(() => {
+          const shiftEnd = setToHour(now, SHIFT_END_HOUR);
+          const minutesEarly = Math.floor((shiftEnd.getTime() - now.getTime()) / 60000);
+          return minutesEarly > 0 ? `${minutesEarly} minutes` : '0 minutes';
+        })()}
         confirmText="Check Out"
         cancelText="Cancel"
       />

@@ -30,7 +30,6 @@ export default function FormInput({
 }: FormInputProps) {
   const isFilled = value && value.toString().length > 0;
   const bgClass = bgColor === 'white' ? 'bg-white' : 'bg-neutral-50';
-  const hoverBgClass = bgColor === 'white' ? 'hover:bg-neutral-50' : 'hover:bg-neutral-100';
 
   // Calculate padding: 10px (icon position) + 16px (icon size) + 4px (text padding) = 30px
   const leftPadding = hasLeadIcon ? '30px' : '10px';
@@ -75,8 +74,7 @@ export default function FormInput({
           disabled:cursor-not-allowed
           ${isFilled ? 'text-neutral-700' : ''}
           border-neutral-100
-          ${hoverBgClass}
-          hover:border-neutral-200
+          hover:border-neutral-300
           focus:border-neutral-400
           focus:ring-2
           focus:ring-neutral-100
