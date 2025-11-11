@@ -22,3 +22,35 @@ body {
     -moz-osx-font-smoothing: grayscale;
   }
 }
+
+@layer utilities {
+  @keyframes slide-in-from-top {
+    from {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slide-out-to-top {
+    from {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+  }
+
+  .animate-in {
+    animation: slide-in-from-top 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+  }
+
+  .animate-out {
+    animation: slide-out-to-top 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+  }
+}

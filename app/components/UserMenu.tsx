@@ -1,7 +1,6 @@
 'use client';
 
 import { useAuth } from '@/lib/auth/AuthContext';
-import { useRouter } from 'next/navigation';
 
 /**
  * User menu component that displays user info and sign out button
@@ -9,11 +8,19 @@ import { useRouter } from 'next/navigation';
  */
 export default function UserMenu() {
   const { profile, signOut, loading } = useAuth();
-  const router = useRouter();
 
   const handleSignOut = async () => {
-    await signOut();
-    router.push('/login');
+    try {
+      await signOut();
+      // Use window.location.replace for a hard redirect that clears all state
+      // Small delay to ensure cookies are cleared
+      await new Promise(resolve => setTimeout(resolve, 150));
+      window.location.replace('/login');
+    } catch (error) {
+      console.error('Error during sign out:', error);
+      // Force redirect even on error
+      window.location.replace('/login');
+    }
   };
 
   if (loading || !profile) {

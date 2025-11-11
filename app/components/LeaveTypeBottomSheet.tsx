@@ -148,7 +148,7 @@ export default function LeaveTypeBottomSheet({ selected, onSelect }: LeaveTypeBo
                     </div>
 
                     {/* Radio Button */}
-                    <div className="flex-shrink-0 flex items-center justify-center">
+                    <div className="flex-shrink-0 flex items-center justify-center h-6 w-6">
                       <RadioButton checked={isSelected} />
                     </div>
                   </button>

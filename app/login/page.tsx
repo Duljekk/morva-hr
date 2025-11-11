@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { useToast } from '@/app/contexts/ToastContext';
 import { createClient } from '@/lib/supabase/client';
 import FormInput from '../components/FormInput';
 import ButtonLarge from '../components/ButtonLarge';
@@ -15,6 +16,7 @@ import EyeClosedIcon from '@/app/assets/icons/eye-closed.svg';
 export default function LoginPage() {
   const router = useRouter();
   const { signIn } = useAuth();
+  const { showToast } = useToast();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -39,6 +41,7 @@ export default function LoginPage() {
 
         if (error || !data) {
           setError('Username not found');
+          showToast('danger', 'Login Failed', 'Username not found. Please check your credentials and try again.');
           setIsSubmitting(false);
           return;
         }
@@ -50,7 +53,9 @@ export default function LoginPage() {
       const { error } = await signIn(emailToUse, password);
 
       if (error) {
-        setError(error.message || 'Invalid login credentials');
+        const errorMessage = error.message || 'Invalid login credentials';
+        setError(errorMessage);
+        showToast('danger', 'Login Failed', 'The username or password you entered is incorrect. Please try again.');
         setIsSubmitting(false);
         return;
       }
@@ -59,7 +64,9 @@ export default function LoginPage() {
       router.push('/');
       router.refresh();
     } catch (err) {
-      setError('An unexpected error occurred');
+      const errorMessage = 'An unexpected error occurred';
+      setError(errorMessage);
+      showToast('danger', 'Error', 'An unexpected error occurred. Please try again.');
       setIsSubmitting(false);
     }
   };
@@ -121,13 +128,6 @@ export default function LoginPage() {
                 Your personal dashboard is just a login away. Let&apos;s get your day started.
               </p>
             </div>
-
-            {/* Error Message */}
-            {error && (
-              <div className="mb-4 w-full max-w-[322px] rounded-xl bg-red-50 border border-red-200 px-4 py-3">
-                <p className="text-xs text-red-600 text-center">{error}</p>
-              </div>
-            )}
 
             {/* Login Form */}
             <form onSubmit={handleSubmit} className="flex w-full max-w-[322px] flex-col">

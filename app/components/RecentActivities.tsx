@@ -37,10 +37,12 @@ export default function RecentActivities({ activities }: RecentActivitiesProps) 
               </p>
             </div>
 
-            {/* Activity Card */}
-            <div className="flex justify-end">
-              <div className={`w-[339px] ${dayIndex < activities.length - 1 ? 'border-l-2 border-dashed border-neutral-300' : ''} pl-3.5`}>
-                <div className="flex flex-col rounded-xl bg-[rgba(255,255,255,0.6)] px-3 py-2.5 shadow-[0px_1px_2px_0px_rgba(164,172,185,0.24),0px_0px_0.5px_0.5px_rgba(28,28,28,0.05)]">
+            {/* Activity Card Container */}
+            <div className="flex items-start justify-end pl-4">
+              {/* Middle container with stroke - centered on calendar icon */}
+              <div className={`flex flex-col gap-2.5 flex-1 ${dayIndex < activities.length - 1 ? 'border-l border-dashed border-neutral-300' : ''} pl-3.5`}>
+                {/* Inner container - activity card */}
+                <div className="flex flex-col rounded-xl bg-[rgba(255,255,255,0.6)] px-3 py-2.5 shadow-[0px_1px_2px_0px_rgba(164,172,185,0.24),0px_0px_0.5px_0.5px_rgba(28,28,28,0.05)] w-full">
                   {day.activities.map((activity, actIndex) => (
                     <div key={actIndex}>
                       {/* Activity Item */}

@@ -316,22 +316,27 @@ export default function Home() {
               onClick={async () => {
                 console.log('🔴 Logout button clicked!');
                 
-                // Set a safety timeout to redirect even if signOut hangs
+                // Set a safety timeout to redirect even if signOut hangs (6 seconds)
                 const redirectTimeout = setTimeout(() => {
                   console.log('🔴 Safety timeout triggered, forcing redirect...');
                   window.location.replace('/login');
-                }, 4000);
+                }, 6000);
                 
                 try {
                   console.log('🔴 Calling signOut...');
                   await signOut();
                   console.log('🔴 SignOut completed successfully');
+                  clearTimeout(redirectTimeout);
+                  
+                  // Small delay to ensure cookies are fully cleared
+                  await new Promise(resolve => setTimeout(resolve, 150));
+                  
+                  console.log('🔴 Redirecting to login...');
+                  window.location.replace('/login');
                 } catch (error) {
                   console.error('🔴 Error during logout:', error);
-                } finally {
                   clearTimeout(redirectTimeout);
-                  console.log('🔴 Forcing page reload and redirect to login...');
-                  // Force a hard reload to /login to clear all state
+                  // Force redirect even on error
                   window.location.replace('/login');
                 }
               }}
@@ -353,7 +358,22 @@ export default function Home() {
         earlyDuration={(() => {
           const shiftEnd = setToHour(now, SHIFT_END_HOUR);
           const minutesEarly = Math.floor((shiftEnd.getTime() - now.getTime()) / 60000);
-          return minutesEarly > 0 ? `${minutesEarly} minutes` : '0 minutes';
+          
+          if (minutesEarly <= 0) {
+            return '0 minutes';
+          }
+          
+          if (minutesEarly > 60) {
+            const hours = Math.floor(minutesEarly / 60);
+            const minutes = minutesEarly % 60;
+            if (minutes > 0) {
+              return `${hours} hour${hours !== 1 ? 's' : ''} ${minutes} minute${minutes !== 1 ? 's' : ''}`;
+            } else {
+              return `${hours} hour${hours !== 1 ? 's' : ''}`;
+            }
+          }
+          
+          return `${minutesEarly} minutes`;
         })()}
         confirmText="Check Out"
         cancelText="Cancel"

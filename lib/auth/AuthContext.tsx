@@ -87,25 +87,61 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     console.log('🔵 AuthContext: signOut called');
     try {
-      console.log('🔵 AuthContext: About to call supabase.auth.signOut()...');
-      
-      // Create a timeout promise
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('SignOut timeout')), 3000)
+      // Create a promise that resolves when SIGNED_OUT event is received
+      let signedOutResolver: (() => void) | null = null;
+      const signedOutPromise = new Promise<void>((resolve) => {
+        signedOutResolver = resolve;
+      });
+
+      // Set up a one-time listener for SIGNED_OUT event
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+        if (event === 'SIGNED_OUT') {
+          console.log('🔵 AuthContext: SIGNED_OUT event received');
+          if (signedOutResolver) {
+            signedOutResolver();
+            subscription.unsubscribe();
+          }
+        }
+      });
+
+      // Create a timeout promise (5 seconds max wait)
+      const timeoutPromise = new Promise<void>((_, reject) => 
+        setTimeout(() => {
+          subscription.unsubscribe();
+          reject(new Error('SignOut timeout'));
+        }, 5000)
       );
+
+      console.log('🔵 AuthContext: Calling supabase.auth.signOut()...');
       
-      // Race between signOut and timeout
+      // Start the signOut process
       const signOutPromise = supabase.auth.signOut();
       
+      // Wait for both signOut API call and SIGNED_OUT event
       try {
-        const result = await Promise.race([signOutPromise, timeoutPromise]);
-        console.log('🔵 AuthContext: Supabase signOut completed:', result);
-      } catch (timeoutError) {
-        console.warn('🔵 AuthContext: SignOut timed out, continuing anyway:', timeoutError);
+        await Promise.all([
+          signOutPromise.catch(err => {
+            // Log but don't fail - cookies might still be cleared
+            console.warn('🔵 AuthContext: signOut API call had an error:', err);
+          }),
+          Promise.race([signedOutPromise, timeoutPromise]).catch(err => {
+            // If timeout, we'll still continue
+            console.warn('🔵 AuthContext: SIGNED_OUT event timeout:', err);
+          })
+        ]);
+        
+        console.log('🔵 AuthContext: SignOut completed and SIGNED_OUT event received');
+      } catch (error) {
+        console.warn('🔵 AuthContext: SignOut timed out or had error, but continuing:', error);
+      } finally {
+        subscription.unsubscribe();
       }
       
+      // Small delay to ensure cookies are cleared
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       console.log('🔵 AuthContext: Clearing local state...');
-      // Clear local state regardless of API result
+      // Clear local state
       setUser(null);
       setProfile(null);
       setSession(null);

@@ -54,11 +54,11 @@ export default function ConfirmationModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-6"
       onClick={handleBackdropClick}
     >
       <div 
-        className="mx-6 w-full max-w-[354px] bg-white flex flex-col gap-3"
+        className="w-full max-w-[354px] bg-white flex flex-col gap-3"
         style={{
           borderRadius: '14px',
           paddingTop: '24px',
