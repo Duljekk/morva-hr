@@ -20,6 +20,16 @@ interface RecentActivitiesProps {
 }
 
 export default function RecentActivities({ activities }: RecentActivitiesProps) {
+  // Helper function to format date like "October 30" (same format as backend)
+  const formatActivityDate = (date: Date): string => {
+    const month = date.toLocaleDateString('en-US', { month: 'long' });
+    const day = date.getDate();
+    return `${month} ${day}`;
+  };
+
+  // Get today's formatted date for comparison
+  const todayDateString = formatActivityDate(new Date());
+
   return (
     <div className="flex flex-col gap-3 w-full">
       <p className="text-base font-semibold text-neutral-700 tracking-tight">
@@ -33,7 +43,7 @@ export default function RecentActivities({ activities }: RecentActivitiesProps) 
             <div className="w-fit flex items-center gap-0.5 rounded-3xl bg-[rgba(255,255,255,0.6)] px-2 py-1 shadow-[0px_1px_2px_0px_rgba(164,172,185,0.24),0px_0px_0.5px_0.5px_rgba(28,28,28,0.08)]">
               <CalendarIcon className="h-3.5 w-3.5 shrink-0" />
               <p className="text-xs font-semibold text-neutral-700">
-                {day.date}
+                {day.date === todayDateString ? 'Today' : day.date}
               </p>
             </div>
 

@@ -1,6 +1,7 @@
 'use client';
 
 import ButtonLarge from './ButtonLarge';
+import LeaveStatusCard from './LeaveStatusCard';
 
 type WidgetState = 'preCheckIn' | 'onClock' | 'overtime' | 'checkedOut';
 
@@ -18,6 +19,8 @@ interface CheckInOutWidgetProps {
   onCheckOut: () => void;
   onCheckOutRequest: () => void;
   onRequestLeave: () => void;
+  hasActiveLeave?: boolean;
+  activeLeaveInfo?: { status: string; startDate: string; endDate: string; leaveTypeName?: string };
 }
 
 const formatClockTime = (date: Date) =>
@@ -61,16 +64,41 @@ export default function CheckInOutWidget({
   onCheckOut,
   onCheckOutRequest,
   onRequestLeave,
+  hasActiveLeave = false,
+  activeLeaveInfo,
 }: CheckInOutWidgetProps) {
-  const heading = state === 'checkedOut'
-    ? "You've Checked Out"
-    : state === 'preCheckIn'
-      ? 'Ready To Start Your Day?'
-      : "You're On The Clock";
+  // Check if today is within the leave date range
+  const isOnLeaveToday = (() => {
+    if (!activeLeaveInfo || activeLeaveInfo.status !== 'approved') {
+      return false;
+    }
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startDate = new Date(activeLeaveInfo.startDate + 'T00:00:00');
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(activeLeaveInfo.endDate + 'T00:00:00');
+    endDate.setHours(0, 0, 0, 0);
+    
+    return today >= startDate && today <= endDate;
+  })();
+
+  const heading = isOnLeaveToday
+    ? "Enjoy Your Day Off!"
+    : state === 'checkedOut'
+      ? "You've Checked Out"
+      : state === 'preCheckIn'
+        ? 'Ready To Start Your Day?'
+        : "You're On The Clock";
 
   const shiftStartLabel = formatTimeWithPeriod(shiftStart);
 
   const subtitle = (() => {
+    if (isOnLeaveToday) {
+      const leaveTypeName = activeLeaveInfo?.leaveTypeName || 'Leave';
+      return `You are on ${leaveTypeName} today.`;
+    }
+
     if (state === 'checkedOut') {
       return 'See you tomorrow!';
     }
@@ -112,6 +140,7 @@ export default function CheckInOutWidget({
 
   const primaryDisabled = (() => {
     if (isLoading) return true; // Disable during operations
+    if (isOnLeaveToday) return true; // Disable check-in/out when on leave
     
     switch (state) {
       case 'preCheckIn':
@@ -169,19 +198,31 @@ export default function CheckInOutWidget({
 
       {/* Bottom Container */}
       <div className="flex flex-col gap-2 px-[18px] pb-[30px] pt-5">
-        <ButtonLarge
-          onClick={handlePrimaryClick}
-          disabled={primaryDisabled}
-          variant="primary"
-        >
-          {primaryLabel}
-        </ButtonLarge>
-        <ButtonLarge
-          onClick={onRequestLeave}
-          variant="secondary"
-        >
-          Request Leave
-        </ButtonLarge>
+        {!isOnLeaveToday && (
+          <ButtonLarge
+            onClick={handlePrimaryClick}
+            disabled={primaryDisabled}
+            variant="primary"
+          >
+            {primaryLabel}
+          </ButtonLarge>
+        )}
+        {hasActiveLeave && activeLeaveInfo ? (
+          <LeaveStatusCard
+            status={activeLeaveInfo.status as 'pending' | 'approved'}
+            startDate={activeLeaveInfo.startDate}
+            endDate={activeLeaveInfo.endDate}
+            onClick={onRequestLeave}
+          />
+        ) : (
+          <ButtonLarge
+            onClick={onRequestLeave}
+            variant="secondary"
+            disabled={hasActiveLeave}
+          >
+            Request Leave
+          </ButtonLarge>
+        )}
       </div>
     </div>
   );

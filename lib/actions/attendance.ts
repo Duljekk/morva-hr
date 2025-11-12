@@ -99,9 +99,13 @@ export async function checkIn() {
     // Calculate shift start time for today
     const shiftStart = new Date(now);
     shiftStart.setHours(userData.shift_start_hour, 0, 0, 0);
+    shiftStart.setSeconds(0, 0); // Ensure seconds and milliseconds are 0
 
-    // Determine check-in status: late if after shift start
-    const checkInStatus = now > shiftStart ? 'late' : 'ontime';
+    // Determine check-in status: late if check-in time is >= shift start + 1 minute
+    // This allows for exact time (11:00:00) or up to 59 seconds after (11:00:59) to be considered ontime
+    // Only 11:01:00 and later will be marked as late
+    const shiftStartWithTolerance = new Date(shiftStart.getTime() + 60000); // Add 1 minute tolerance (60 seconds)
+    const checkInStatus = now >= shiftStartWithTolerance ? 'late' : 'ontime';
 
     // Check if already checked in today
     const { data: existing } = await supabase
@@ -247,6 +251,159 @@ export async function checkOut() {
   } catch (error) {
     console.error('Unexpected error in checkOut:', error);
     return { error: 'Failed to check out' };
+  }
+}
+
+// Type definitions for recent activities
+export interface Activity {
+  type: 'checkin' | 'checkout' | 'leave';
+  time: string;
+  status?: 'late' | 'ontime' | 'overtime' | 'leftearly';
+}
+
+export interface DayActivity {
+  date: string;
+  activities: Activity[];
+}
+
+/**
+ * GET RECENT ACTIVITIES
+ * 
+ * Logic:
+ * 1. Get current user from auth session
+ * 2. Query attendance_records for the last N days (default 14 days)
+ * 3. Group records by date
+ * 4. Format into DayActivity[] structure with check-in and check-out activities
+ * 5. Return formatted activities sorted by date (newest first)
+ */
+export async function getRecentActivities(days: number = 14): Promise<{ data?: DayActivity[]; error?: string }> {
+  try {
+    const supabase = await createClient();
+    
+    // Get current user
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return { error: 'Not authenticated' };
+    }
+
+    // Calculate date range (last N days, including today)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startDate = new Date(today);
+    startDate.setDate(startDate.getDate() - (days - 1)); // Include today, so subtract (days - 1)
+
+    const todayDateString = today.toISOString().split('T')[0];
+    const startDateString = startDate.toISOString().split('T')[0];
+
+    console.log('[getRecentActivities] Fetching activities for user:', user.id);
+    console.log('[getRecentActivities] Date range:', { startDateString, todayDateString, days });
+
+    // Query attendance records for the date range (including today)
+    const { data: records, error: fetchError } = await supabase
+      .from('attendance_records')
+      .select('date, check_in_time, check_out_time, check_in_status, check_out_status')
+      .eq('user_id', user.id)
+      .gte('date', startDateString)
+      .lte('date', todayDateString) // Include today
+      .order('date', { ascending: false });
+
+    if (fetchError) {
+      console.error('[getRecentActivities] Error fetching records:', fetchError);
+      return { error: 'Failed to fetch recent activities' };
+    }
+
+    console.log('[getRecentActivities] Found records:', records?.length || 0);
+
+    if (!records || records.length === 0) {
+      console.log('[getRecentActivities] No records found, returning empty array');
+      return { data: [] };
+    }
+
+    // Helper function to format date (e.g., "October 30")
+    const formatDate = (dateString: string): string => {
+      const date = new Date(dateString + 'T00:00:00');
+      const month = date.toLocaleDateString('en-US', { month: 'long' });
+      const day = date.getDate();
+      return `${month} ${day}`;
+    };
+
+    // Helper function to format time (e.g., "11:12")
+    const formatTime = (timestamp: string): string => {
+      const date = new Date(timestamp);
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      return `${hours}:${minutes}`;
+    };
+
+    // Group records by date and format activities
+    const activitiesByDate = new Map<string, Activity[]>();
+
+    for (const record of records) {
+      const dateKey = record.date;
+      
+      // Debug: Log today's record if found
+      if (dateKey === todayDateString) {
+        console.log('[getRecentActivities] Found today\'s record:', {
+          date: dateKey,
+          check_in_time: record.check_in_time,
+          check_out_time: record.check_out_time,
+          check_in_status: record.check_in_status,
+          check_out_status: record.check_out_status,
+        });
+      }
+      
+      if (!activitiesByDate.has(dateKey)) {
+        activitiesByDate.set(dateKey, []);
+      }
+
+      const activities = activitiesByDate.get(dateKey)!;
+
+      // Add check-in activity if exists
+      if (record.check_in_time) {
+        activities.push({
+          type: 'checkin',
+          time: formatTime(record.check_in_time),
+          status: record.check_in_status || undefined,
+        });
+      }
+
+      // Add check-out activity if exists
+      if (record.check_out_time) {
+        activities.push({
+          type: 'checkout',
+          time: formatTime(record.check_out_time),
+          status: record.check_out_status || undefined,
+        });
+      }
+    }
+
+    // Convert map to array and format
+    // Sort by date first (newest first), then format
+    // Filter out dates with no activities (shouldn't happen, but just in case)
+    const dayActivities: DayActivity[] = Array.from(activitiesByDate.entries())
+      .filter(([date, activities]) => activities.length > 0) // Only include dates with activities
+      .sort(([dateA], [dateB]) => {
+        // Sort by date string (YYYY-MM-DD format) - newest first
+        return dateB.localeCompare(dateA);
+      })
+      .map(([date, activities]) => ({
+        date: formatDate(date),
+        activities: activities.sort((a, b) => {
+          // Sort activities by time (check-in before check-out typically)
+          if (a.type === 'checkin' && b.type === 'checkout') return -1;
+          if (a.type === 'checkout' && b.type === 'checkin') return 1;
+          return a.time.localeCompare(b.time);
+        }),
+      }));
+
+    console.log('[getRecentActivities] Formatted activities:', dayActivities.length, 'days');
+    console.log('[getRecentActivities] Today date string:', todayDateString);
+    console.log('[getRecentActivities] Sample records:', records?.slice(0, 3));
+
+    return { data: dayActivities };
+  } catch (error) {
+    console.error('Unexpected error in getRecentActivities:', error);
+    return { error: 'Failed to fetch recent activities' };
   }
 }
 

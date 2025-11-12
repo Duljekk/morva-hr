@@ -329,6 +329,67 @@ export async function getAllLeaveBalances(): Promise<{ data?: LeaveBalance[]; er
 }
 
 /**
+ * Check if user has an active leave request
+ * Active requests are those with status 'pending' or 'approved' where end_date >= current date
+ */
+export async function hasActiveLeaveRequest(): Promise<{ 
+  data?: { hasActive: boolean; request?: LeaveRequest }; 
+  error?: string 
+}> {
+  try {
+    const supabase = await createClient();
+
+    // Verify authentication
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      console.error('[hasActiveLeaveRequest] Auth error:', authError);
+      return { error: 'You must be logged in' };
+    }
+
+    const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
+
+    // Query for active leave requests with leave type name
+    const { data: activeRequest, error: fetchError } = await supabase
+      .from('leave_requests')
+      .select(`
+        *,
+        leave_types:leave_type_id (
+          name
+        )
+      `)
+      .eq('user_id', user.id)
+      .in('status', ['pending', 'approved'])
+      .gte('end_date', today) // end_date >= current date
+      .maybeSingle(); // Returns null if no record found, instead of error
+
+    if (fetchError) {
+      console.error('[hasActiveLeaveRequest] Error fetching active leave:', fetchError);
+      return { error: 'Failed to check for active leave request' };
+    }
+
+    // Format the response with leave type name
+    const formattedRequest = activeRequest ? {
+      ...activeRequest,
+      leaveTypeName: (activeRequest.leave_types as any)?.name || undefined,
+    } : undefined;
+
+    return {
+      data: {
+        hasActive: !!activeRequest,
+        request: formattedRequest || undefined,
+      },
+    };
+  } catch (error) {
+    console.error('[hasActiveLeaveRequest] Unexpected error:', error);
+    return { error: 'An unexpected error occurred' };
+  }
+}
+
+/**
  * Submit a leave request with attachments
  */
 export async function submitLeaveRequest(
@@ -350,6 +411,22 @@ export async function submitLeaveRequest(
     }
 
     console.log('[submitLeaveRequest] User authenticated:', user.id);
+
+    // Check for existing active leave request
+    const activeLeaveCheck = await hasActiveLeaveRequest();
+    if (activeLeaveCheck.error) {
+      console.error('[submitLeaveRequest] Error checking active leave:', activeLeaveCheck.error);
+      return { error: 'Failed to verify leave request status. Please try again.' };
+    }
+
+    if (activeLeaveCheck.data?.hasActive) {
+      const activeRequest = activeLeaveCheck.data.request;
+      const status = activeRequest?.status || 'active';
+      console.log('[submitLeaveRequest] User already has active leave request:', activeRequest?.id);
+      return { 
+        error: `You already have an active leave request (${status}). Please wait for it to be processed or cancel it before submitting a new one.` 
+      };
+    }
 
     // Validate dates
     const startDate = new Date(requestData.startDate);
@@ -421,6 +498,120 @@ export async function submitLeaveRequest(
   } catch (error) {
     console.error('Submit leave request error:', error);
     return { error: 'An unexpected error occurred while submitting your request' };
+  }
+}
+
+/**
+ * Approve a leave request (HR Admin only)
+ * Sets approved_by and approved_at fields as required by database constraint
+ */
+export async function approveLeaveRequest(
+  requestId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createClient();
+
+    // Verify authentication
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return { success: false, error: 'You must be logged in' };
+    }
+
+    // Check if user is HR admin
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (userError || !userData || userData.role !== 'hr_admin') {
+      return { success: false, error: 'Only HR admins can approve leave requests' };
+    }
+
+    // Update request with status, approved_by, and approved_at
+    const { error } = await supabase
+      .from('leave_requests')
+      .update({
+        status: 'approved',
+        approved_by: user.id,
+        approved_at: new Date().toISOString(),
+      })
+      .eq('id', requestId)
+      .eq('status', 'pending'); // Can only approve pending requests
+
+    if (error) {
+      console.error('Approve request error:', error);
+      return { success: false, error: 'Failed to approve request. It may have already been processed.' };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Approve request error:', error);
+    return { success: false, error: 'An unexpected error occurred' };
+  }
+}
+
+/**
+ * Reject a leave request (HR Admin only)
+ * Sets approved_by, approved_at, and rejection_reason as required by database constraint
+ */
+export async function rejectLeaveRequest(
+  requestId: string,
+  rejectionReason: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createClient();
+
+    // Verify authentication
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return { success: false, error: 'You must be logged in' };
+    }
+
+    // Check if user is HR admin
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (userError || !userData || userData.role !== 'hr_admin') {
+      return { success: false, error: 'Only HR admins can reject leave requests' };
+    }
+
+    if (!rejectionReason || rejectionReason.trim().length === 0) {
+      return { success: false, error: 'Rejection reason is required' };
+    }
+
+    // Update request with status, approved_by, approved_at, and rejection_reason
+    const { error } = await supabase
+      .from('leave_requests')
+      .update({
+        status: 'rejected',
+        approved_by: user.id,
+        approved_at: new Date().toISOString(),
+        rejection_reason: rejectionReason.trim(),
+      })
+      .eq('id', requestId)
+      .eq('status', 'pending'); // Can only reject pending requests
+
+    if (error) {
+      console.error('Reject request error:', error);
+      return { success: false, error: 'Failed to reject request. It may have already been processed.' };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Reject request error:', error);
+    return { success: false, error: 'An unexpected error occurred' };
   }
 }
 

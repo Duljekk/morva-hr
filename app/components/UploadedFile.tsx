@@ -72,8 +72,10 @@ export default function UploadedFile({
       {onRemove && !isUploading && (
         <div className="flex items-center justify-center -ml-[10px] -mt-1">
         <button
+          type="button"
           onClick={(e) => {
             e.stopPropagation();
+            e.preventDefault();
             onRemove();
           }}
             className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-white border border-neutral-100 hover:bg-neutral-50 transition-colors p-[3px]"

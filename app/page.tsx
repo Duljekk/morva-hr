@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { getTodaysAttendance, checkIn, checkOut } from '@/lib/actions/attendance';
+import { useToast } from '@/app/contexts/ToastContext';
+import { getTodaysAttendance, checkIn, checkOut, getRecentActivities, type DayActivity } from '@/lib/actions/attendance';
+import { hasActiveLeaveRequest } from '@/lib/actions/leaves';
 import NotificationButton from './components/NotificationButton';
 import AnnouncementBanner from './components/AnnouncementBanner';
 import CheckInOutWidget from './components/CheckInOutWidget';
@@ -47,6 +49,9 @@ export default function Home() {
   const [checkOutDateTime, setCheckOutDateTime] = useState<Date | null>(null);
   const [showCheckOutConfirm, setShowCheckOutConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [recentActivities, setRecentActivities] = useState<DayActivity[]>([]);
+  const [hasActiveLeave, setHasActiveLeave] = useState(false);
+  const [activeLeaveInfo, setActiveLeaveInfo] = useState<{ status: string; startDate: string; endDate: string; leaveTypeName?: string } | undefined>(undefined);
 
   // Fetch today's attendance from database on mount
   useEffect(() => {
@@ -64,6 +69,163 @@ export default function Home() {
     }
     loadAttendance();
   }, []);
+
+  // Fetch active leave status on mount
+  useEffect(() => {
+    async function loadActiveLeaveStatus() {
+      const result = await hasActiveLeaveRequest();
+      if (result.data) {
+        setHasActiveLeave(result.data.hasActive);
+        if (result.data.request) {
+          // Get leave type name from the request (now included in response from hasActiveLeaveRequest)
+          const leaveTypeName = (result.data.request as any).leaveTypeName || 
+            (() => {
+              // Fallback to mapping if leaveTypeName not available
+              const leaveTypeMap: Record<string, string> = {
+                'annual': 'Annual Leave',
+                'sick': 'Sick Leave',
+                'unpaid': 'Unpaid Leave',
+              };
+              return leaveTypeMap[result.data.request.leave_type_id] || 'Leave';
+            })();
+          
+          setActiveLeaveInfo({
+            status: result.data.request.status,
+            startDate: result.data.request.start_date,
+            endDate: result.data.request.end_date,
+            leaveTypeName,
+          });
+        }
+      } else if (result.error) {
+        console.error('Error loading active leave status:', result.error);
+        // On error, default to false (allow leave requests)
+        setHasActiveLeave(false);
+      }
+    }
+    loadActiveLeaveStatus();
+  }, []);
+
+  // Calculate shift times (needed for loadRecentActivities)
+  const shiftStart = useMemo(() => setToHour(now, SHIFT_START_HOUR), [now]);
+  const shiftEnd = useMemo(() => setToHour(now, SHIFT_END_HOUR), [now]);
+
+  // Function to format date like "October 30"
+  const formatActivityDate = useCallback((date: Date): string => {
+    const month = date.toLocaleDateString('en-US', { month: 'long' });
+    const day = date.getDate();
+    return `${month} ${day}`;
+  }, []);
+
+  // Function to format time like "11:12"
+  const formatActivityTime = useCallback((date: Date): string => {
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+  }, []);
+
+  // Function to load recent activities
+  const loadRecentActivities = useCallback(async () => {
+    const result = await getRecentActivities(14);
+    if (result.data) {
+      let activities = result.data;
+      
+      // Check if today's activities are included
+      const todayDateString = formatActivityDate(new Date());
+      const todayInActivities = activities.find(day => day.date === todayDateString);
+      
+      // Only merge today's activities if they're NOT already in the backend response
+      // This ensures we use the correct status from the database
+      if (!todayInActivities && (checkInDateTime || checkOutDateTime)) {
+        // Calculate shift times when needed (using check-in date for accuracy)
+        const referenceDate = checkInDateTime || checkOutDateTime || new Date();
+        const currentShiftStart = setToHour(referenceDate, SHIFT_START_HOUR);
+        const currentShiftEnd = setToHour(referenceDate, SHIFT_END_HOUR);
+        
+        const todayActivities: typeof activities[0]['activities'] = [];
+        
+        // Add check-in activity if exists
+        if (checkInDateTime) {
+          // Use same logic as backend: 1 minute tolerance (check-in at 11:00:00 to 11:00:59 is ontime)
+          const shiftStartWithTolerance = new Date(currentShiftStart.getTime() + 60000); // Add 1 minute tolerance
+          const checkInStatus = checkInDateTime.getTime() >= shiftStartWithTolerance.getTime() ? 'late' : 'ontime';
+          todayActivities.push({
+            type: 'checkin' as const,
+            time: formatActivityTime(checkInDateTime),
+            status: checkInStatus,
+          });
+        }
+        
+        // Add check-out activity if exists
+        if (checkOutDateTime) {
+          const checkOutStatus = checkOutDateTime.getTime() > currentShiftEnd.getTime() 
+            ? 'overtime' 
+            : checkOutDateTime.getTime() < currentShiftEnd.getTime() 
+              ? 'leftearly' 
+              : 'ontime';
+          todayActivities.push({
+            type: 'checkout' as const,
+            time: formatActivityTime(checkOutDateTime),
+            status: checkOutStatus,
+          });
+        }
+        
+        // Add today's entry at the beginning (newest first) only if we have activities
+        if (todayActivities.length > 0) {
+          activities = [{ date: todayDateString, activities: todayActivities }, ...activities];
+        }
+      }
+      
+      setRecentActivities(activities);
+    } else if (result.error) {
+      console.error('Error loading recent activities:', result.error);
+      
+      // Even on error, try to show today's activities if we have them
+      if (checkInDateTime || checkOutDateTime) {
+        // Calculate shift times when needed
+        const referenceDate = checkInDateTime || checkOutDateTime || new Date();
+        const currentShiftStart = setToHour(referenceDate, SHIFT_START_HOUR);
+        const currentShiftEnd = setToHour(referenceDate, SHIFT_END_HOUR);
+        
+        const todayDateString = formatActivityDate(new Date());
+        const todayActivities: typeof recentActivities[0]['activities'] = [];
+        
+        if (checkInDateTime) {
+          // Use same logic as backend: 1 minute tolerance (check-in at 11:00:00 to 11:00:59 is ontime)
+          const shiftStartWithTolerance = new Date(currentShiftStart.getTime() + 60000); // Add 1 minute tolerance
+          const checkInStatus = checkInDateTime.getTime() >= shiftStartWithTolerance.getTime() ? 'late' : 'ontime';
+          todayActivities.push({
+            type: 'checkin' as const,
+            time: formatActivityTime(checkInDateTime),
+            status: checkInStatus,
+          });
+        }
+        
+        if (checkOutDateTime) {
+          const checkOutStatus = checkOutDateTime.getTime() > currentShiftEnd.getTime() 
+            ? 'overtime' 
+            : checkOutDateTime.getTime() < currentShiftEnd.getTime() 
+              ? 'leftearly' 
+              : 'ontime';
+          todayActivities.push({
+            type: 'checkout' as const,
+            time: formatActivityTime(checkOutDateTime),
+            status: checkOutStatus,
+          });
+        }
+        
+        if (todayActivities.length > 0) {
+          setRecentActivities([{ date: todayDateString, activities: todayActivities }]);
+        } else {
+          setRecentActivities([]);
+        }
+      } else {
+        setRecentActivities([]);
+      }
+    }
+  }, [checkInDateTime, checkOutDateTime, formatActivityDate, formatActivityTime]);
+
+  // Fetch recent activities from database on mount and when check-in/check-out changes
+  useEffect(() => {
+    loadRecentActivities();
+  }, [loadRecentActivities]);
 
   // Update clock every second
   useEffect(() => {
@@ -92,9 +254,6 @@ export default function Home() {
     return `It's ${dayName}, ${getOrdinalSuffix(day)} ${month} ${year}`;
   }, []);
 
-  const shiftStart = useMemo(() => setToHour(now, SHIFT_START_HOUR), [now]);
-  const shiftEnd = useMemo(() => setToHour(now, SHIFT_END_HOUR), [now]);
-
   // Determine widget state
   const isCheckedIn = !!checkInDateTime && !checkOutDateTime;
   const canCheckIn = !checkInDateTime && now.getTime() >= shiftStart.getTime();
@@ -120,10 +279,24 @@ export default function Home() {
       return;
     }
 
-      // Update UI with returned data
+      // Redirect to success page with check-in data
       if (result.data?.check_in_time) {
-        setCheckInDateTime(new Date(result.data.check_in_time));
-    setCheckOutDateTime(null);
+        const checkInTime = new Date(result.data.check_in_time);
+        const checkInStatus = result.data.check_in_status || 'ontime';
+        
+        // Calculate time difference from shift start
+        const shiftStart = setToHour(checkInTime, SHIFT_START_HOUR);
+        const timeDiffMs = checkInTime.getTime() - shiftStart.getTime();
+        const timeDiffMinutes = Math.floor(timeDiffMs / 60000);
+        
+        // Redirect to success page with check-in data as URL params
+        const params = new URLSearchParams({
+          time: checkInTime.toISOString(),
+          status: checkInStatus,
+          minutesDiff: timeDiffMinutes.toString(),
+        });
+        router.push(`/check-in-success?${params.toString()}`);
+        return; // Don't update state here, let the success page handle it
       }
     } catch (error) {
       console.error('Check-in error:', error);
@@ -155,6 +328,7 @@ export default function Home() {
       // Update UI with returned data
       if (result.data?.check_out_time) {
         setCheckOutDateTime(new Date(result.data.check_out_time));
+        // Recent activities will refresh automatically via useEffect
       }
       
       setShowCheckOutConfirm(false);
@@ -176,12 +350,22 @@ export default function Home() {
   };
 
   // Check-in card data
+  // Calculate shift start time based on the check-in date, not current time
+  const shiftStartForCheckIn = useMemo(() => {
+    return checkInDateTime ? setToHour(checkInDateTime, SHIFT_START_HOUR) : null;
+  }, [checkInDateTime]);
+
   const checkInCardTime = checkInDateTime ? formatClockTime(checkInDateTime) : '--:--';
-  const checkInStatus = checkInDateTime 
-    ? (checkInDateTime.getTime() > shiftStart.getTime() ? 'late' : 'ontime')
+  const checkInStatus = checkInDateTime && shiftStartForCheckIn
+    ? (() => {
+        // Add 1 minute tolerance to shift start time
+        const shiftStartWithTolerance = new Date(shiftStartForCheckIn.getTime() + 60000); // 60 seconds = 1 minute
+        // Only mark as late if check-in time is >= shift start + 1 minute (11:01:00 and later)
+        return checkInDateTime.getTime() >= shiftStartWithTolerance.getTime() ? 'late' : 'ontime';
+      })()
     : undefined;
-  const checkInDuration = checkInDateTime && checkInDateTime.getTime() > shiftStart.getTime()
-    ? formatDurationFromMs(checkInDateTime.getTime() - shiftStart.getTime())
+  const checkInDuration = checkInDateTime && shiftStartForCheckIn && checkInDateTime.getTime() > shiftStartForCheckIn.getTime()
+    ? formatDurationFromMs(checkInDateTime.getTime() - shiftStartForCheckIn.getTime())
     : undefined;
 
   // Check-out card data
@@ -218,23 +402,6 @@ export default function Home() {
         ? formatDurationFromMs(remainingToShiftEndMs)
         : undefined;
 
-  // Sample data for recent activities
-  const recentActivities = [
-    {
-      date: 'October 30',
-      activities: [
-        { type: 'checkin' as const, time: '11:12', status: 'late' as const },
-        { type: 'checkout' as const, time: '19:30', status: 'ontime' as const },
-      ],
-    },
-    {
-      date: 'October 29',
-      activities: [
-        { type: 'checkin' as const, time: '10:58', status: 'ontime' as const },
-        { type: 'checkout' as const, time: '18:15', status: 'leftearly' as const },
-      ],
-    },
-  ];
 
   return (
     <div className="relative min-h-screen w-full bg-neutral-50">
@@ -282,6 +449,8 @@ export default function Home() {
               onCheckOut={handleCheckOut}
               onCheckOutRequest={handleCheckOutRequest}
               onRequestLeave={handleRequestLeave}
+              hasActiveLeave={hasActiveLeave}
+              activeLeaveInfo={activeLeaveInfo}
             />
 
             {/* Attendance Log Section */}

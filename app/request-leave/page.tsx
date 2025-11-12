@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeftIcon } from '../components/Icons';
 import Calendar from '../components/Calendar';
@@ -15,7 +15,7 @@ import DiscardChangesModal from '../components/DiscardChangesModal';
 import ArrowCalendarIcon from '@/app/assets/icons/arrow-calendar.svg';
 import LeaveFullDayIcon from '@/app/assets/icons/leave-fullday.svg';
 import LeaveHalfDayIcon from '@/app/assets/icons/leave-halfday.svg';
-import { uploadLeaveAttachment, deleteLeaveAttachment, submitLeaveRequest } from '@/lib/actions/leaves';
+import { uploadLeaveAttachment, deleteLeaveAttachment, submitLeaveRequest, hasActiveLeaveRequest } from '@/lib/actions/leaves';
 import { validateFile } from '@/lib/utils/fileUpload';
 
 interface UploadedFileData {
@@ -43,9 +43,30 @@ export default function RequestLeavePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [showDiscardModal, setShowDiscardModal] = useState(false);
+  const [activeLeaveMessage, setActiveLeaveMessage] = useState<string | null>(null);
   
   // Check if form has any changes
   const hasChanges = reason.trim() !== '' || uploadedFiles.length > 0;
+
+  // Check for active leave request on page load
+  useEffect(() => {
+    async function checkActiveLeave() {
+      const result = await hasActiveLeaveRequest();
+      if (result.data?.hasActive && result.data.request) {
+        const request = result.data.request;
+        const status = request.status === 'pending' ? 'pending approval' : 'approved';
+        const endDate = new Date(request.end_date).toLocaleDateString('en-US', { 
+          month: 'long', 
+          day: 'numeric',
+          year: 'numeric'
+        });
+        setActiveLeaveMessage(
+          `You already have an active leave request (${status}) that ends on ${endDate}. Please wait for it to be processed or cancel it before submitting a new request.`
+        );
+      }
+    }
+    checkActiveLeave();
+  }, []);
   
   // Handle back button click
   const handleBackClick = () => {
@@ -355,6 +376,13 @@ export default function RequestLeavePage() {
             )}
           </div>
 
+          {/* Active Leave Message */}
+          {activeLeaveMessage && (
+            <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-700">
+              {activeLeaveMessage}
+            </div>
+          )}
+
           {/* Error Message */}
           {formError && (
             <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-600">
@@ -367,7 +395,7 @@ export default function RequestLeavePage() {
             type="submit"
             variant="primary"
             className="mt-3"
-            disabled={isSubmitting || uploadedFiles.some(f => f.isUploading)}
+            disabled={isSubmitting || uploadedFiles.some(f => f.isUploading) || !!activeLeaveMessage}
           >
             {isSubmitting ? 'Submitting...' : 'Send Request'}
           </ButtonLarge>

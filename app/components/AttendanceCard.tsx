@@ -46,29 +46,29 @@ export default function AttendanceCard({ type, time, status, duration }: Attenda
           {/* Status Badge */}
           <div className="flex items-center gap-1">
             {status === 'late' && (
-              <p className="text-xs font-semibold text-amber-600 tracking-tight">
-                Late
-              </p>
+                <p className="text-xs font-semibold text-amber-600 tracking-tight">
+                  Late
+                </p>
             )}
             {status === 'ontime' && (
-              <p className="text-xs font-semibold text-emerald-600 tracking-tight">
-                On Time
-              </p>
+                <p className="text-xs font-semibold text-emerald-600 tracking-tight">
+                  On Time
+                </p>
             )}
             {status === 'overtime' && (
               <p className="text-xs font-semibold text-neutral-500 tracking-tight">
-                Overtime
-              </p>
+                  Overtime
+                </p>
             )}
             {status === 'leftearly' && (
-              <p className="text-xs font-semibold text-amber-600 tracking-tight">
-                Left Early
-              </p>
+                <p className="text-xs font-semibold text-amber-600 tracking-tight">
+                  Left Early
+                </p>
             )}
             {status === 'remaining' && (
-              <p className="text-xs font-semibold text-neutral-500 tracking-tight">
-                Remaining
-              </p>
+                <p className="text-xs font-semibold text-neutral-500 tracking-tight">
+                  Remaining
+                </p>
             )}
           </div>
 

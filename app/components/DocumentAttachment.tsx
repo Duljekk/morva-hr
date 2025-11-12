@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useRef } from 'react';
 import DoctorLetterIcon from '@/app/assets/icons/doctor-letter.svg';
 
 interface DocumentAttachmentProps {
@@ -12,15 +12,21 @@ export default function DocumentAttachment({
   onFileSelect,
   className = '',
 }: DocumentAttachmentProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && onFileSelect) {
       onFileSelect(file);
+      // Reset the input value so the same file can be selected again
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
   const handleClick = () => {
-    document.getElementById('file-upload-input')?.click();
+    fileInputRef.current?.click();
   };
 
   return (
@@ -47,6 +53,7 @@ export default function DocumentAttachment({
         />
       </svg>
       <input
+        ref={fileInputRef}
         id="file-upload-input"
         type="file"
         accept=".pdf"

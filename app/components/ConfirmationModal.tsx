@@ -75,21 +75,30 @@ export default function ConfirmationModal({
         </div>
 
         {/* Content */}
-        <div className="flex flex-col gap-[18px]">
+        <div className="flex flex-col gap-[18px] md:gap-[18px]">
           {/* Title and Message */}
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 md:gap-1">
             <h2 className="text-lg font-semibold text-neutral-700 leading-7 tracking-[-0.18px]">
               {title}
             </h2>
             
             {shiftEndTime && earlyDuration && (
-              <div className="flex flex-col text-base text-neutral-500 tracking-[-0.16px]">
-                <div className="flex items-center gap-1 flex-wrap">
+              <div className="text-base text-neutral-500 tracking-[-0.16px] leading-6">
+                {/* Mobile: Natural text wrapping */}
+                <p className="md:hidden">
+                  <span className="font-normal">Your shift ends at </span>
+                  <span className="font-semibold">{shiftEndTime}.</span>
+                  <span className="font-normal"> If you check out now, you'll be </span>
+                  <span className="font-semibold">{earlyDuration}</span>
+                  <span className="font-normal"> early.</span>
+                </p>
+                {/* Desktop: Original layout with flex */}
+                <div className="hidden md:flex items-center gap-1 flex-wrap">
                   <span className="font-normal leading-6">Your shift ends at</span>
                   <span className="font-semibold leading-5">{shiftEndTime}</span>
                   <span className="font-normal leading-6">If you check out</span>
                 </div>
-                <div className="flex items-center gap-1 flex-wrap">
+                <div className="hidden md:flex items-center gap-1 flex-wrap">
                   <span className="font-normal leading-6">now, you'll be</span>
                   <span className="font-semibold leading-5">{earlyDuration}</span>
                   <span className="font-normal leading-6">early.</span>
