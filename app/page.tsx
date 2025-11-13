@@ -155,7 +155,9 @@ export default function Home() {
         
         // Add check-out activity if exists
         if (checkOutDateTime) {
-          const checkOutStatus = checkOutDateTime.getTime() > currentShiftEnd.getTime() 
+          // Use same logic as backend: 1 minute tolerance (check-out at 19:00:00 to 19:00:59 is ontime)
+          const shiftEndWithTolerance = new Date(currentShiftEnd.getTime() + 60000); // Add 1 minute tolerance
+          const checkOutStatus = checkOutDateTime.getTime() > shiftEndWithTolerance.getTime() 
             ? 'overtime' 
             : checkOutDateTime.getTime() < currentShiftEnd.getTime() 
               ? 'leftearly' 
@@ -199,7 +201,9 @@ export default function Home() {
         }
         
         if (checkOutDateTime) {
-          const checkOutStatus = checkOutDateTime.getTime() > currentShiftEnd.getTime() 
+          // Use same logic as backend: 1 minute tolerance (check-out at 19:00:00 to 19:00:59 is ontime)
+          const shiftEndWithTolerance = new Date(currentShiftEnd.getTime() + 60000); // Add 1 minute tolerance
+          const checkOutStatus = checkOutDateTime.getTime() > shiftEndWithTolerance.getTime() 
             ? 'overtime' 
             : checkOutDateTime.getTime() < currentShiftEnd.getTime() 
               ? 'leftearly' 
@@ -374,8 +378,10 @@ export default function Home() {
   const checkoutOvertimeMs = checkOutDateTime ? Math.max(0, checkOutDateTime.getTime() - shiftEnd.getTime()) : 0;
 
   const checkoutCardTime = checkOutDateTime ? formatClockTime(checkOutDateTime) : '--:--';
+  // Use same logic as backend: 1 minute tolerance (check-out at 19:00:00 to 19:00:59 is ontime)
+  const shiftEndWithTolerance = new Date(shiftEnd.getTime() + 60000); // Add 1 minute tolerance
   const checkoutStatus = checkOutDateTime
-    ? (checkOutDateTime.getTime() > shiftEnd.getTime() 
+    ? (checkOutDateTime.getTime() > shiftEndWithTolerance.getTime() 
         ? 'overtime' 
         : checkOutDateTime.getTime() < shiftEnd.getTime() 
           ? 'leftearly' 

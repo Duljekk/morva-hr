@@ -208,10 +208,12 @@ export async function checkOut() {
     shiftEnd.setHours(userData.shift_end_hour, 0, 0, 0);
 
     // Determine check-out status
+    // Allow 1 minute tolerance for "ontime" (check-out at 19:00:00 to 19:00:59 is ontime)
+    const shiftEndWithTolerance = new Date(shiftEnd.getTime() + 60000); // Add 1 minute tolerance
     let checkOutStatus: 'leftearly' | 'ontime' | 'overtime';
     if (now < shiftEnd) {
       checkOutStatus = 'leftearly';
-    } else if (now.getTime() === shiftEnd.getTime()) {
+    } else if (now.getTime() <= shiftEndWithTolerance.getTime()) {
       checkOutStatus = 'ontime';
     } else {
       checkOutStatus = 'overtime';
@@ -258,7 +260,10 @@ export async function checkOut() {
 export interface Activity {
   type: 'checkin' | 'checkout' | 'leave';
   time: string;
-  status?: 'late' | 'ontime' | 'overtime' | 'leftearly';
+  status?: 'late' | 'ontime' | 'overtime' | 'leftearly' | 'pending' | 'approved' | 'rejected';
+  // Leave-specific fields
+  leaveType?: 'annual' | 'sick' | 'unpaid';
+  dateRange?: string; // e.g., "14-15 Nov"
 }
 
 export interface DayActivity {
@@ -287,13 +292,26 @@ export async function getRecentActivities(days: number = 14): Promise<{ data?: D
     }
 
     // Calculate date range (last N days, including today)
+    // Use local timezone for date calculations to match user's local date
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const startDate = new Date(today);
+    const localYear = today.getFullYear();
+    const localMonth = today.getMonth();
+    const localDay = today.getDate();
+    const todayLocal = new Date(localYear, localMonth, localDay);
+    
+    const startDate = new Date(todayLocal);
     startDate.setDate(startDate.getDate() - (days - 1)); // Include today, so subtract (days - 1)
 
-    const todayDateString = today.toISOString().split('T')[0];
-    const startDateString = startDate.toISOString().split('T')[0];
+    // Format dates as YYYY-MM-DD in local timezone
+    const formatLocalDate = (date: Date): string => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+    
+    const todayDateString = formatLocalDate(todayLocal);
+    const startDateString = formatLocalDate(startDate);
 
     console.log('[getRecentActivities] Fetching activities for user:', user.id);
     console.log('[getRecentActivities] Date range:', { startDateString, todayDateString, days });
@@ -312,9 +330,57 @@ export async function getRecentActivities(days: number = 14): Promise<{ data?: D
       return { error: 'Failed to fetch recent activities' };
     }
 
-    console.log('[getRecentActivities] Found records:', records?.length || 0);
+    // Query leave requests that overlap with the date range
+    // We want to show leaves where ANY date in [start_date, end_date] falls within [startDateString, todayDateString]
+    // OR where the leave starts in the future but within an extended range
+    // Calculate extended end date to show future leaves (extend by same number of days)
+    const extendedEndDate = new Date(today);
+    extendedEndDate.setDate(extendedEndDate.getDate() + days);
+    const extendedEndDateString = extendedEndDate.toISOString().split('T')[0];
+    
+    // Query 1: Leaves that overlap with past/current range (start_date <= today AND end_date >= startDate)
+    const { data: pastLeaves, error: pastLeaveError } = await supabase
+      .from('leave_requests')
+      .select('id, leave_type_id, start_date, end_date, status, created_at')
+      .eq('user_id', user.id)
+      .lte('start_date', todayDateString)
+      .gte('end_date', startDateString)
+      .in('status', ['pending', 'approved', 'rejected'])
+      .order('created_at', { ascending: false });
+    
+    // Query 2: Future leaves that start within extended range (start_date > today AND start_date <= extendedEndDate)
+    const { data: futureLeaves, error: futureLeaveError } = await supabase
+      .from('leave_requests')
+      .select('id, leave_type_id, start_date, end_date, status, created_at')
+      .eq('user_id', user.id)
+      .gt('start_date', todayDateString)
+      .lte('start_date', extendedEndDateString)
+      .in('status', ['pending', 'approved', 'rejected'])
+      .order('created_at', { ascending: false });
+    
+    // Merge both queries and remove duplicates
+    const allLeaves = [
+      ...(pastLeaves || []),
+      ...(futureLeaves || []),
+    ];
+    
+    const uniqueLeaves = allLeaves.filter((leave, index, self) =>
+      index === self.findIndex(l => l.id === leave.id)
+    );
+    
+    const leaveError = pastLeaveError || futureLeaveError;
+    
+    if (leaveError) {
+      console.error('[getRecentActivities] Error fetching leave requests:', leaveError);
+      // Continue without leave requests if there's an error
+    }
+    
+    const leaveRequests = uniqueLeaves;
 
-    if (!records || records.length === 0) {
+    console.log('[getRecentActivities] Found records:', records?.length || 0);
+    console.log('[getRecentActivities] Found leave requests:', leaveRequests?.length || 0);
+
+    if ((!records || records.length === 0) && (!leaveRequests || leaveRequests.length === 0)) {
       console.log('[getRecentActivities] No records found, returning empty array');
       return { data: [] };
     }
@@ -335,44 +401,136 @@ export async function getRecentActivities(days: number = 14): Promise<{ data?: D
       return `${hours}:${minutes}`;
     };
 
+    // Helper function to format date range (e.g., "14-15 Nov")
+    const formatDateRange = (startDate: string, endDate: string): string => {
+      const start = new Date(startDate + 'T00:00:00');
+      const end = new Date(endDate + 'T00:00:00');
+      
+      const startDay = start.getDate();
+      const endDay = end.getDate();
+      const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
+      const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
+      
+      // If same month, show "14-15 Nov", otherwise "30 Nov - 2 Dec"
+      if (startMonth === endMonth) {
+        return `${startDay}-${endDay} ${startMonth}`;
+      } else {
+        return `${startDay} ${startMonth} - ${endDay} ${endMonth}`;
+      }
+    };
+
+    // Helper function to get all dates in a range
+    const getDatesInRange = (startDate: string, endDate: string): string[] => {
+      const dates: string[] = [];
+      const start = new Date(startDate + 'T00:00:00');
+      const end = new Date(endDate + 'T00:00:00');
+      
+      const current = new Date(start);
+      while (current <= end) {
+        dates.push(current.toISOString().split('T')[0]);
+        current.setDate(current.getDate() + 1);
+      }
+      
+      return dates;
+    };
+
     // Group records by date and format activities
     const activitiesByDate = new Map<string, Activity[]>();
 
-    for (const record of records) {
-      const dateKey = record.date;
-      
-      // Debug: Log today's record if found
-      if (dateKey === todayDateString) {
-        console.log('[getRecentActivities] Found today\'s record:', {
-          date: dateKey,
-          check_in_time: record.check_in_time,
-          check_out_time: record.check_out_time,
-          check_in_status: record.check_in_status,
-          check_out_status: record.check_out_status,
-        });
-      }
-      
-      if (!activitiesByDate.has(dateKey)) {
-        activitiesByDate.set(dateKey, []);
-      }
+    // Process attendance records
+    if (records) {
+      for (const record of records) {
+        const dateKey = record.date;
+        
+        // Debug: Log today's record if found
+        if (dateKey === todayDateString) {
+          console.log('[getRecentActivities] Found today\'s record:', {
+            date: dateKey,
+            check_in_time: record.check_in_time,
+            check_out_time: record.check_out_time,
+            check_in_status: record.check_in_status,
+            check_out_status: record.check_out_status,
+          });
+        }
+        
+        if (!activitiesByDate.has(dateKey)) {
+          activitiesByDate.set(dateKey, []);
+        }
 
-      const activities = activitiesByDate.get(dateKey)!;
+        const activities = activitiesByDate.get(dateKey)!;
 
-      // Add check-in activity if exists
-      if (record.check_in_time) {
+        // Add check-in activity if exists
+        if (record.check_in_time) {
+          activities.push({
+            type: 'checkin',
+            time: formatTime(record.check_in_time),
+            status: record.check_in_status || undefined,
+          });
+        }
+
+        // Add check-out activity if exists
+        if (record.check_out_time) {
+          activities.push({
+            type: 'checkout',
+            time: formatTime(record.check_out_time),
+            status: record.check_out_status || undefined,
+          });
+        }
+      }
+    }
+
+    // Process leave requests
+    // Leave requests should appear on the date they were REQUESTED (created_at), not on the leave dates
+    if (uniqueLeaves && uniqueLeaves.length > 0) {
+      for (const leave of uniqueLeaves) {
+        // Get the date when the leave was requested (created_at)
+        // Convert to local timezone to get the correct local date
+        const requestDate = new Date(leave.created_at);
+        // Get local date components (not UTC)
+        const localYear = requestDate.getFullYear();
+        const localMonth = requestDate.getMonth();
+        const localDay = requestDate.getDate();
+        // Create a new date at midnight in local timezone
+        const localRequestDate = new Date(localYear, localMonth, localDay);
+        // Format as YYYY-MM-DD in local timezone
+        const year = localRequestDate.getFullYear();
+        const month = String(localRequestDate.getMonth() + 1).padStart(2, '0');
+        const day = String(localRequestDate.getDate()).padStart(2, '0');
+        const requestDateString = `${year}-${month}-${day}`;
+        
+        // Only include if the request date is within our display range
+        const isInPastRange = requestDateString >= startDateString && requestDateString <= todayDateString;
+        const isInFutureRange = requestDateString > todayDateString && requestDateString <= extendedEndDateString;
+        
+        if (!isInPastRange && !isInFutureRange) {
+          continue; // Skip if request date is outside our range
+        }
+        
+        const dateRange = formatDateRange(leave.start_date, leave.end_date);
+        const leaveTime = formatTime(leave.created_at);
+        
+        // Map leave_type_id to leave type
+        const leaveType = leave.leave_type_id as 'annual' | 'sick' | 'unpaid';
+        
+        // Map status (exclude 'cancelled')
+        const status = leave.status === 'cancelled' ? undefined : leave.status as 'pending' | 'approved' | 'rejected';
+        
+        if (!status) continue; // Skip cancelled leaves
+        
+        // Add leave activity on the date it was requested
+        if (!activitiesByDate.has(requestDateString)) {
+          activitiesByDate.set(requestDateString, []);
+        }
+        
+        const activities = activitiesByDate.get(requestDateString)!;
+        
+        // Add leave activity
         activities.push({
-          type: 'checkin',
-          time: formatTime(record.check_in_time),
-          status: record.check_in_status || undefined,
-        });
-      }
-
-      // Add check-out activity if exists
-      if (record.check_out_time) {
-        activities.push({
-          type: 'checkout',
-          time: formatTime(record.check_out_time),
-          status: record.check_out_status || undefined,
+          type: 'leave',
+          time: leaveTime,
+          status: status,
+          leaveType: leaveType,
+          dateRange: dateRange,
         });
       }
     }
@@ -389,7 +547,10 @@ export async function getRecentActivities(days: number = 14): Promise<{ data?: D
       .map(([date, activities]) => ({
         date: formatDate(date),
         activities: activities.sort((a, b) => {
-          // Sort activities by time (check-in before check-out typically)
+          // Sort activities: leave requests first, then check-in, then check-out
+          // Within same type, sort by time
+          if (a.type === 'leave' && b.type !== 'leave') return -1;
+          if (a.type !== 'leave' && b.type === 'leave') return 1;
           if (a.type === 'checkin' && b.type === 'checkout') return -1;
           if (a.type === 'checkout' && b.type === 'checkin') return 1;
           return a.time.localeCompare(b.time);

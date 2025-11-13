@@ -13,3 +13,7 @@ WHERE status IN ('pending', 'approved')
 COMMENT ON INDEX idx_one_active_leave_per_user IS 
 'Ensures each user can only have one active leave request (pending or approved with end_date >= current date) at a time';
 
+
+
+
+

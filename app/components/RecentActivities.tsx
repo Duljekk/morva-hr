@@ -3,14 +3,29 @@
 import CheckInNeutralIcon from '@/app/assets/icons/check-in-neutral.svg';
 import CheckOutNeutralIcon from '@/app/assets/icons/check-out-neutral.svg';
 import CalendarIcon from '@/app/assets/icons/calendar-1.svg';
+import AttendanceBadge, { type AttendanceStatus, type LeaveStatus } from './AttendanceBadge';
 
-interface Activity {
+// Leave icon imports
+import AnnualPendingIcon from '@/app/assets/icons/annual-pending.svg';
+import AnnualApprovedIcon from '@/app/assets/icons/annual-approved.svg';
+import AnnualRejectedIcon from '@/app/assets/icons/annual-rejected.svg';
+import SickPendingIcon from '@/app/assets/icons/sick-pending.svg';
+import SickApprovedIcon from '@/app/assets/icons/sick-approved.svg';
+import SickRejectedIcon from '@/app/assets/icons/sick-rejected.svg';
+import UnpaidPendingIcon from '@/app/assets/icons/unpaid-pending.svg';
+import UnpaidApprovedIcon from '@/app/assets/icons/unpaid-approved.svg';
+import UnpaidRejectedIcon from '@/app/assets/icons/unpaid-rejected.svg';
+
+export interface Activity {
   type: 'checkin' | 'checkout' | 'leave';
   time: string;
-  status?: 'late' | 'ontime' | 'overtime' | 'leftearly';
+  status?: AttendanceStatus | LeaveStatus;
+  // Leave-specific fields
+  leaveType?: 'annual' | 'sick' | 'unpaid';
+  dateRange?: string; // e.g., "14-15 Nov"
 }
 
-interface DayActivity {
+export interface DayActivity {
   date: string;
   activities: Activity[];
 }
@@ -29,6 +44,40 @@ export default function RecentActivities({ activities }: RecentActivitiesProps) 
 
   // Get today's formatted date for comparison
   const todayDateString = formatActivityDate(new Date());
+
+  // Helper function to get leave icon based on type and status
+  const getLeaveIcon = (leaveType: 'annual' | 'sick' | 'unpaid', status: LeaveStatus) => {
+    if (leaveType === 'annual') {
+      if (status === 'pending') return AnnualPendingIcon;
+      if (status === 'approved') return AnnualApprovedIcon;
+      return AnnualRejectedIcon;
+    }
+    if (leaveType === 'sick') {
+      if (status === 'pending') return SickPendingIcon;
+      if (status === 'approved') return SickApprovedIcon;
+      return SickRejectedIcon;
+    }
+    // unpaid
+    if (status === 'pending') return UnpaidPendingIcon;
+    if (status === 'approved') return UnpaidApprovedIcon;
+    return UnpaidRejectedIcon;
+  };
+
+  // Separate activities into attendance and leave
+  const separateActivities = (activities: Activity[]) => {
+    const attendance: Activity[] = [];
+    const leave: Activity[] = [];
+    
+    activities.forEach(activity => {
+      if (activity.type === 'leave') {
+        leave.push(activity);
+      } else {
+        attendance.push(activity);
+      }
+    });
+    
+    return { attendance, leave };
+  };
 
   return (
     <div className="flex flex-col gap-3 w-full">
@@ -51,70 +100,93 @@ export default function RecentActivities({ activities }: RecentActivitiesProps) 
             <div className="flex items-start justify-end pl-4">
               {/* Middle container with stroke - centered on calendar icon */}
               <div className={`flex flex-col gap-2.5 flex-1 ${dayIndex < activities.length - 1 ? 'border-l border-dashed border-neutral-300' : ''} pl-3.5`}>
-                {/* Inner container - activity card */}
-                <div className="flex flex-col rounded-xl bg-[rgba(255,255,255,0.6)] px-3 py-2.5 shadow-[0px_1px_2px_0px_rgba(164,172,185,0.24),0px_0px_0.5px_0.5px_rgba(28,28,28,0.05)] w-full">
-                  {day.activities.map((activity, actIndex) => (
-                    <div key={actIndex}>
-                      {/* Activity Item */}
-                      <div className={`flex items-center gap-2 ${actIndex > 0 ? 'pt-2.5' : ''} ${actIndex < day.activities.length - 1 ? 'pb-3' : ''}`}>
-                        {/* Icon */}
-                        {activity.type === 'checkin' ? (
-                          <CheckInNeutralIcon className="h-8 w-8 shrink-0" />
-                        ) : (
-                          <CheckOutNeutralIcon className="h-8 w-8 shrink-0" />
-                        )}
+                {(() => {
+                  const { attendance, leave } = separateActivities(day.activities);
+                  
+                  return (
+                    <>
+                      {/* Leave Request Cards - Separate from attendance */}
+                      {leave.map((activity, leaveIndex) => {
+                        if (!activity.leaveType || !activity.status) return null;
+                        const LeaveIcon = getLeaveIcon(activity.leaveType, activity.status as LeaveStatus);
+                        
+                        return (
+                          <div
+                            key={`leave-${leaveIndex}`}
+                            className="flex flex-col rounded-xl bg-[rgba(255,255,255,0.6)] px-3 py-2.5 shadow-[0px_1px_2px_0px_rgba(164,172,185,0.24),0px_0px_0.5px_0.5px_rgba(28,28,28,0.05)] w-full"
+                          >
+                            <div className="flex items-center gap-2">
+                              {/* Leave Icon */}
+                              <LeaveIcon className="h-8 w-8 shrink-0" />
 
-                        {/* Text and Badge */}
-                        <div className="flex flex-1 items-start">
-                          <div className="flex-1">
-                            <p className="text-sm font-semibold text-neutral-600 tracking-tight leading-[18px]">
-                              {activity.type === 'checkin' ? 'Checked-In' : 'Checked-Out'}
-                            </p>
-                            <p className="text-xs font-medium text-neutral-400 leading-4">
-                              {activity.time}
-                            </p>
-                          </div>
+                              {/* Text and Badge */}
+                              <div className="flex flex-1 items-start">
+                                <div className="flex-1">
+                                  <p className="text-sm font-semibold text-neutral-600 tracking-[-0.07px] leading-[18px]">
+                                    Requested Leave
+                                  </p>
+                                  {activity.dateRange && (
+                                    <div className="flex gap-1 items-center">
+                                      <p className="text-xs font-medium text-neutral-400 leading-4">
+                                        {activity.dateRange}
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
 
-                          {/* Status Badge */}
-                          {activity.status && (
-                            <div className={`rounded-xl px-2 py-0.5 ${
-                              activity.status === 'late' 
-                                ? 'bg-amber-100' 
-                                : activity.status === 'ontime'
-                                ? 'bg-green-100'
-                                : activity.status === 'overtime'
-                                ? 'bg-neutral-100'
-                                : 'bg-amber-50'
-                            }`}>
-                              <p className={`text-xs font-semibold tracking-tight ${
-                                activity.status === 'late'
-                                  ? 'text-amber-700'
-                                  : activity.status === 'ontime'
-                                  ? 'text-green-700'
-                                  : activity.status === 'overtime'
-                                  ? 'text-neutral-600'
-                                  : 'text-amber-600'
-                              }`}>
-                                {activity.status === 'late'
-                                  ? 'Late'
-                                  : activity.status === 'ontime'
-                                  ? 'On Time'
-                                  : activity.status === 'overtime'
-                                  ? 'Overtime'
-                                  : 'Left Early'}
-                              </p>
+                                {/* Status Badge */}
+                                {activity.status && (
+                                  <AttendanceBadge status={activity.status as LeaveStatus} />
+                                )}
+                              </div>
                             </div>
-                          )}
-                        </div>
-                      </div>
+                          </div>
+                        );
+                      })}
 
-                      {/* Divider */}
-                      {actIndex < day.activities.length - 1 && (
-                        <div className="h-px w-full bg-neutral-100" />
+                      {/* Attendance Cards (Check-In/Check-Out) */}
+                      {attendance.length > 0 && (
+                        <div className="flex flex-col rounded-xl bg-[rgba(255,255,255,0.6)] px-3 py-2.5 shadow-[0px_1px_2px_0px_rgba(164,172,185,0.24),0px_0px_0.5px_0.5px_rgba(28,28,28,0.05)] w-full">
+                          {attendance.map((activity, actIndex) => (
+                            <div key={actIndex}>
+                              {/* Activity Item */}
+                              <div className={`flex items-center gap-2 ${actIndex > 0 ? 'pt-2.5' : ''} ${actIndex < attendance.length - 1 ? 'pb-3' : ''}`}>
+                                {/* Icon */}
+                                {activity.type === 'checkin' ? (
+                                  <CheckInNeutralIcon className="h-8 w-8 shrink-0" />
+                                ) : (
+                                  <CheckOutNeutralIcon className="h-8 w-8 shrink-0" />
+                                )}
+
+                                {/* Text and Badge */}
+                                <div className="flex flex-1 items-start">
+                                  <div className="flex-1">
+                                    <p className="text-sm font-semibold text-neutral-600 tracking-tight leading-[18px]">
+                                      {activity.type === 'checkin' ? 'Checked-In' : 'Checked-Out'}
+                                    </p>
+                                    <p className="text-xs font-medium text-neutral-400 leading-4">
+                                      {activity.time}
+                                    </p>
+                                  </div>
+
+                                  {/* Status Badge */}
+                                  {activity.status && (
+                                    <AttendanceBadge status={activity.status as AttendanceStatus} />
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Divider */}
+                              {actIndex < attendance.length - 1 && (
+                                <div className="h-px w-full bg-neutral-100" />
+                              )}
+                            </div>
+                          ))}
+                        </div>
                       )}
-                    </div>
-                  ))}
-                </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </div>
