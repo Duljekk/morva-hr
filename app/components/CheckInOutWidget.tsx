@@ -66,6 +66,7 @@ export default function CheckInOutWidget({
   onRequestLeave,
   hasActiveLeave = false,
   activeLeaveInfo,
+  onOpenLeaveDetails,
 }: CheckInOutWidgetProps) {
   // Check if today is within the leave date range
   const isOnLeaveToday = (() => {
@@ -212,7 +213,7 @@ export default function CheckInOutWidget({
             status={activeLeaveInfo.status as 'pending' | 'approved'}
             startDate={activeLeaveInfo.startDate}
             endDate={activeLeaveInfo.endDate}
-            onClick={onRequestLeave}
+            onClick={onOpenLeaveDetails || onRequestLeave}
           />
         ) : (
           <ButtonLarge

@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { createClient } from '../supabase/client';
 import type { Database } from '../supabase/types';
+import { signOut as serverSignOut } from '../actions/auth';
 
 // Extended user type with profile data
 export interface UserProfile {
@@ -87,9 +88,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     console.log('🔵 AuthContext: signOut called');
     try {
+      // First, call server action to clear server-side cookies (critical for middleware)
+      console.log('🔵 AuthContext: Calling server signOut to clear server-side cookies...');
+      const serverResult = await serverSignOut();
+      
+      if (serverResult.error) {
+        console.warn('🔵 AuthContext: Server signOut had error, but continuing:', serverResult.error);
+      } else {
+        console.log('🔵 AuthContext: Server signOut successful');
+      }
+
+      // Also clear client-side session and cookies
+      console.log('🔵 AuthContext: Clearing client-side session...');
+      
       // Create a promise that resolves when SIGNED_OUT event is received
       let signedOutResolver: (() => void) | null = null;
-      const signedOutPromise = new Promise<void>((resolve) => {
+      const signedOutEventPromise = new Promise<void>((resolve) => {
         signedOutResolver = resolve;
       });
 
@@ -104,44 +118,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       });
 
-      // Create a timeout promise (5 seconds max wait)
+      // Create a timeout promise (3 seconds max wait for client-side cleanup)
       const timeoutPromise = new Promise<void>((_, reject) => 
         setTimeout(() => {
           subscription.unsubscribe();
-          reject(new Error('SignOut timeout'));
-        }, 5000)
+          reject(new Error('Client signOut timeout'));
+        }, 3000)
       );
 
-      console.log('🔵 AuthContext: Calling supabase.auth.signOut()...');
+      // Clear client-side session
+      const clientSignOutPromise = supabase.auth.signOut();
       
-      // Start the signOut process
-      const signOutPromise = supabase.auth.signOut();
-      
-      // Wait for both signOut API call and SIGNED_OUT event
+      // Wait for client-side signOut and SIGNED_OUT event (with timeout)
       try {
-        await Promise.all([
-          signOutPromise.catch(err => {
-            // Log but don't fail - cookies might still be cleared
-            console.warn('🔵 AuthContext: signOut API call had an error:', err);
-          }),
-          Promise.race([signedOutPromise, timeoutPromise]).catch(err => {
-            // If timeout, we'll still continue
-            console.warn('🔵 AuthContext: SIGNED_OUT event timeout:', err);
-          })
-        ]);
+        await Promise.race([
+          Promise.all([
+            clientSignOutPromise.catch(err => {
+              console.warn('🔵 AuthContext: Client signOut API call had an error:', err);
+            }),
+            signedOutEventPromise
+          ]),
+          timeoutPromise
+        ]).catch(err => {
+          console.warn('🔵 AuthContext: Client signOut timed out or had error:', err);
+        });
         
-        console.log('🔵 AuthContext: SignOut completed and SIGNED_OUT event received');
+        console.log('🔵 AuthContext: Client signOut completed');
       } catch (error) {
-        console.warn('🔵 AuthContext: SignOut timed out or had error, but continuing:', error);
+        console.warn('🔵 AuthContext: Client signOut error, but continuing:', error);
       } finally {
         subscription.unsubscribe();
       }
       
-      // Small delay to ensure cookies are cleared
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      console.log('🔵 AuthContext: Clearing local state...');
       // Clear local state
+      console.log('🔵 AuthContext: Clearing local state...');
       setUser(null);
       setProfile(null);
       setSession(null);

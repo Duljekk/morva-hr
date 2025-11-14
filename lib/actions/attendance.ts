@@ -439,8 +439,8 @@ export async function getRecentActivities(days: number = 14): Promise<{ data?: D
 
     // Process attendance records
     if (records) {
-      for (const record of records) {
-        const dateKey = record.date;
+    for (const record of records) {
+      const dateKey = record.date;
         
         // Debug: Log today's record if found
         if (dateKey === todayDateString) {
@@ -452,28 +452,28 @@ export async function getRecentActivities(days: number = 14): Promise<{ data?: D
             check_out_status: record.check_out_status,
           });
         }
-        
-        if (!activitiesByDate.has(dateKey)) {
-          activitiesByDate.set(dateKey, []);
-        }
+      
+      if (!activitiesByDate.has(dateKey)) {
+        activitiesByDate.set(dateKey, []);
+      }
 
-        const activities = activitiesByDate.get(dateKey)!;
+      const activities = activitiesByDate.get(dateKey)!;
 
-        // Add check-in activity if exists
-        if (record.check_in_time) {
-          activities.push({
-            type: 'checkin',
-            time: formatTime(record.check_in_time),
-            status: record.check_in_status || undefined,
-          });
-        }
+      // Add check-in activity if exists
+      if (record.check_in_time) {
+        activities.push({
+          type: 'checkin',
+          time: formatTime(record.check_in_time),
+          status: record.check_in_status || undefined,
+        });
+      }
 
-        // Add check-out activity if exists
-        if (record.check_out_time) {
-          activities.push({
-            type: 'checkout',
-            time: formatTime(record.check_out_time),
-            status: record.check_out_status || undefined,
+      // Add check-out activity if exists
+      if (record.check_out_time) {
+        activities.push({
+          type: 'checkout',
+          time: formatTime(record.check_out_time),
+          status: record.check_out_status || undefined,
           });
         }
       }

@@ -12,12 +12,15 @@ export default function UserMenu() {
   const handleSignOut = async () => {
     try {
       await signOut();
+      // Delay to ensure server-side cookies are fully cleared before redirect
+      // This prevents middleware from seeing the user as still authenticated
+      await new Promise(resolve => setTimeout(resolve, 300));
       // Use window.location.replace for a hard redirect that clears all state
-      // Small delay to ensure cookies are cleared
-      await new Promise(resolve => setTimeout(resolve, 150));
       window.location.replace('/login');
     } catch (error) {
       console.error('Error during sign out:', error);
+      // Delay even on error to ensure cookies are cleared
+      await new Promise(resolve => setTimeout(resolve, 300));
       // Force redirect even on error
       window.location.replace('/login');
     }

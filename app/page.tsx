@@ -5,13 +5,14 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useToast } from '@/app/contexts/ToastContext';
 import { getTodaysAttendance, checkIn, checkOut, getRecentActivities, type DayActivity } from '@/lib/actions/attendance';
-import { hasActiveLeaveRequest } from '@/lib/actions/leaves';
+import { hasActiveLeaveRequest, getLeaveRequest } from '@/lib/actions/leaves';
 import NotificationButton from './components/NotificationButton';
 import AnnouncementBanner from './components/AnnouncementBanner';
 import CheckInOutWidget from './components/CheckInOutWidget';
 import AttendanceCard from './components/AttendanceCard';
 import RecentActivities from './components/RecentActivities';
 import ConfirmationModal from './components/ConfirmationModal';
+import LeaveRequestDetailsModal from './components/LeaveRequestDetailsModal';
 
 const SHIFT_START_HOUR = 11;
 const SHIFT_END_HOUR = 19;
@@ -51,7 +52,19 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [recentActivities, setRecentActivities] = useState<DayActivity[]>([]);
   const [hasActiveLeave, setHasActiveLeave] = useState(false);
-  const [activeLeaveInfo, setActiveLeaveInfo] = useState<{ status: string; startDate: string; endDate: string; leaveTypeName?: string } | undefined>(undefined);
+  const [activeLeaveInfo, setActiveLeaveInfo] = useState<{ id?: string; status: string; startDate: string; endDate: string; leaveTypeName?: string } | undefined>(undefined);
+  const [showLeaveDetails, setShowLeaveDetails] = useState(false);
+  const [leaveDetailsData, setLeaveDetailsData] = useState<{
+    startDate: string;
+    endDate: string;
+    status: 'pending' | 'approved' | 'rejected';
+    requestedOn: string;
+    requestedAt?: string;
+    approvedAt?: string;
+    rejectionReason?: string;
+    leaveType: string;
+    reason: string;
+  } | null>(null);
 
   // Fetch today's attendance from database on mount
   useEffect(() => {
@@ -90,6 +103,7 @@ export default function Home() {
             })();
           
           setActiveLeaveInfo({
+            id: result.data.request.id,
             status: result.data.request.status,
             startDate: result.data.request.start_date,
             endDate: result.data.request.end_date,
@@ -349,6 +363,29 @@ export default function Home() {
     router.push('/request-leave');
   };
 
+  const handleOpenLeaveDetails = async () => {
+    if (!activeLeaveInfo?.id) return;
+    
+    const result = await getLeaveRequest(activeLeaveInfo.id);
+    
+    if (result.data) {
+      setLeaveDetailsData({
+        startDate: result.data.startDate,
+        endDate: result.data.endDate,
+        status: result.data.status,
+        requestedOn: result.data.requestedOn,
+        requestedAt: result.data.requestedAt,
+        approvedAt: result.data.approvedAt,
+        rejectionReason: result.data.rejectionReason,
+        leaveType: result.data.leaveType,
+        reason: result.data.reason,
+      });
+      setShowLeaveDetails(true);
+    } else if (result.error) {
+      console.error('Error fetching leave request details:', result.error);
+    }
+  };
+
   const handleAnnouncementClick = () => {
     alert('Announcement details would open here');
   };
@@ -457,6 +494,7 @@ export default function Home() {
               onRequestLeave={handleRequestLeave}
               hasActiveLeave={hasActiveLeave}
               activeLeaveInfo={activeLeaveInfo}
+              onOpenLeaveDetails={handleOpenLeaveDetails}
             />
 
             {/* Attendance Log Section */}
@@ -491,11 +529,11 @@ export default function Home() {
               onClick={async () => {
                 console.log('🔴 Logout button clicked!');
                 
-                // Set a safety timeout to redirect even if signOut hangs (6 seconds)
+                // Set a safety timeout to redirect even if signOut hangs (8 seconds)
                 const redirectTimeout = setTimeout(() => {
                   console.log('🔴 Safety timeout triggered, forcing redirect...');
                   window.location.replace('/login');
-                }, 6000);
+                }, 8000);
                 
                 try {
                   console.log('🔴 Calling signOut...');
@@ -503,14 +541,17 @@ export default function Home() {
                   console.log('🔴 SignOut completed successfully');
                   clearTimeout(redirectTimeout);
                   
-                  // Small delay to ensure cookies are fully cleared
-                  await new Promise(resolve => setTimeout(resolve, 150));
+                  // Delay to ensure server-side cookies are fully cleared before redirect
+                  // This prevents middleware from seeing the user as still authenticated
+                  await new Promise(resolve => setTimeout(resolve, 300));
                   
                   console.log('🔴 Redirecting to login...');
                   window.location.replace('/login');
                 } catch (error) {
                   console.error('🔴 Error during logout:', error);
                   clearTimeout(redirectTimeout);
+                  // Delay even on error to ensure cookies are cleared
+                  await new Promise(resolve => setTimeout(resolve, 300));
                   // Force redirect even on error
                   window.location.replace('/login');
                 }
@@ -553,6 +594,23 @@ export default function Home() {
         confirmText="Check Out"
         cancelText="Cancel"
       />
+
+      {/* Leave Request Details Modal */}
+      {leaveDetailsData && (
+        <LeaveRequestDetailsModal
+          isOpen={showLeaveDetails}
+          onClose={() => setShowLeaveDetails(false)}
+          startDate={leaveDetailsData.startDate}
+          endDate={leaveDetailsData.endDate}
+          status={leaveDetailsData.status}
+          requestedOn={leaveDetailsData.requestedOn}
+          requestedAt={leaveDetailsData.requestedAt}
+          approvedAt={leaveDetailsData.approvedAt}
+          rejectionReason={leaveDetailsData.rejectionReason}
+          leaveType={leaveDetailsData.leaveType}
+          reason={leaveDetailsData.reason}
+        />
+      )}
     </div>
   );
 }

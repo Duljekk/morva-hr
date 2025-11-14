@@ -148,41 +148,41 @@ export default function RecentActivities({ activities }: RecentActivitiesProps) 
                       {attendance.length > 0 && (
                         <div className="flex flex-col rounded-xl bg-[rgba(255,255,255,0.6)] px-3 py-2.5 shadow-[0px_1px_2px_0px_rgba(164,172,185,0.24),0px_0px_0.5px_0.5px_rgba(28,28,28,0.05)] w-full">
                           {attendance.map((activity, actIndex) => (
-                            <div key={actIndex}>
-                              {/* Activity Item */}
+                    <div key={actIndex}>
+                      {/* Activity Item */}
                               <div className={`flex items-center gap-2 ${actIndex > 0 ? 'pt-2.5' : ''} ${actIndex < attendance.length - 1 ? 'pb-3' : ''}`}>
-                                {/* Icon */}
-                                {activity.type === 'checkin' ? (
-                                  <CheckInNeutralIcon className="h-8 w-8 shrink-0" />
-                                ) : (
-                                  <CheckOutNeutralIcon className="h-8 w-8 shrink-0" />
-                                )}
+                        {/* Icon */}
+                        {activity.type === 'checkin' ? (
+                          <CheckInNeutralIcon className="h-8 w-8 shrink-0" />
+                        ) : (
+                          <CheckOutNeutralIcon className="h-8 w-8 shrink-0" />
+                        )}
 
-                                {/* Text and Badge */}
-                                <div className="flex flex-1 items-start">
-                                  <div className="flex-1">
-                                    <p className="text-sm font-semibold text-neutral-600 tracking-tight leading-[18px]">
-                                      {activity.type === 'checkin' ? 'Checked-In' : 'Checked-Out'}
-                                    </p>
-                                    <p className="text-xs font-medium text-neutral-400 leading-4">
-                                      {activity.time}
-                                    </p>
-                                  </div>
+                        {/* Text and Badge */}
+                        <div className="flex flex-1 items-start">
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold text-neutral-600 tracking-tight leading-[18px]">
+                              {activity.type === 'checkin' ? 'Checked-In' : 'Checked-Out'}
+                            </p>
+                            <p className="text-xs font-medium text-neutral-400 leading-4">
+                              {activity.time}
+                            </p>
+                          </div>
 
-                                  {/* Status Badge */}
-                                  {activity.status && (
+                          {/* Status Badge */}
+                          {activity.status && (
                                     <AttendanceBadge status={activity.status as AttendanceStatus} />
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Divider */}
-                              {actIndex < attendance.length - 1 && (
-                                <div className="h-px w-full bg-neutral-100" />
-                              )}
-                            </div>
-                          ))}
+                          )}
                         </div>
+                      </div>
+
+                      {/* Divider */}
+                              {actIndex < attendance.length - 1 && (
+                        <div className="h-px w-full bg-neutral-100" />
+                      )}
+                    </div>
+                  ))}
+                </div>
                       )}
                     </>
                   );

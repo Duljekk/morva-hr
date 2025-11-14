@@ -653,3 +653,116 @@ export async function cancelLeaveRequest(requestId: string): Promise<{ success: 
   }
 }
 
+/**
+ * Get a single leave request by ID with all details
+ * Returns data formatted for the LeaveRequestDetailsModal component
+ */
+export async function getLeaveRequest(
+  requestId: string
+): Promise<{
+  data?: {
+    id: string;
+    startDate: string;
+    endDate: string;
+    status: 'pending' | 'approved' | 'rejected';
+    requestedOn: string; // Date part of created_at
+    requestedAt: string; // Full timestamp of created_at
+    approvedAt?: string; // Full timestamp of approved_at (if approved/rejected)
+    rejectionReason?: string; // Rejection reason (if rejected)
+    leaveType: string; // Leave type name
+    reason: string; // Leave reason
+  };
+  error?: string;
+}> {
+  try {
+    const supabase = await createClient();
+
+    // Verify authentication
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      console.error('[getLeaveRequest] Auth error:', authError);
+      return { error: 'You must be logged in' };
+    }
+
+    // Check if user is HR admin
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (userError) {
+      console.error('[getLeaveRequest] Error fetching user role:', userError);
+      return { error: 'Failed to verify user permissions' };
+    }
+
+    const isHrAdmin = userData?.role === 'hr_admin';
+
+    // Query leave request with leave type name
+    let query = supabase
+      .from('leave_requests')
+      .select(`
+        id,
+        user_id,
+        start_date,
+        end_date,
+        status,
+        reason,
+        created_at,
+        approved_at,
+        rejection_reason,
+        leave_types:leave_type_id (
+          name
+        )
+      `)
+      .eq('id', requestId)
+      .maybeSingle();
+
+    const { data: leaveRequest, error: fetchError } = await query;
+
+    if (fetchError) {
+      console.error('[getLeaveRequest] Error fetching leave request:', fetchError);
+      return { error: 'Failed to fetch leave request' };
+    }
+
+    if (!leaveRequest) {
+      return { error: 'Leave request not found' };
+    }
+
+    // Check permissions: users can only see their own requests, HR admins can see all
+    if (!isHrAdmin && leaveRequest.user_id !== user.id) {
+      return { error: 'You do not have permission to view this leave request' };
+    }
+
+    // Extract leave type name
+    const leaveTypeName = (leaveRequest.leave_types as any)?.name || 'Unknown';
+
+    // Format dates
+    const requestedOn = leaveRequest.created_at.split('T')[0]; // Date part
+    const requestedAt = leaveRequest.created_at; // Full timestamp
+    const approvedAt = leaveRequest.approved_at || undefined;
+
+    return {
+      data: {
+        id: leaveRequest.id,
+        startDate: leaveRequest.start_date,
+        endDate: leaveRequest.end_date,
+        status: leaveRequest.status as 'pending' | 'approved' | 'rejected',
+        requestedOn,
+        requestedAt,
+        approvedAt,
+        rejectionReason: leaveRequest.rejection_reason || undefined,
+        leaveType: leaveTypeName,
+        reason: leaveRequest.reason || '',
+      },
+    };
+  } catch (error) {
+    console.error('[getLeaveRequest] Unexpected error:', error);
+    return { error: 'An unexpected error occurred' };
+  }
+}
+

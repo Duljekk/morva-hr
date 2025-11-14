@@ -17,6 +17,7 @@ import LeaveFullDayIcon from '@/app/assets/icons/leave-fullday.svg';
 import LeaveHalfDayIcon from '@/app/assets/icons/leave-halfday.svg';
 import { uploadLeaveAttachment, deleteLeaveAttachment, submitLeaveRequest, hasActiveLeaveRequest } from '@/lib/actions/leaves';
 import { validateFile } from '@/lib/utils/fileUpload';
+import { useToast } from '@/app/contexts/ToastContext';
 
 interface UploadedFileData {
   id: string;
@@ -32,6 +33,7 @@ interface UploadedFileData {
 
 export default function RequestLeavePage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [selectedLeaveType, setSelectedLeaveType] = useState<LeaveType>(leaveTypes[0]);
   
   // Initialize dates to current date
@@ -263,8 +265,12 @@ export default function RequestLeavePage() {
         return;
       }
       
-      // Success! Redirect to home
-      alert('Leave request sent successfully!');
+      // Success! Show toast notification and redirect to home
+      showToast(
+        'success',
+        'Leave Request Sent',
+        "Your leave request has been sent. You'll be notified when there's an update."
+      );
       router.push('/');
     } catch (error) {
       console.error('Submit error:', error);

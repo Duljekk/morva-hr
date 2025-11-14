@@ -14,8 +14,11 @@ export default function LeaveRequestDetailsTestPage() {
     startDate: '2025-10-27',
     endDate: '2025-10-27',
     requestedOn: '2025-11-12',
+    requestedAt: '2025-11-12T09:00:00Z',
+    approvedAt: '2025-11-12T10:00:00Z',
+    rejectionReason: 'Dates conflict with office agenda.',
     leaveType: 'Sick Leave',
-    reason: 'Getting sick after drinking sparkling water',
+    reason: 'Experiencing a severe migraine and light sensitivity, making it impossible to look at the screen.',
   };
 
   return (
@@ -77,6 +80,7 @@ export default function LeaveRequestDetailsTestPage() {
           endDate={sampleData.endDate}
           status="pending"
           requestedOn={sampleData.requestedOn}
+          requestedAt={sampleData.requestedAt}
           leaveType={sampleData.leaveType}
           reason={sampleData.reason}
         />
@@ -89,6 +93,8 @@ export default function LeaveRequestDetailsTestPage() {
           endDate={sampleData.endDate}
           status="approved"
           requestedOn={sampleData.requestedOn}
+          requestedAt={sampleData.requestedAt}
+          approvedAt={sampleData.approvedAt}
           leaveType={sampleData.leaveType}
           reason={sampleData.reason}
         />
@@ -101,6 +107,9 @@ export default function LeaveRequestDetailsTestPage() {
           endDate={sampleData.endDate}
           status="rejected"
           requestedOn={sampleData.requestedOn}
+          requestedAt={sampleData.requestedAt}
+          approvedAt={sampleData.approvedAt}
+          rejectionReason={sampleData.rejectionReason}
           leaveType={sampleData.leaveType}
           reason={sampleData.reason}
         />
