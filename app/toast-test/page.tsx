@@ -40,7 +40,7 @@ export default function ToastTestPage() {
                   onClick={() =>
                     showToast(
                       'success',
-                      'Login Successful',
+                      'Login successful',
                       'You have been logged in successfully.'
                     )
                   }
@@ -52,7 +52,7 @@ export default function ToastTestPage() {
                   onClick={() =>
                     showToast(
                       'success',
-                      'Data Saved',
+                      'Data saved',
                       'Your changes have been saved successfully.'
                     )
                   }
@@ -83,7 +83,7 @@ export default function ToastTestPage() {
                   onClick={() =>
                     showToast(
                       'warning',
-                      'Login Failed',
+                      'Login failed',
                       'The username or password you entered is incorrect. Please try again.'
                     )
                   }
@@ -95,7 +95,7 @@ export default function ToastTestPage() {
                   onClick={() =>
                     showToast(
                       'warning',
-                      'Incomplete Form',
+                      'Incomplete form',
                       'Some required fields are missing. Please fill them in.'
                     )
                   }
@@ -126,7 +126,7 @@ export default function ToastTestPage() {
                   onClick={() =>
                     showToast(
                       'danger',
-                      'Login Failed',
+                      'Login failed',
                       'The username or password you entered is incorrect. Please try again.'
                     )
                   }
@@ -138,7 +138,7 @@ export default function ToastTestPage() {
                   onClick={() =>
                     showToast(
                       'danger',
-                      'Connection Error',
+                      'Connection error',
                       'Unable to connect to the server. Please check your internet connection.'
                     )
                   }
@@ -157,7 +157,7 @@ export default function ToastTestPage() {
                   onClick={() =>
                     showToast(
                       'success',
-                      'Quick Toast',
+                      'Quick toast',
                       'This toast will disappear in 2 seconds.',
                       2000
                     )
@@ -170,7 +170,7 @@ export default function ToastTestPage() {
                   onClick={() =>
                     showToast(
                       'warning',
-                      'Long Toast',
+                      'Long toast',
                       'This toast will stay for 10 seconds.',
                       10000
                     )
@@ -183,7 +183,7 @@ export default function ToastTestPage() {
                   onClick={() =>
                     showToast(
                       'danger',
-                      'Persistent Toast',
+                      'Persistent toast',
                       'This toast will not auto-dismiss (duration: 0).',
                       0
                     )
@@ -201,12 +201,12 @@ export default function ToastTestPage() {
               <div className="flex flex-wrap gap-3">
                 <ButtonLarge
                   onClick={() => {
-                    showToast('success', 'First Toast', 'This is the first toast.');
+                    showToast('success', 'First toast', 'This is the first toast.');
                     setTimeout(() => {
-                      showToast('warning', 'Second Toast', 'This is the second toast.');
+                      showToast('warning', 'Second toast', 'This is the second toast.');
                     }, 500);
                     setTimeout(() => {
-                      showToast('danger', 'Third Toast', 'This is the third toast.');
+                      showToast('danger', 'Third toast', 'This is the third toast.');
                     }, 1000);
                   }}
                   variant="primary"

@@ -69,7 +69,7 @@ export default function DiscardChangesModal({
           {/* Title and Message */}
           <div className="flex flex-col gap-1">
             <h2 className="text-lg font-semibold text-neutral-700 leading-7 tracking-[-0.18px]">
-              Discard Changes?
+              Discard changes?
             </h2>
             <p className="text-base font-normal text-neutral-500 leading-6 tracking-[-0.16px]">
               This request isn't finished. All your information will be lost if you leave.

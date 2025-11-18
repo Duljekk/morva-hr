@@ -141,10 +141,10 @@ function CheckInSuccessContent() {
         {/* Text Content */}
           {timeMessage && (
         <div className="mb-12 flex w-full max-w-[283px] flex-col items-center gap-1 text-center">
-          <h1 className="text-2xl font-semibold leading-7 tracking-[-0.24px] text-neutral-700">
-            You&apos;re Checked In!
+          <h1 className="text-2xl font-semibold leading-7 tracking-[-0.24px] text-neutral-800">
+            You&apos;re checked in
           </h1>
-          <div className="flex flex-col items-center text-lg leading-7 tracking-[-0.18px] text-neutral-500">
+          <div className="flex flex-col items-center text-lg leading-7 tracking-[-0.18px] text-neutral-600">
                 {timeMessage.status === 'ontime' ? (
                   <>
                     <p className="font-normal break-words">{timeMessage.text}</p>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeftIcon } from '../components/Icons';
+import ArrowLeftIcon from '@/app/assets/icons/arrow-left.svg';
 import Calendar from '../components/Calendar';
 import LeaveTypeBottomSheet, { leaveTypes, LeaveType } from '../components/LeaveTypeBottomSheet';
 import DocumentAttachment from '../components/DocumentAttachment';
@@ -194,6 +194,15 @@ export default function RequestLeavePage() {
     setUploadedFiles(uploadedFiles.filter(file => file.id !== id));
   };
 
+  // Helper function to format date in local timezone (YYYY-MM-DD)
+  // This prevents timezone shift issues when using toISOString()
+  const formatDateLocal = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -242,10 +251,12 @@ export default function RequestLeavePage() {
         ? (dayType === 'half' ? 0.5 : 1)
         : days;
       
+      // Format dates in local timezone to prevent timezone shift
+      // Using toISOString() converts to UTC which can shift dates by one day
       const submitData = {
         leaveTypeId: selectedLeaveType.id,
-        startDate: startDate.toISOString().split('T')[0], // Format: YYYY-MM-DD
-        endDate: endDate.toISOString().split('T')[0],
+        startDate: formatDateLocal(startDate), // Format: YYYY-MM-DD in local timezone
+        endDate: formatDateLocal(endDate), // Format: YYYY-MM-DD in local timezone
         dayType: dayType,
         totalDays: totalDays,
         reason: reason.trim(),
@@ -268,7 +279,7 @@ export default function RequestLeavePage() {
       // Success! Show toast notification and redirect to home
       showToast(
         'success',
-        'Leave Request Sent',
+        'Leave request sent',
         "Your leave request has been sent. You'll be notified when there's an update."
       );
       router.push('/');
@@ -289,7 +300,7 @@ export default function RequestLeavePage() {
             onClick={handleBackClick}
             className="absolute left-6 flex h-10 w-10 items-center justify-center"
           >
-            <ChevronLeftIcon className="h-6 w-6 text-neutral-700" />
+            <ArrowLeftIcon className="h-6 w-6 text-neutral-700" />
           </button>
           <h1 className="text-xl font-semibold text-neutral-800 tracking-tight">
             Request Leave
@@ -302,7 +313,7 @@ export default function RequestLeavePage() {
           <div className="flex items-center gap-3 mb-[2px]">
             {/* From Date */}
             <div className="flex flex-1 flex-col gap-2">
-              <p className="text-sm font-semibold text-neutral-600 tracking-tight">From</p>
+              <p className="text-sm font-semibold text-neutral-800 tracking-tight">From</p>
               <Calendar value={startDate} onChange={handleStartDateChange} />
             </div>
 
@@ -313,7 +324,7 @@ export default function RequestLeavePage() {
 
             {/* Until Date */}
             <div className="flex flex-1 flex-col gap-2">
-              <p className="text-sm font-semibold text-neutral-600 tracking-tight text-left">Until</p>
+              <p className="text-sm font-semibold text-neutral-800 tracking-tight text-left">Until</p>
               <Calendar value={endDate} onChange={handleEndDateChange} />
             </div>
           </div>
@@ -342,7 +353,7 @@ export default function RequestLeavePage() {
 
           {/* Leave Type */}
           <div className="flex flex-col gap-2">
-            <p className="text-sm font-semibold text-neutral-600 tracking-tight">Leave Type</p>
+            <p className="text-sm font-semibold text-neutral-800 tracking-tight">Leave type</p>
             <LeaveTypeBottomSheet
               selected={selectedLeaveType}
               onSelect={setSelectedLeaveType}
@@ -351,7 +362,7 @@ export default function RequestLeavePage() {
 
           {/* Reason for Leave */}
           <div className="flex flex-col gap-2">
-            <p className="text-sm font-semibold text-neutral-600 tracking-tight">Reason for Leave</p>
+            <p className="text-sm font-semibold text-neutral-800 tracking-tight">Reason for leave</p>
             <TextArea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
@@ -363,7 +374,7 @@ export default function RequestLeavePage() {
 
           {/* Attachment Section */}
           <div className="flex flex-col gap-2.5 overflow-visible">
-            <p className="text-sm font-semibold text-neutral-600 tracking-tight">Attachment</p>
+            <p className="text-sm font-semibold text-neutral-800 tracking-tight">Attachment</p>
             <DocumentAttachment onFileSelect={handleFileSelect} />
             
             {/* Uploaded Files */}
@@ -402,8 +413,9 @@ export default function RequestLeavePage() {
             variant="primary"
             className="mt-3"
             disabled={isSubmitting || uploadedFiles.some(f => f.isUploading) || !!activeLeaveMessage}
+            isLoading={isSubmitting}
           >
-            {isSubmitting ? 'Submitting...' : 'Send Request'}
+            Send Request
           </ButtonLarge>
         </form>
       </div>

@@ -1,5 +1,6 @@
 'use client';
 
+import { memo, useMemo } from 'react';
 import CheckInNeutralIcon from '@/app/assets/icons/check-in-neutral.svg';
 import CheckOutNeutralIcon from '@/app/assets/icons/check-out-neutral.svg';
 import CalendarIcon from '@/app/assets/icons/calendar-1.svg';
@@ -34,62 +35,76 @@ interface RecentActivitiesProps {
   activities: DayActivity[];
 }
 
-export default function RecentActivities({ activities }: RecentActivitiesProps) {
-  // Helper function to format date like "October 30" (same format as backend)
-  const formatActivityDate = (date: Date): string => {
-    const month = date.toLocaleDateString('en-US', { month: 'long' });
-    const day = date.getDate();
-    return `${month} ${day}`;
-  };
+// Helper functions moved outside component - they don't depend on component state/props
+// This prevents them from being recreated on every render
 
-  // Get today's formatted date for comparison
+/**
+ * Format date like "October 30" (same format as backend)
+ */
+const formatActivityDate = (date: Date): string => {
+  const month = date.toLocaleDateString('en-US', { month: 'long' });
+  const day = date.getDate();
+  return `${month} ${day}`;
+};
+
+/**
+ * Get leave icon based on type and status
+ */
+const getLeaveIcon = (leaveType: 'annual' | 'sick' | 'unpaid', status: LeaveStatus) => {
+  if (leaveType === 'annual') {
+    if (status === 'pending') return AnnualPendingIcon;
+    if (status === 'approved') return AnnualApprovedIcon;
+    return AnnualRejectedIcon;
+  }
+  if (leaveType === 'sick') {
+    if (status === 'pending') return SickPendingIcon;
+    if (status === 'approved') return SickApprovedIcon;
+    return SickRejectedIcon;
+  }
+  // unpaid
+  if (status === 'pending') return UnpaidPendingIcon;
+  if (status === 'approved') return UnpaidApprovedIcon;
+  return UnpaidRejectedIcon;
+};
+
+/**
+ * Separate activities into attendance and leave arrays
+ */
+const separateActivities = (activities: Activity[]) => {
+  const attendance: Activity[] = [];
+  const leave: Activity[] = [];
+  
+  activities.forEach(activity => {
+    if (activity.type === 'leave') {
+      leave.push(activity);
+    } else {
+      attendance.push(activity);
+    }
+  });
+  
+  return { attendance, leave };
+};
+
+/**
+ * Memoized RecentActivities component
+ * Only re-renders when activities prop changes
+ */
+function RecentActivities({ activities }: RecentActivitiesProps) {
+  // Calculate today's date string - simple operation, no need to memoize
+  // Since component is memoized, this will only run when activities prop changes
   const todayDateString = formatActivityDate(new Date());
-
-  // Helper function to get leave icon based on type and status
-  const getLeaveIcon = (leaveType: 'annual' | 'sick' | 'unpaid', status: LeaveStatus) => {
-    if (leaveType === 'annual') {
-      if (status === 'pending') return AnnualPendingIcon;
-      if (status === 'approved') return AnnualApprovedIcon;
-      return AnnualRejectedIcon;
-    }
-    if (leaveType === 'sick') {
-      if (status === 'pending') return SickPendingIcon;
-      if (status === 'approved') return SickApprovedIcon;
-      return SickRejectedIcon;
-    }
-    // unpaid
-    if (status === 'pending') return UnpaidPendingIcon;
-    if (status === 'approved') return UnpaidApprovedIcon;
-    return UnpaidRejectedIcon;
-  };
-
-  // Separate activities into attendance and leave
-  const separateActivities = (activities: Activity[]) => {
-    const attendance: Activity[] = [];
-    const leave: Activity[] = [];
-    
-    activities.forEach(activity => {
-      if (activity.type === 'leave') {
-        leave.push(activity);
-      } else {
-        attendance.push(activity);
-      }
-    });
-    
-    return { attendance, leave };
-  };
 
   return (
     <div className="flex flex-col gap-3 w-full">
-      <p className="text-base font-semibold text-neutral-700 tracking-tight">
+      <p className="text-base font-semibold text-neutral-800 tracking-tight">
         Recent Activities
       </p>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2.5">
         {activities.map((day, dayIndex) => (
-          <div key={dayIndex} className="flex flex-col gap-3">
+          <div key={dayIndex} className="flex flex-col gap-2.5">
             {/* Date Badge */}
-            <div className="w-fit flex items-center gap-0.5 rounded-3xl bg-[rgba(255,255,255,0.6)] px-2 py-1 shadow-[0px_1px_2px_0px_rgba(164,172,185,0.24),0px_0px_0.5px_0.5px_rgba(28,28,28,0.08)]">
+            <div className="w-fit flex items-center gap-1 rounded-3xl px-2 py-0">
               <CalendarIcon className="h-3.5 w-3.5 shrink-0" />
               <p className="text-xs font-semibold text-neutral-700">
                 {day.date === todayDateString ? 'Today' : day.date}
@@ -97,10 +112,10 @@ export default function RecentActivities({ activities }: RecentActivitiesProps) 
             </div>
 
             {/* Activity Card Container */}
-            <div className="flex items-start justify-end pl-4">
+            <div className="flex items-start justify-end pl-[14px]">
               {/* Middle container with stroke - centered on calendar icon */}
               <div className={`flex flex-col gap-2.5 flex-1 ${dayIndex < activities.length - 1 ? 'border-l border-dashed border-neutral-300' : ''} pl-3.5`}>
-                {(() => {
+                {useMemo(() => {
                   const { attendance, leave } = separateActivities(day.activities);
                   
                   return (
@@ -122,12 +137,12 @@ export default function RecentActivities({ activities }: RecentActivitiesProps) 
                               {/* Text and Badge */}
                               <div className="flex flex-1 items-start">
                                 <div className="flex-1">
-                                  <p className="text-sm font-semibold text-neutral-600 tracking-[-0.07px] leading-[18px]">
+                                  <p className="text-sm font-semibold text-neutral-700 tracking-[-0.07px] leading-[18px]">
                                     Requested Leave
                                   </p>
                                   {activity.dateRange && (
                                     <div className="flex gap-1 items-center">
-                                      <p className="text-xs font-medium text-neutral-400 leading-4">
+                                      <p className="text-xs font-medium text-neutral-500 leading-4">
                                         {activity.dateRange}
                                       </p>
                                     </div>
@@ -161,10 +176,10 @@ export default function RecentActivities({ activities }: RecentActivitiesProps) 
                         {/* Text and Badge */}
                         <div className="flex flex-1 items-start">
                           <div className="flex-1">
-                            <p className="text-sm font-semibold text-neutral-600 tracking-tight leading-[18px]">
-                              {activity.type === 'checkin' ? 'Checked-In' : 'Checked-Out'}
+                            <p className="text-sm font-semibold text-neutral-700 tracking-[-0.07px] leading-[18px]">
+                              {activity.type === 'checkin' ? 'Checked In' : 'Checked Out'}
                             </p>
-                            <p className="text-xs font-medium text-neutral-400 leading-4">
+                            <p className="text-xs font-medium text-neutral-500 leading-4">
                               {activity.time}
                             </p>
                           </div>
@@ -186,7 +201,7 @@ export default function RecentActivities({ activities }: RecentActivitiesProps) 
                       )}
                     </>
                   );
-                })()}
+                }, [day.activities])}
               </div>
             </div>
           </div>
@@ -195,6 +210,10 @@ export default function RecentActivities({ activities }: RecentActivitiesProps) 
     </div>
   );
 }
+
+// Export memoized component to prevent unnecessary re-renders
+// Component will only re-render when activities prop changes
+export default memo(RecentActivities);
 
 
 

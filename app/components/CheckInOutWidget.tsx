@@ -21,6 +21,7 @@ interface CheckInOutWidgetProps {
   onRequestLeave: () => void;
   hasActiveLeave?: boolean;
   activeLeaveInfo?: { status: string; startDate: string; endDate: string; leaveTypeName?: string };
+  onOpenLeaveDetails?: () => void;
 }
 
 const formatClockTime = (date: Date) =>
@@ -85,12 +86,12 @@ export default function CheckInOutWidget({
   })();
 
   const heading = isOnLeaveToday
-    ? "Enjoy Your Day Off!"
+    ? "Enjoy your day off!"
     : state === 'checkedOut'
-      ? "You've Checked Out"
+      ? "You've checked out"
       : state === 'preCheckIn'
-        ? 'Ready To Start Your Day?'
-        : "You're On The Clock";
+        ? 'Ready to start your day?'
+        : "You're on the clock";
 
   const shiftStartLabel = formatTimeWithPeriod(shiftStart);
 
@@ -133,11 +134,9 @@ export default function CheckInOutWidget({
 
   const metricColor = state === 'overtime' ? 'text-emerald-600' : 'text-neutral-800';
 
-  const primaryLabel = isLoading 
-    ? 'Processing...' 
-    : state === 'preCheckIn' || state === 'checkedOut' 
-      ? 'Check-In' 
-      : 'Check-Out';
+  const primaryLabel = state === 'preCheckIn' || state === 'checkedOut' 
+    ? 'Check-In' 
+    : 'Check-Out';
 
   const primaryDisabled = (() => {
     if (isLoading) return true; // Disable during operations
@@ -183,11 +182,11 @@ export default function CheckInOutWidget({
       {/* Top Container */}
       <div className="flex flex-col items-center gap-3 border-[3px] border-white bg-[rgba(17,17,17,0.02)] px-0 py-6 rounded-tl-[26px] rounded-tr-[26px]">
         <div className="flex flex-col items-center">
-          <p className="text-base font-semibold text-neutral-700 tracking-tight">
+          <p className="text-base font-semibold text-neutral-800 tracking-tight">
             {heading}
           </p>
           {subtitle && (
-            <p className="text-base text-neutral-800 opacity-60 text-center">
+            <p className="text-base text-neutral-500 text-center">
               {subtitle}
             </p>
           )}
@@ -204,6 +203,7 @@ export default function CheckInOutWidget({
             onClick={handlePrimaryClick}
             disabled={primaryDisabled}
             variant="primary"
+            isLoading={isLoading}
           >
             {primaryLabel}
           </ButtonLarge>

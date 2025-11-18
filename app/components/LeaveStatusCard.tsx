@@ -38,7 +38,7 @@ export default function LeaveStatusCard({ status, startDate, endDate, onClick }:
       {/* Top section - Button */}
       <div className="flex flex-col gap-2.5 items-start pt-1 px-1 w-full">
         <div className="bg-white border border-neutral-200 flex h-12 items-center justify-center px-5 py-1.5 rounded-xl w-full">
-          <p className="text-base font-semibold text-neutral-600 tracking-[-0.16px] text-center whitespace-pre">
+          <p className="text-base font-semibold text-neutral-700 tracking-[-0.16px] text-center whitespace-pre">
             {buttonText}
           </p>
         </div>

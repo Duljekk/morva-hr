@@ -29,11 +29,11 @@ export default function AttendanceCard({ type, time, status, duration }: Attenda
 
         {/* Text */}
         <div className="flex flex-col">
-          <p className="text-base font-semibold text-neutral-600 tracking-tight leading-5">
+          <p className="text-base font-semibold text-neutral-700 tracking-tight leading-5">
             {isCheckIn ? 'Checked In' : 'Check Out'}
           </p>
           <p className={`text-sm font-medium leading-[18px] ${
-            isEmpty ? 'text-neutral-300' : 'text-neutral-300'
+            isEmpty ? 'text-neutral-400' : 'text-neutral-400'
           }`}>
             {time}
           </p>
@@ -73,7 +73,7 @@ export default function AttendanceCard({ type, time, status, duration }: Attenda
           </div>
 
           {/* Duration */}
-          <p className="text-xs font-medium text-neutral-300">
+          <p className="text-xs font-medium text-neutral-400">
             {duration}
           </p>
         </div>

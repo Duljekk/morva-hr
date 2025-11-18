@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useToast } from '@/app/contexts/ToastContext';
@@ -45,6 +45,9 @@ const formatDurationFromMs = (ms: number) => {
 export default function Home() {
   const router = useRouter();
   const { signOut, profile } = useAuth();
+  // Use ref to track current time without causing re-renders
+  const nowRef = useRef(new Date());
+  // State for time-dependent calculations - only updates when needed for UI
   const [now, setNow] = useState(new Date());
   const [checkInDateTime, setCheckInDateTime] = useState<Date | null>(null);
   const [checkOutDateTime, setCheckOutDateTime] = useState<Date | null>(null);
@@ -119,23 +122,77 @@ export default function Home() {
     loadActiveLeaveStatus();
   }, []);
 
-  // Calculate shift times (needed for loadRecentActivities)
-  const shiftStart = useMemo(() => setToHour(now, SHIFT_START_HOUR), [now]);
-  const shiftEnd = useMemo(() => setToHour(now, SHIFT_END_HOUR), [now]);
+  // Track current date components to detect date changes
+  // This only updates when the actual date changes, not every second
+  const [currentDateKey, setCurrentDateKey] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  });
 
-  // Function to format date like "October 30"
-  const formatActivityDate = useCallback((date: Date): string => {
+  // Ref to track date key without causing re-renders
+  const dateKeyRef = useRef(currentDateKey);
+
+  // Sync ref with state when state changes
+  useEffect(() => {
+    dateKeyRef.current = currentDateKey;
+  }, [currentDateKey]);
+
+  // Update date key only when date actually changes (not every second)
+  useEffect(() => {
+    const checkDateChange = () => {
+      const d = nowRef.current;
+      const newDateKey = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      if (newDateKey !== dateKeyRef.current) {
+        dateKeyRef.current = newDateKey;
+        setCurrentDateKey(newDateKey);
+      }
+    };
+
+    // Check on mount and then periodically (every minute is sufficient for date changes)
+    checkDateChange();
+    const interval = setInterval(checkDateChange, 60000); // Check every minute
+
+    return () => clearInterval(interval);
+  }, []); // Empty deps - uses refs internally
+
+  // Calculate shift times - memoized to prevent recalculation on every render
+  // These only need to update when the date changes, not every second
+  const shiftStart = useMemo(() => {
+    return setToHour(nowRef.current, SHIFT_START_HOUR);
+  }, [currentDateKey]); // Only recalculate when date changes
+  
+  const shiftEnd = useMemo(() => {
+    return setToHour(nowRef.current, SHIFT_END_HOUR);
+  }, [currentDateKey]); // Only recalculate when date changes
+
+  // Refs to store current check-in/out times for stable callback references
+  const checkInDateTimeRef = useRef<Date | null>(null);
+  const checkOutDateTimeRef = useRef<Date | null>(null);
+  
+  // Update refs when state changes
+  useEffect(() => {
+    checkInDateTimeRef.current = checkInDateTime;
+  }, [checkInDateTime]);
+  
+  useEffect(() => {
+    checkOutDateTimeRef.current = checkOutDateTime;
+  }, [checkOutDateTime]);
+
+  // Helper functions moved outside component - they're pure functions with no dependencies
+  // These don't need to be in useCallback since they're not used as dependencies
+  const formatActivityDate = (date: Date): string => {
     const month = date.toLocaleDateString('en-US', { month: 'long' });
     const day = date.getDate();
     return `${month} ${day}`;
-  }, []);
+  };
 
-  // Function to format time like "11:12"
-  const formatActivityTime = useCallback((date: Date): string => {
+  const formatActivityTime = (date: Date): string => {
     return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-  }, []);
+  };
 
   // Function to load recent activities
+  // Uses refs to access current values without including them in dependencies
+  // This prevents unnecessary callback recreation and API calls
   const loadRecentActivities = useCallback(async () => {
     const result = await getRecentActivities(14);
     if (result.data) {
@@ -147,38 +204,42 @@ export default function Home() {
       
       // Only merge today's activities if they're NOT already in the backend response
       // This ensures we use the correct status from the database
-      if (!todayInActivities && (checkInDateTime || checkOutDateTime)) {
+      // Use refs to get current values without dependencies
+      const currentCheckIn = checkInDateTimeRef.current;
+      const currentCheckOut = checkOutDateTimeRef.current;
+      
+      if (!todayInActivities && (currentCheckIn || currentCheckOut)) {
         // Calculate shift times when needed (using check-in date for accuracy)
-        const referenceDate = checkInDateTime || checkOutDateTime || new Date();
+        const referenceDate = currentCheckIn || currentCheckOut || new Date();
         const currentShiftStart = setToHour(referenceDate, SHIFT_START_HOUR);
         const currentShiftEnd = setToHour(referenceDate, SHIFT_END_HOUR);
         
         const todayActivities: typeof activities[0]['activities'] = [];
         
         // Add check-in activity if exists
-        if (checkInDateTime) {
+        if (currentCheckIn) {
           // Use same logic as backend: 1 minute tolerance (check-in at 11:00:00 to 11:00:59 is ontime)
           const shiftStartWithTolerance = new Date(currentShiftStart.getTime() + 60000); // Add 1 minute tolerance
-          const checkInStatus = checkInDateTime.getTime() >= shiftStartWithTolerance.getTime() ? 'late' : 'ontime';
+          const checkInStatus = currentCheckIn.getTime() >= shiftStartWithTolerance.getTime() ? 'late' : 'ontime';
           todayActivities.push({
             type: 'checkin' as const,
-            time: formatActivityTime(checkInDateTime),
+            time: formatActivityTime(currentCheckIn),
             status: checkInStatus,
           });
         }
         
         // Add check-out activity if exists
-        if (checkOutDateTime) {
+        if (currentCheckOut) {
           // Use same logic as backend: 1 minute tolerance (check-out at 19:00:00 to 19:00:59 is ontime)
           const shiftEndWithTolerance = new Date(currentShiftEnd.getTime() + 60000); // Add 1 minute tolerance
-          const checkOutStatus = checkOutDateTime.getTime() > shiftEndWithTolerance.getTime() 
+          const checkOutStatus = currentCheckOut.getTime() > shiftEndWithTolerance.getTime() 
             ? 'overtime' 
-            : checkOutDateTime.getTime() < currentShiftEnd.getTime() 
+            : currentCheckOut.getTime() < currentShiftEnd.getTime() 
               ? 'leftearly' 
               : 'ontime';
           todayActivities.push({
             type: 'checkout' as const,
-            time: formatActivityTime(checkOutDateTime),
+            time: formatActivityTime(currentCheckOut),
             status: checkOutStatus,
           });
         }
@@ -194,37 +255,41 @@ export default function Home() {
       console.error('Error loading recent activities:', result.error);
       
       // Even on error, try to show today's activities if we have them
-      if (checkInDateTime || checkOutDateTime) {
+      // Use refs to get current values
+      const currentCheckIn = checkInDateTimeRef.current;
+      const currentCheckOut = checkOutDateTimeRef.current;
+      
+      if (currentCheckIn || currentCheckOut) {
         // Calculate shift times when needed
-        const referenceDate = checkInDateTime || checkOutDateTime || new Date();
+        const referenceDate = currentCheckIn || currentCheckOut || new Date();
         const currentShiftStart = setToHour(referenceDate, SHIFT_START_HOUR);
         const currentShiftEnd = setToHour(referenceDate, SHIFT_END_HOUR);
         
         const todayDateString = formatActivityDate(new Date());
         const todayActivities: typeof recentActivities[0]['activities'] = [];
         
-        if (checkInDateTime) {
+        if (currentCheckIn) {
           // Use same logic as backend: 1 minute tolerance (check-in at 11:00:00 to 11:00:59 is ontime)
           const shiftStartWithTolerance = new Date(currentShiftStart.getTime() + 60000); // Add 1 minute tolerance
-          const checkInStatus = checkInDateTime.getTime() >= shiftStartWithTolerance.getTime() ? 'late' : 'ontime';
+          const checkInStatus = currentCheckIn.getTime() >= shiftStartWithTolerance.getTime() ? 'late' : 'ontime';
           todayActivities.push({
             type: 'checkin' as const,
-            time: formatActivityTime(checkInDateTime),
+            time: formatActivityTime(currentCheckIn),
             status: checkInStatus,
           });
         }
         
-        if (checkOutDateTime) {
+        if (currentCheckOut) {
           // Use same logic as backend: 1 minute tolerance (check-out at 19:00:00 to 19:00:59 is ontime)
           const shiftEndWithTolerance = new Date(currentShiftEnd.getTime() + 60000); // Add 1 minute tolerance
-          const checkOutStatus = checkOutDateTime.getTime() > shiftEndWithTolerance.getTime() 
+          const checkOutStatus = currentCheckOut.getTime() > shiftEndWithTolerance.getTime() 
             ? 'overtime' 
-            : checkOutDateTime.getTime() < currentShiftEnd.getTime() 
+            : currentCheckOut.getTime() < currentShiftEnd.getTime() 
               ? 'leftearly' 
               : 'ontime';
           todayActivities.push({
             type: 'checkout' as const,
-            time: formatActivityTime(checkOutDateTime),
+            time: formatActivityTime(currentCheckOut),
             status: checkOutStatus,
           });
         }
@@ -238,50 +303,119 @@ export default function Home() {
         setRecentActivities([]);
       }
     }
-  }, [checkInDateTime, checkOutDateTime, formatActivityDate, formatActivityTime]);
+  }, []); // Empty deps - function uses refs to access current values
+
+  // Debounce timer ref to prevent rapid successive calls
+  const loadActivitiesTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hasMountedRef = useRef(false);
 
   // Fetch recent activities from database on mount and when check-in/check-out changes
+  // Debounced to prevent rapid successive API calls
   useEffect(() => {
-    loadRecentActivities();
-  }, [loadRecentActivities]);
+    // Clear any pending debounce timer
+    if (loadActivitiesTimeoutRef.current) {
+      clearTimeout(loadActivitiesTimeoutRef.current);
+    }
 
-  // Update clock every second
-  useEffect(() => {
-    const interval = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(interval);
-  }, []);
+    // On initial mount, load immediately (no debounce needed)
+    // For subsequent changes, debounce to batch rapid state changes
+    const shouldDebounce = hasMountedRef.current;
+    hasMountedRef.current = true;
 
-  // Dynamic date formatting
-  const formattedDate = useMemo(() => {
-    const today = new Date();
-    const dayName = today.toLocaleDateString('en-US', { weekday: 'long' });
-    const day = today.getDate();
-    const month = today.toLocaleDateString('en-US', { month: 'long' });
-    const year = today.getFullYear();
-    
-    // Get ordinal suffix (1st, 2nd, 3rd, 4th, etc.)
-    const getOrdinalSuffix = (num: number) => {
-      const j = num % 10;
-      const k = num % 100;
-      if (j === 1 && k !== 11) return num + 'st';
-      if (j === 2 && k !== 12) return num + 'nd';
-      if (j === 3 && k !== 13) return num + 'rd';
-      return num + 'th';
+    const loadActivities = () => {
+      loadRecentActivities();
     };
-    
-    return `It's ${dayName}, ${getOrdinalSuffix(day)} ${month} ${year}`;
+
+    if (shouldDebounce) {
+      // Debounce the API call by 300ms to batch rapid state changes
+      loadActivitiesTimeoutRef.current = setTimeout(loadActivities, 300);
+    } else {
+      // Load immediately on mount
+      loadActivities();
+    }
+
+    return () => {
+      if (loadActivitiesTimeoutRef.current) {
+        clearTimeout(loadActivitiesTimeoutRef.current);
+      }
+    };
+  }, [checkInDateTime, checkOutDateTime, loadRecentActivities]); // Only trigger when check-in/out actually changes
+
+  // Update time reference and state
+  // Use requestAnimationFrame for smoother updates, fallback to setInterval
+  useEffect(() => {
+    let animationFrameId: number | null = null;
+    let intervalId: NodeJS.Timeout | null = null;
+    let lastUpdateTime = Date.now();
+
+    const updateTime = () => {
+      const currentTime = new Date();
+      nowRef.current = currentTime;
+      
+      // Only update state if a full second has passed (reduces re-renders)
+      const nowMs = Date.now();
+      if (nowMs - lastUpdateTime >= 1000) {
+        setNow(currentTime);
+        lastUpdateTime = nowMs;
+      }
+    };
+
+    // Use requestAnimationFrame for smoother updates when tab is active
+    const scheduleUpdate = () => {
+      animationFrameId = requestAnimationFrame(() => {
+        updateTime();
+        scheduleUpdate();
+      });
+    };
+
+    // Start with requestAnimationFrame
+    scheduleUpdate();
+
+    // Fallback to setInterval for reliability (updates every second)
+    intervalId = setInterval(updateTime, 1000);
+
+    return () => {
+      if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+      }
+      if (intervalId !== null) {
+        clearInterval(intervalId);
+      }
+    };
   }, []);
 
-  // Determine widget state
+  // Helper function for date formatting - moved outside component logic
+  // This is a pure function that doesn't need memoization
+  const formatFullDate = (date: Date): string => {
+    const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
+    const day = date.getDate();
+    const month = date.toLocaleDateString('en-US', { month: 'long' });
+    const year = date.getFullYear();
+    return `It's ${dayName}, ${month} ${day}, ${year}`;
+  };
+
+  // Dynamic date formatting - only updates when date changes, not every second
+  // Uses currentDateKey which only changes when the actual date changes
+  const formattedDate = useMemo(() => {
+    return formatFullDate(nowRef.current);
+  }, [currentDateKey]); // Only recalculate when date changes
+
+  // Determine widget state - memoized to prevent recalculation
   const isCheckedIn = !!checkInDateTime && !checkOutDateTime;
-  const canCheckIn = !checkInDateTime && now.getTime() >= shiftStart.getTime();
+  
+  const canCheckIn = useMemo(() => {
+    return !checkInDateTime && nowRef.current.getTime() >= shiftStart.getTime();
+  }, [checkInDateTime, shiftStart, now]);
+  
   const canCheckOut = isCheckedIn;
   
-  const widgetState: 'preCheckIn' | 'onClock' | 'overtime' | 'checkedOut' = checkOutDateTime
-    ? 'checkedOut'
-    : isCheckedIn
-      ? (now.getTime() >= shiftEnd.getTime() ? 'overtime' : 'onClock')
-      : 'preCheckIn';
+  const widgetState: 'preCheckIn' | 'onClock' | 'overtime' | 'checkedOut' = useMemo(() => {
+    if (checkOutDateTime) return 'checkedOut';
+    if (isCheckedIn) {
+      return nowRef.current.getTime() >= shiftEnd.getTime() ? 'overtime' : 'onClock';
+    }
+    return 'preCheckIn';
+  }, [checkOutDateTime, isCheckedIn, shiftEnd, now]);
 
   const handleCheckIn = async () => {
     if (isLoading || checkInDateTime) {
@@ -409,41 +543,67 @@ export default function Home() {
     ? formatDurationFromMs(checkInDateTime.getTime() - shiftStartForCheckIn.getTime())
     : undefined;
 
-  // Check-out card data
-  const remainingToShiftEndMs = Math.max(0, shiftEnd.getTime() - now.getTime());
-  const overtimeMs = isCheckedIn ? Math.max(0, now.getTime() - shiftEnd.getTime()) : 0;
-  const checkoutOvertimeMs = checkOutDateTime ? Math.max(0, checkOutDateTime.getTime() - shiftEnd.getTime()) : 0;
+  // Check-out card data - memoized expensive calculations
+  const remainingToShiftEndMs = useMemo(() => {
+    return Math.max(0, shiftEnd.getTime() - nowRef.current.getTime());
+  }, [shiftEnd, now]);
+  
+  const overtimeMs = useMemo(() => {
+    return isCheckedIn ? Math.max(0, nowRef.current.getTime() - shiftEnd.getTime()) : 0;
+  }, [isCheckedIn, shiftEnd, now]);
+  
+  const checkoutOvertimeMs = useMemo(() => {
+    return checkOutDateTime ? Math.max(0, checkOutDateTime.getTime() - shiftEnd.getTime()) : 0;
+  }, [checkOutDateTime, shiftEnd]);
 
   const checkoutCardTime = checkOutDateTime ? formatClockTime(checkOutDateTime) : '--:--';
+  
   // Use same logic as backend: 1 minute tolerance (check-out at 19:00:00 to 19:00:59 is ontime)
-  const shiftEndWithTolerance = new Date(shiftEnd.getTime() + 60000); // Add 1 minute tolerance
-  const checkoutStatus = checkOutDateTime
-    ? (checkOutDateTime.getTime() > shiftEndWithTolerance.getTime() 
+  const shiftEndWithTolerance = useMemo(() => {
+    return new Date(shiftEnd.getTime() + 60000); // Add 1 minute tolerance
+  }, [shiftEnd]);
+  
+  const checkoutStatus = useMemo(() => {
+    if (checkOutDateTime) {
+      return checkOutDateTime.getTime() > shiftEndWithTolerance.getTime() 
         ? 'overtime' 
         : checkOutDateTime.getTime() < shiftEnd.getTime() 
           ? 'leftearly' 
-          : 'ontime')
-    : isCheckedIn && now.getTime() >= shiftEnd.getTime()
-      ? 'overtime'
-      : isCheckedIn
-        ? 'remaining'
-        : undefined;
+          : 'ontime';
+    }
+    if (isCheckedIn && nowRef.current.getTime() >= shiftEnd.getTime()) {
+      return 'overtime';
+    }
+    if (isCheckedIn) {
+      return 'remaining';
+    }
+    return undefined;
+  }, [checkOutDateTime, shiftEndWithTolerance, shiftEnd, isCheckedIn, now]);
 
-  const checkoutLeftEarlyMs = checkOutDateTime && checkOutDateTime.getTime() < shiftEnd.getTime()
-    ? shiftEnd.getTime() - checkOutDateTime.getTime()
-    : 0;
+  const checkoutLeftEarlyMs = useMemo(() => {
+    return checkOutDateTime && checkOutDateTime.getTime() < shiftEnd.getTime()
+      ? shiftEnd.getTime() - checkOutDateTime.getTime()
+      : 0;
+  }, [checkOutDateTime, shiftEnd]);
 
-  const checkoutDuration = checkOutDateTime
-    ? (checkOutDateTime.getTime() > shiftEnd.getTime()
-        ? formatDurationFromMs(checkoutOvertimeMs)
-        : checkOutDateTime.getTime() < shiftEnd.getTime()
-          ? formatDurationFromMs(checkoutLeftEarlyMs)
-          : undefined)
-    : isCheckedIn && now.getTime() >= shiftEnd.getTime()
-      ? formatDurationFromMs(overtimeMs)
-      : isCheckedIn
-        ? formatDurationFromMs(remainingToShiftEndMs)
-        : undefined;
+  const checkoutDuration = useMemo(() => {
+    if (checkOutDateTime) {
+      if (checkOutDateTime.getTime() > shiftEnd.getTime()) {
+        return formatDurationFromMs(checkoutOvertimeMs);
+      }
+      if (checkOutDateTime.getTime() < shiftEnd.getTime()) {
+        return formatDurationFromMs(checkoutLeftEarlyMs);
+      }
+      return undefined;
+    }
+    if (isCheckedIn && nowRef.current.getTime() >= shiftEnd.getTime()) {
+      return formatDurationFromMs(overtimeMs);
+    }
+    if (isCheckedIn) {
+      return formatDurationFromMs(remainingToShiftEndMs);
+    }
+    return undefined;
+  }, [checkOutDateTime, shiftEnd, isCheckedIn, checkoutOvertimeMs, checkoutLeftEarlyMs, overtimeMs, remainingToShiftEndMs, now]);
 
 
   return (
@@ -464,7 +624,7 @@ export default function Home() {
             </div>
             <NotificationButton
               hasNotification={true}
-              onClick={() => alert('Notifications would open here')}
+              onClick={() => router.push('/notifications')}
             />
         </div>
 
@@ -481,7 +641,7 @@ export default function Home() {
             <CheckInOutWidget
               shiftStart={shiftStart}
               shiftEnd={shiftEnd}
-              currentTime={now}
+              currentTime={nowRef.current}
               checkInTime={checkInDateTime}
               checkOutTime={checkOutDateTime}
               state={widgetState}
@@ -569,7 +729,7 @@ export default function Home() {
         isOpen={showCheckOutConfirm}
         onClose={() => setShowCheckOutConfirm(false)}
         onConfirm={handleCheckOut}
-        title="Check-Out Early?"
+        title="Check-out early?"
         shiftEndTime={formatTimeWithPeriod(setToHour(now, SHIFT_END_HOUR))}
         earlyDuration={(() => {
           const shiftEnd = setToHour(now, SHIFT_END_HOUR);

@@ -85,7 +85,7 @@ function LeaveRequestStatusTimeline({
                 </div>
               </div>
             )}
-            <p className="text-sm font-medium text-neutral-600 leading-[18px] tracking-[-0.07px] whitespace-pre">
+            <p className="text-sm font-medium text-neutral-800 leading-[18px] tracking-[-0.07px] whitespace-pre">
               {item.label}
             </p>
           </div>
@@ -101,10 +101,10 @@ function LeaveRequestStatusTimeline({
                 </p>
                 {/* Timestamp */}
                 <div className="flex gap-1 items-center shrink-0">
-                  <p className="text-xs font-medium text-neutral-400 leading-4 whitespace-pre">
+                  <p className="text-xs font-medium text-neutral-600 leading-4 whitespace-pre">
                     {formatDate(item.date)}
                   </p>
-                  <p className="text-xs font-medium text-neutral-300 leading-4 whitespace-pre">
+                  <p className="text-xs font-medium text-neutral-400 leading-4 whitespace-pre">
                     {item.time}
                   </p>
                 </div>
@@ -117,10 +117,10 @@ function LeaveRequestStatusTimeline({
             // First item without reason (Accepted/Approved variant)
             <div className="flex flex-col items-start pb-0 pt-0.5 px-1.5 shrink-0 w-full">
               <div className="border-l border-dashed border-neutral-300 flex gap-1 items-center pb-3.5 pt-0 px-3.5 shrink-0 w-full h-[30px]">
-                <p className="text-xs font-medium text-neutral-400 leading-4 whitespace-pre">
+                <p className="text-xs font-medium text-neutral-600 leading-4 whitespace-pre">
                   {formatDate(item.date)}
                 </p>
-                <p className="text-xs font-medium text-neutral-300 leading-4 whitespace-pre">
+                <p className="text-xs font-medium text-neutral-400 leading-4 whitespace-pre">
                   {item.time}
                 </p>
               </div>
@@ -129,10 +129,10 @@ function LeaveRequestStatusTimeline({
             // Regular variant without reason (Requested)
             <div className="flex flex-col items-start px-1.5 py-0 shrink-0 w-full">
               <div className="flex gap-1 items-center px-3.5 py-0 shrink-0 w-full">
-                <p className="text-xs font-medium text-neutral-400 leading-4 whitespace-pre">
+                <p className="text-xs font-medium text-neutral-600 leading-4 whitespace-pre">
                   {formatDate(item.date)}
                 </p>
-                <p className="text-xs font-medium text-neutral-300 leading-4 whitespace-pre">
+                <p className="text-xs font-medium text-neutral-400 leading-4 whitespace-pre">
                   {item.time}
                 </p>
               </div>

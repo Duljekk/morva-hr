@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useMemo, type ReactNode } from 'react';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { createClient } from '../supabase/client';
 import type { Database } from '../supabase/types';
@@ -35,26 +35,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
-  const supabase = createClient();
+  // Memoize Supabase client to prevent recreation on every render
+  // This is important for React 19 and Next.js 16 compatibility
+  const supabase = useMemo(() => createClient(), []);
 
   // Fetch user profile from database
-  const fetchProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
+  // Memoize to prevent recreation on every render
+  const fetchProfile = useMemo(
+    () => async (userId: string) => {
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', userId)
+          .single();
 
-      if (error) throw error;
+        if (error) throw error;
 
-      setProfile(data as UserProfile);
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-      setProfile(null);
-    }
-  };
+        setProfile(data as UserProfile);
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+        setProfile(null);
+      }
+    },
+    [supabase]
+  );
 
   // Refresh profile data
   const refreshProfile = async () => {
@@ -168,9 +175,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   // Initialize auth state and listen for changes
+  // Use separate useEffect for mounting to prevent hydration issues
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+
+    let isActive = true;
+    let subscription: { unsubscribe: () => void } | null = null;
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!isActive) return;
+      
       setSession(session);
       setUser(session?.user ?? null);
       
@@ -183,8 +202,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Listen for auth changes
     const {
-      data: { subscription },
+      data: { subscription: authSubscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!isActive) return;
+      
       console.log('🔵 AuthContext: Auth state changed -', event, 'Session:', session ? 'EXISTS' : 'NULL');
       
       setSession(session);
@@ -201,8 +222,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
-  }, []);
+    subscription = authSubscription;
+
+    return () => {
+      isActive = false;
+      if (subscription) {
+        subscription.unsubscribe();
+      }
+    };
+  }, [mounted, supabase]);
 
   const value = {
     user,

@@ -18,8 +18,8 @@ const statusStyles = {
     label: 'Late',
   },
   ontime: {
-    bg: 'bg-[#f0fdf4]',
-    text: 'text-[#00a63e]',
+    bg: 'bg-[#dcfce7]',
+    text: 'text-[#008236]',
     label: 'On Time',
   },
   overtime: {

@@ -41,7 +41,7 @@ export default function UploadedFile({
 
       {/* File Info */}
         <div className="flex flex-col flex-1 min-w-0 pr-[2px]">
-          <p className="text-xs font-medium text-neutral-500 leading-4 whitespace-nowrap overflow-hidden text-ellipsis w-full">
+          <p className="text-xs font-medium text-neutral-600 leading-4 whitespace-nowrap overflow-hidden text-ellipsis w-full">
           {fileName}
         </p>
           
@@ -56,12 +56,12 @@ export default function UploadedFile({
                   style={{ width: 12, height: 12 }}
                 />
               </div>
-              <p className="text-xs font-medium text-neutral-300 leading-4 whitespace-nowrap">
+              <p className="text-xs font-medium text-neutral-400 leading-4 whitespace-nowrap">
                 Uploading...
               </p>
             </div>
           ) : (
-            <p className="text-xs font-medium text-neutral-300 leading-4 whitespace-nowrap">
+            <p className="text-xs font-medium text-neutral-400 leading-4 whitespace-nowrap">
           {fileSize}
         </p>
           )}

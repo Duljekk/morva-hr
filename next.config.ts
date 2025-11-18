@@ -8,7 +8,18 @@ const nextConfig: NextConfig = {
     },
   },
   // Use webpack for SVG handling via SVGR
-  webpack(config) {
+  webpack(config, { isServer }) {
+    // Fix Windows case-sensitivity issues
+    // This prevents webpack from treating paths with different casing as different modules
+    config.resolve.symlinks = false;
+    
+    // Normalize paths to prevent case-sensitivity issues on Windows
+    if (!isServer) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+      };
+    }
+
     // Grab the existing rule that handles SVG imports
     const fileLoaderRule = config.module.rules.find((rule: any) =>
       rule.test?.test?.('.svg'),

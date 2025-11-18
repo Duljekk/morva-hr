@@ -171,7 +171,7 @@ export default function LeaveRequestDetailsModal({
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-neutral-100 pl-5 pr-[14px] py-4">
-          <h2 className="text-base font-semibold text-neutral-700 leading-5 tracking-[-0.16px]">
+          <h2 className="text-base font-semibold text-neutral-800 leading-5 tracking-[-0.16px]">
             Leave Request Details
           </h2>
           <button
@@ -204,7 +204,7 @@ export default function LeaveRequestDetailsModal({
           <div className="flex items-end gap-4 px-5 mb-3">
             {/* From Date */}
             <div className="flex flex-1 flex-col gap-2">
-              <p className="text-sm font-semibold text-neutral-700 leading-[18px] tracking-[-0.07px]">
+              <p className="text-sm font-semibold text-neutral-800 leading-[18px] tracking-[-0.07px]">
                 From
               </p>
               <div className="bg-white border border-neutral-100 rounded-2xl overflow-clip">
@@ -230,7 +230,7 @@ export default function LeaveRequestDetailsModal({
 
             {/* Until Date */}
             <div className="flex flex-1 flex-col gap-2">
-              <p className="text-sm font-semibold text-neutral-700 leading-[18px] tracking-[-0.07px]">
+              <p className="text-sm font-semibold text-neutral-800 leading-[18px] tracking-[-0.07px]">
                 Until
               </p>
               <div className="bg-white border border-neutral-100 rounded-2xl overflow-clip">
@@ -256,11 +256,11 @@ export default function LeaveRequestDetailsModal({
             <div className="flex flex-col gap-1 px-5">
               {/* Requested On */}
               <div className="flex items-center gap-0.5 h-6">
-                <p className="text-sm font-semibold text-neutral-700 leading-[18px] tracking-[-0.07px] w-[124px] shrink-0">
+                <p className="text-sm font-semibold text-neutral-800 leading-[18px] tracking-[-0.07px] w-[124px] shrink-0">
                   Requested On
                 </p>
                 <div className="flex-1 px-2">
-                  <p className="text-sm font-normal text-neutral-500 leading-5 tracking-[-0.07px]">
+                  <p className="text-sm font-normal text-neutral-600 leading-5 tracking-[-0.07px]">
                     {formatFullDate(requestedOn)}
                   </p>
                 </div>
@@ -268,11 +268,11 @@ export default function LeaveRequestDetailsModal({
 
               {/* Leave Type */}
               <div className="flex items-center gap-0.5 h-6">
-                <p className="text-sm font-semibold text-neutral-700 leading-[18px] tracking-[-0.07px] w-[124px] shrink-0">
+                <p className="text-sm font-semibold text-neutral-800 leading-[18px] tracking-[-0.07px] w-[124px] shrink-0">
                   Leave Type
                 </p>
                 <div className="flex-1 px-2">
-                  <p className="text-sm font-normal text-neutral-500 leading-5 tracking-[-0.07px]">
+                  <p className="text-sm font-normal text-neutral-600 leading-5 tracking-[-0.07px]">
                     {leaveType}
                   </p>
                 </div>
@@ -280,8 +280,8 @@ export default function LeaveRequestDetailsModal({
             </div>
 
             {/* Reason */}
-            <div className="border-l-[1.5px] border-neutral-400 px-5">
-              <p className="text-sm font-normal text-neutral-500 leading-5 tracking-[-0.07px]">
+            <div className="border-l-2 border-neutral-400 px-5">
+              <p className="text-sm font-normal text-neutral-600 leading-5 tracking-[-0.07px]">
                 "{reason}"
               </p>
             </div>
@@ -290,8 +290,8 @@ export default function LeaveRequestDetailsModal({
 
         {/* Status Timeline Section */}
         <div className="border-t border-neutral-100 flex flex-col gap-2.5 pb-5 pt-4 px-5">
-          <div className="flex flex-col gap-1.5">
-            <p className="text-sm font-semibold text-neutral-700 leading-[18px] tracking-[-0.07px]">
+          <div className="flex flex-col gap-2">
+            <p className="text-sm font-semibold text-neutral-800 leading-[18px] tracking-[-0.07px]">
               Status
             </p>
             <LeaveRequestStatusTimeline

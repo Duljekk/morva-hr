@@ -41,7 +41,7 @@ export default function LoginPage() {
 
         if (error || !data) {
           setError('Username not found');
-          showToast('danger', 'Login Failed', 'Username not found. Please check your credentials and try again.');
+          showToast('danger', 'Login failed', 'Username not found. Please check your credentials and try again.');
           setIsSubmitting(false);
           return;
         }
@@ -55,7 +55,7 @@ export default function LoginPage() {
       if (error) {
         const errorMessage = error.message || 'Invalid login credentials';
         setError(errorMessage);
-        showToast('danger', 'Login Failed', 'The username or password you entered is incorrect. Please try again.');
+        showToast('danger', 'Login failed', 'The username or password you entered is incorrect. Please try again.');
         setIsSubmitting(false);
         return;
       }
@@ -121,7 +121,7 @@ export default function LoginPage() {
           <div className="relative z-10 flex w-full flex-col items-center">
             {/* Welcome Section */}
             <div className="mb-8 flex w-full max-w-[297px] flex-col items-center gap-1 text-center">
-              <h1 className="text-xl font-semibold leading-[30px] tracking-[-0.2px] text-neutral-700">
+              <h1 className="text-xl font-semibold leading-[30px] tracking-[-0.2px] text-neutral-800">
                 Welcome to MorvaHR!
               </h1>
               <p className="text-sm font-normal leading-5 tracking-[-0.07px] text-neutral-600">
@@ -169,8 +169,9 @@ export default function LoginPage() {
                 variant="primary"
                 className="mt-8"
                 disabled={isSubmitting}
+                isLoading={isSubmitting}
               >
-                {isSubmitting ? 'Logging in...' : 'Log In'}
+                Log In
               </ButtonLarge>
             </form>
           </div>

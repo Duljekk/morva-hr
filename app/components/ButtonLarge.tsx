@@ -1,17 +1,21 @@
 'use client';
 
 import { ButtonHTMLAttributes, ReactNode } from 'react';
+import Lottie from 'lottie-react';
+import loaderAnimation from '@/app/assets/animations/loader.json';
 
 interface ButtonLargeProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
   variant?: 'primary' | 'secondary';
   className?: string;
+  isLoading?: boolean;
 }
 
 export default function ButtonLarge({
   children,
   variant = 'primary',
   className = '',
+  isLoading = false,
   ...props
 }: ButtonLargeProps) {
   const baseClasses = 'flex h-12 w-full items-center justify-center px-5 py-1.5 text-base font-semibold tracking-tight transition-colors';
@@ -24,9 +28,21 @@ export default function ButtonLarge({
   return (
     <button
       className={`${baseClasses} ${variantClasses[variant]} ${className}`}
+      disabled={isLoading || props.disabled}
       {...props}
     >
-      {children}
+      {isLoading ? (
+        <div className="flex items-center justify-center">
+          <Lottie 
+            animationData={loaderAnimation}
+            loop={true}
+            autoplay={true}
+            style={{ width: 16, height: 16 }}
+          />
+        </div>
+      ) : (
+        children
+      )}
     </button>
   );
 }

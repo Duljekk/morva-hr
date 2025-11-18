@@ -429,8 +429,16 @@ export async function submitLeaveRequest(
     }
 
     // Validate dates
-    const startDate = new Date(requestData.startDate);
-    const endDate = new Date(requestData.endDate);
+    // Parse dates in local timezone to avoid timezone shift issues
+    // Date strings in YYYY-MM-DD format are parsed as UTC by default,
+    // so we parse them explicitly in local timezone
+    const parseLocalDate = (dateString: string): Date => {
+      const [year, month, day] = dateString.split('-').map(Number);
+      return new Date(year, month - 1, day);
+    };
+    
+    const startDate = parseLocalDate(requestData.startDate);
+    const endDate = parseLocalDate(requestData.endDate);
     if (startDate > endDate) {
       console.error('[submitLeaveRequest] Invalid dates:', { startDate, endDate });
       return { error: 'Start date must be before or equal to end date' };

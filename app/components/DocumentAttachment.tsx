@@ -68,11 +68,11 @@ export default function DocumentAttachment({
 
       {/* Text Content */}
       <div className="flex flex-col items-center">
-        <p className="text-sm font-medium text-neutral-500">
-          Click to Upload Files
+        <p className="text-sm font-medium text-neutral-600">
+          Click to upload files
         </p>
         <p className="text-xs font-medium text-neutral-400">
-          PDF format, up to 10 MB
+          PDF format, up to 5 MB
         </p>
       </div>
     </div>
