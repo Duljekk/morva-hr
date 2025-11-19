@@ -1,9 +1,14 @@
 'use client';
 
 import { useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import ButtonLarge from './ButtonLarge';
 import useLockBodyScroll from '../hooks/useLockBodyScroll';
-import WarningModalIcon from '@/app/assets/icons/warning-modal.svg';
+
+// Lazy load SVG icon - only load when modal is open
+const WarningModalIcon = dynamic(() => import('@/app/assets/icons/warning-modal.svg'), {
+  ssr: false,
+});
 
 interface ConfirmationModalProps {
   isOpen: boolean;
@@ -69,7 +74,7 @@ export default function ConfirmationModal({
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Warning Icon */}
+        {/* Warning Icon - Lazy loaded */}
         <div className="shrink-0">
           <WarningModalIcon className="h-10 w-10" />
         </div>

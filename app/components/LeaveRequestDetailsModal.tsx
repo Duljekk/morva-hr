@@ -1,9 +1,14 @@
 'use client';
 
 import { useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import useLockBodyScroll from '../hooks/useLockBodyScroll';
-import ArrowCalendarIcon from '@/app/assets/icons/arrow-calendar.svg';
 import LeaveRequestStatusTimeline, { StatusItem } from './LeaveRequestStatusTimeline';
+
+// Lazy load SVG icon - only load when modal is open
+const ArrowCalendarIcon = dynamic(() => import('@/app/assets/icons/arrow-calendar.svg'), {
+  ssr: false,
+});
 
 interface LeaveRequestDetailsModalProps {
   isOpen: boolean;

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef } from 'react';
+import { useRef, type ChangeEvent } from 'react';
 import DoctorLetterIcon from '@/app/assets/icons/doctor-letter.svg';
 
 interface DocumentAttachmentProps {
@@ -14,7 +14,7 @@ export default function DocumentAttachment({
 }: DocumentAttachmentProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && onFileSelect) {
       onFileSelect(file);

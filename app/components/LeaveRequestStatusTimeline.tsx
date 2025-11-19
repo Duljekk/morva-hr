@@ -1,10 +1,7 @@
 'use client';
 
 import React from 'react';
-import PulseDangerIcon from '@/app/assets/icons/pulse-danger.svg';
-import PulseProgressIcon from '@/app/assets/icons/pulse-progress.svg';
-import PulseSuccessIcon from '@/app/assets/icons/pulse-success.svg';
-import PulseNeutralIcon from '@/app/assets/icons/pulse-neutral.svg';
+import { SpriteIcon } from './IconSprite';
 
 export type LeaveRequestStatus = 'pending' | 'approved' | 'rejected';
 
@@ -31,15 +28,15 @@ const formatDate = (dateString: string): string => {
   });
 };
 
-// Get the appropriate pulse icon based on label and status context
-const getPulseIcon = (label: string, status: LeaveRequestStatus): React.ComponentType<React.SVGProps<SVGSVGElement>> => {
-  if (label === 'Rejected') return PulseDangerIcon;
-  if (label === 'Accepted' || label === 'Approved') return PulseSuccessIcon;
+// Get the appropriate pulse icon name based on label and status context
+const getPulseIconName = (label: string, status: LeaveRequestStatus): string => {
+  if (label === 'Rejected') return 'pulse-danger';
+  if (label === 'Accepted' || label === 'Approved') return 'pulse-success';
   if (label === 'Awaiting Approval') {
     // Use pulse-progress only in pending status variant, otherwise use pulse-neutral
-    return status === 'pending' ? PulseProgressIcon : PulseNeutralIcon;
+    return status === 'pending' ? 'pulse-progress' : 'pulse-neutral';
   }
-  return PulseNeutralIcon; // Requested
+  return 'pulse-neutral'; // Requested
 };
 
 // Timeline connector (dashed vertical line)
@@ -57,7 +54,7 @@ function LeaveRequestStatusTimeline({
   // Render status item
   const renderStatusItem = (item: StatusItem, index: number, isLast: boolean, isFirst: boolean) => {
     const hasReason = item.reason && item.reason.trim() !== '';
-    const PulseIcon = getPulseIcon(item.label, status);
+    const pulseIconName = getPulseIconName(item.label, status);
     const isAwaitingApproval = item.label === 'Awaiting Approval';
 
     return (
@@ -68,20 +65,20 @@ function LeaveRequestStatusTimeline({
             {isAwaitingApproval ? (
               // Awaiting Approval: simple relative positioning, no absolute
               <div className="relative shrink-0 size-3">
-                <PulseIcon className="size-3" />
+                <SpriteIcon name={pulseIconName} className="size-3" width={12} height={12} />
               </div>
             ) : isFirst ? (
               // First item (Rejected/Accepted): icon with absolute positioning
               <div className="h-[18px] relative shrink-0 w-3">
                 <div className="absolute left-0 size-3 top-1/2 -translate-y-1/2">
-                  <PulseIcon className="size-3" />
+                  <SpriteIcon name={pulseIconName} className="size-3" width={12} height={12} />
                 </div>
               </div>
             ) : (
               // Requested: icon with absolute positioning
               <div className="h-[18px] relative shrink-0 w-3">
                 <div className="absolute left-0 size-3 top-1/2 -translate-y-1/2">
-                  <PulseIcon className="size-3" />
+                  <SpriteIcon name={pulseIconName} className="size-3" width={12} height={12} />
                 </div>
               </div>
             )}

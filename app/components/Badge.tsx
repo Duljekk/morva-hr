@@ -1,12 +1,12 @@
 'use client';
 
-import React from 'react';
+import type { ReactNode } from 'react';
 
 export type BadgeVariant = 'success' | 'warning' | 'danger';
 
 export interface BadgeProps {
   variant: BadgeVariant;
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
 }
 

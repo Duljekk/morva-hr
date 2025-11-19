@@ -8,6 +8,8 @@
 import { createClient } from '@/lib/supabase/server';
 import { validateFile, generateFilePath, formatFileSize } from '@/lib/utils/fileUpload';
 import { Database } from '@/lib/supabase/types';
+import { revalidateTag, unstable_cache } from 'next/cache';
+import { createNotification } from './notifications';
 
 type LeaveRequest = Database['public']['Tables']['leave_requests']['Row'];
 type LeaveRequestInsert = Database['public']['Tables']['leave_requests']['Insert'];
@@ -44,6 +46,50 @@ export interface SubmitLeaveRequestData {
   totalDays: number;
   reason?: string;
   fileAttachments?: FileAttachment[]; // File details including size
+}
+
+/**
+ * GET LEAVE TYPES (Uncached implementation)
+ * Leave types rarely change, so we cache them for a longer duration
+ */
+async function _getLeaveTypesUncached() {
+  const supabase = await createClient();
+  const { data: leaveTypes, error } = await supabase
+    .from('leave_types')
+    .select('id, name, max_days_per_year')
+    .eq('is_active', true)
+    .order('name');
+  
+  if (error) {
+    console.error('[getLeaveTypes] Error fetching leave types:', error);
+    return { error: 'Failed to fetch leave types' };
+  }
+  
+  return { data: leaveTypes || [] };
+}
+
+/**
+ * GET LEAVE TYPES (Public cached function)
+ * 
+ * Cached with 1-hour revalidation since leave types rarely change
+ */
+export async function getLeaveTypes() {
+  try {
+    // Cache with 1-hour revalidation since leave types rarely change
+    const getCachedLeaveTypes = unstable_cache(
+      async () => _getLeaveTypesUncached(),
+      ['leave-types'],
+      {
+        revalidate: 3600, // 1 hour
+        tags: ['leave-types'],
+      }
+    );
+
+    return await getCachedLeaveTypes();
+  } catch (error) {
+    console.error('[getLeaveTypes] Unexpected error:', error);
+    return { error: 'Failed to fetch leave types' };
+  }
 }
 
 /**
@@ -148,6 +194,7 @@ export async function deleteLeaveAttachment(filePath: string): Promise<{ success
 
 /**
  * Get leave balance for a specific leave type
+ * OPTIMIZED: Uses cached leave types and batches queries in parallel
  */
 export async function getLeaveBalance(leaveTypeId: string): Promise<{ data?: LeaveBalance; error?: string }> {
   try {
@@ -164,20 +211,48 @@ export async function getLeaveBalance(leaveTypeId: string): Promise<{ data?: Lea
       return { error: 'You must be logged in' };
     }
 
-    console.log('[getLeaveBalance] Fetching leave type:', leaveTypeId, 'for user:', user.id);
+    console.log('[getLeaveBalance] Fetching leave balance for type:', leaveTypeId, 'user:', user.id);
 
-    // Get leave type info
-    const { data: leaveType, error: leaveTypeError } = await supabase
-      .from('leave_types')
-      .select('id, name, max_days_per_year')
-      .eq('id', leaveTypeId)
-      .single();
+    // Calculate date range once
+    const currentYear = new Date().getFullYear();
+    const yearStart = `${currentYear}-01-01`;
+    const yearEnd = `${currentYear}-12-31`;
 
-    console.log('[getLeaveBalance] Leave type query result:', { leaveType, leaveTypeError });
+    // OPTIMIZED: Batch both queries in parallel using Promise.all
+    // Query 1: Get leave type info (using cached function for better performance)
+    // Query 2: Get approved leave requests for this year
+    // These queries are independent and can run concurrently
+    const [leaveTypesResult, approvedLeavesResult] = await Promise.all([
+      // Use cached leave types function
+      getLeaveTypes(),
+      // Query approved leaves
+      supabase
+        .from('leave_requests')
+        .select('total_days')
+        .eq('user_id', user.id)
+        .eq('leave_type_id', leaveTypeId)
+        .eq('status', 'approved')
+        .gte('start_date', yearStart)
+        .lte('end_date', yearEnd),
+    ]);
 
-    if (leaveTypeError || !leaveType) {
-      console.error('[getLeaveBalance] Leave type not found:', leaveTypeId, 'Error:', leaveTypeError);
+    // Process leave types result
+    if (leaveTypesResult.error || !leaveTypesResult.data) {
+      console.error('[getLeaveBalance] Failed to fetch leave types:', leaveTypesResult.error);
+      return { error: 'Failed to fetch leave types' };
+    }
+
+    const leaveType = leaveTypesResult.data.find(lt => lt.id === leaveTypeId);
+    if (!leaveType) {
+      console.error('[getLeaveBalance] Leave type not found:', leaveTypeId);
       return { error: 'Leave type not found' };
+    }
+
+    // Process approved leaves result
+    const { data: approvedLeaves, error: leavesError } = approvedLeavesResult;
+    if (leavesError) {
+      console.error('[getLeaveBalance] Error fetching approved leaves:', leavesError);
+      return { error: 'Failed to calculate leave balance' };
     }
 
     // If no quota (e.g., unpaid leave), return unlimited
@@ -192,25 +267,6 @@ export async function getLeaveBalance(leaveTypeId: string): Promise<{ data?: Lea
           remaining: 999, // Indicate unlimited
         },
       };
-    }
-
-    // Get approved leave requests for this year
-    const currentYear = new Date().getFullYear();
-    const yearStart = `${currentYear}-01-01`;
-    const yearEnd = `${currentYear}-12-31`;
-
-    const { data: approvedLeaves, error: leavesError } = await supabase
-      .from('leave_requests')
-      .select('total_days')
-      .eq('user_id', user.id)
-      .eq('leave_type_id', leaveTypeId)
-      .eq('status', 'approved')
-      .gte('start_date', yearStart)
-      .lte('end_date', yearEnd);
-
-    if (leavesError) {
-      console.error('[getLeaveBalance] Error fetching approved leaves:', leavesError);
-      return { error: 'Failed to calculate leave balance' };
     }
 
     // Calculate used days
@@ -240,6 +296,7 @@ export async function getLeaveBalance(leaveTypeId: string): Promise<{ data?: Lea
 
 /**
  * Get all leave balances for the current user
+ * OPTIMIZED: Uses cached leave types and batches queries in parallel
  */
 export async function getAllLeaveBalances(): Promise<{ data?: LeaveBalance[]; error?: string }> {
   try {
@@ -256,27 +313,25 @@ export async function getAllLeaveBalances(): Promise<{ data?: LeaveBalance[]; er
       return { error: 'You must be logged in' };
     }
 
-    console.log('[getAllLeaveBalances] Fetching leave types for user:', user.id);
+    console.log('[getAllLeaveBalances] Fetching leave balances for user:', user.id);
 
-    // Get all active leave types
-    const { data: leaveTypes, error: leaveTypesError } = await supabase
-      .from('leave_types')
-      .select('id, name, max_days_per_year')
-      .eq('is_active', true)
-      .order('name');
-
-    console.log('[getAllLeaveBalances] Leave types query result:', { leaveTypes, leaveTypesError });
-
-    if (leaveTypesError || !leaveTypes) {
-      console.error('[getAllLeaveBalances] Failed to fetch leave types:', leaveTypesError);
+    // OPTIMIZED: Use cached leave types function (1-hour cache)
+    const leaveTypesResult = await getLeaveTypes();
+    if (leaveTypesResult.error || !leaveTypesResult.data) {
+      console.error('[getAllLeaveBalances] Failed to fetch leave types:', leaveTypesResult.error);
       return { error: 'Failed to fetch leave types' };
     }
 
-    // Get all approved leaves for this year
+    const leaveTypes = leaveTypesResult.data;
+
+    // OPTIMIZED: Calculate date range once
     const currentYear = new Date().getFullYear();
     const yearStart = `${currentYear}-01-01`;
     const yearEnd = `${currentYear}-12-31`;
 
+    // Get all approved leaves for this year
+    // This query is independent of leave types, so it could be batched,
+    // but since we're using cached leave types, the benefit is minimal
     const { data: approvedLeaves, error: leavesError } = await supabase
       .from('leave_requests')
       .select('leave_type_id, total_days')
@@ -332,6 +387,53 @@ export async function getAllLeaveBalances(): Promise<{ data?: LeaveBalance[]; er
  * Check if user has an active leave request
  * Active requests are those with status 'pending' or 'approved' where end_date >= current date
  */
+/**
+ * HAS ACTIVE LEAVE REQUEST (Uncached implementation)
+ */
+async function _hasActiveLeaveRequestUncached(userId: string, today: string): Promise<{ 
+  data?: { hasActive: boolean; request?: LeaveRequest }; 
+  error?: string 
+}> {
+  const supabase = await createClient();
+
+  // Query for active leave requests with leave type name
+  const { data: activeRequest, error: fetchError } = await supabase
+    .from('leave_requests')
+    .select(`
+      *,
+      leave_types:leave_type_id (
+        name
+      )
+    `)
+    .eq('user_id', userId)
+    .in('status', ['pending', 'approved'])
+    .gte('end_date', today) // end_date >= current date
+    .maybeSingle(); // Returns null if no record found, instead of error
+
+  if (fetchError) {
+    console.error('[hasActiveLeaveRequest] Error fetching active leave:', fetchError);
+    return { error: 'Failed to check for active leave request' };
+  }
+
+  // Format the response with leave type name
+  const formattedRequest = activeRequest ? {
+    ...activeRequest,
+    leaveTypeName: (activeRequest.leave_types as any)?.name || undefined,
+  } : undefined;
+
+  return {
+    data: {
+      hasActive: !!activeRequest,
+      request: formattedRequest || undefined,
+    },
+  };
+}
+
+/**
+ * HAS ACTIVE LEAVE REQUEST (Public cached function)
+ * 
+ * Cached with 10-minute revalidation and user-specific tags for targeted invalidation
+ */
 export async function hasActiveLeaveRequest(): Promise<{ 
   data?: { hasActive: boolean; request?: LeaveRequest }; 
   error?: string 
@@ -352,40 +454,34 @@ export async function hasActiveLeaveRequest(): Promise<{
 
     const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
 
-    // Query for active leave requests with leave type name
-    const { data: activeRequest, error: fetchError } = await supabase
-      .from('leave_requests')
-      .select(`
-        *,
-        leave_types:leave_type_id (
-          name
-        )
-      `)
-      .eq('user_id', user.id)
-      .in('status', ['pending', 'approved'])
-      .gte('end_date', today) // end_date >= current date
-      .maybeSingle(); // Returns null if no record found, instead of error
+    // Cache with 10-minute revalidation and user-specific tags
+    // Tags: 'leave-requests' (general) and 'user-{userId}' (user-specific)
+    // Note: unstable_cache key must be stable - using user.id and today as part of key
+    try {
+      const getCachedActiveLeave = unstable_cache(
+        async () => {
+          return await _hasActiveLeaveRequestUncached(user.id, today);
+        },
+        ['active-leave', `user-${user.id}`, `date-${today}`],
+        {
+          revalidate: 600, // 10 minutes
+          tags: ['leave-requests', `user-${user.id}`],
+        }
+      );
 
-    if (fetchError) {
-      console.error('[hasActiveLeaveRequest] Error fetching active leave:', fetchError);
-      return { error: 'Failed to check for active leave request' };
+      return await getCachedActiveLeave();
+    } catch (cacheError) {
+      console.error('[hasActiveLeaveRequest] Cache error, falling back to direct call:', cacheError);
+      // Fallback to direct call if caching fails
+      return await _hasActiveLeaveRequestUncached(user.id, today);
     }
-
-    // Format the response with leave type name
-    const formattedRequest = activeRequest ? {
-      ...activeRequest,
-      leaveTypeName: (activeRequest.leave_types as any)?.name || undefined,
-    } : undefined;
-
-    return {
-      data: {
-        hasActive: !!activeRequest,
-        request: formattedRequest || undefined,
-      },
-    };
   } catch (error) {
     console.error('[hasActiveLeaveRequest] Unexpected error:', error);
-    return { error: 'An unexpected error occurred' };
+    console.error('[hasActiveLeaveRequest] Error details:', {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    return { error: `An unexpected error occurred: ${error instanceof Error ? error.message : String(error)}` };
   }
 }
 
@@ -502,6 +598,43 @@ export async function submitLeaveRequest(
       console.log('[submitLeaveRequest] Attachments linked successfully');
     }
 
+    // Create notification for the employee
+    console.log('[submitLeaveRequest] Creating notification for leave request:', leaveRequest.id);
+    const formattedStartDate = new Date(requestData.startDate).toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric' 
+    });
+    const formattedEndDate = new Date(requestData.endDate).toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric' 
+    });
+    
+    const notificationResult = await createNotification({
+      user_id: user.id,
+      type: 'leave_sent',
+      title: 'Leave request sent',
+      description: `Your leave request from ${formattedStartDate} to ${formattedEndDate} has been submitted and is pending approval.`,
+      related_entity_type: 'leave_request',
+      related_entity_id: leaveRequest.id,
+    });
+    
+    if (!notificationResult.success) {
+      console.error('[submitLeaveRequest] ⚠️ Failed to create notification:', {
+        error: notificationResult.error,
+        leaveRequestId: leaveRequest.id,
+        userId: user.id,
+      });
+      // Don't fail the submission - notification is non-critical
+    } else {
+      console.log('[submitLeaveRequest] ✅ Notification created successfully');
+    }
+
+    // Invalidate cache tags for leave requests and activities
+    // 'max' profile enables stale-while-revalidate behavior
+    revalidateTag('leave-requests', 'max');
+    revalidateTag(`user-${user.id}`, 'max');
+    revalidateTag('activities', 'max');
+
     return { data: leaveRequest };
   } catch (error) {
     console.error('Submit leave request error:', error);
@@ -540,6 +673,18 @@ export async function approveLeaveRequest(
       return { success: false, error: 'Only HR admins can approve leave requests' };
     }
 
+    // Get the leave request to find the user_id and details for notification
+    const { data: leaveRequest, error: fetchError } = await supabase
+      .from('leave_requests')
+      .select('user_id, start_date, end_date')
+      .eq('id', requestId)
+      .single();
+
+    if (fetchError || !leaveRequest) {
+      console.error('Approve request error: Could not find leave request:', fetchError);
+      return { success: false, error: 'Leave request not found' };
+    }
+
     // Update request with status, approved_by, and approved_at
     const { error } = await supabase
       .from('leave_requests')
@@ -555,6 +700,40 @@ export async function approveLeaveRequest(
       console.error('Approve request error:', error);
       return { success: false, error: 'Failed to approve request. It may have already been processed.' };
     }
+
+    // Create notification for the employee
+    try {
+      const startDate = new Date(leaveRequest.start_date).toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric' 
+      });
+      const endDate = new Date(leaveRequest.end_date).toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric' 
+      });
+      
+      const notificationResult = await createNotification({
+        user_id: leaveRequest.user_id,
+        type: 'leave_approved',
+        title: 'Leave request approved',
+        description: `Your leave from ${startDate} to ${endDate} has been approved.`,
+        related_entity_type: 'leave_request',
+        related_entity_id: requestId,
+      });
+      if (!notificationResult.success) {
+        console.error('[approveLeaveRequest] Failed to create notification:', notificationResult.error);
+      }
+    } catch (notificationError) {
+      // Log error but don't fail the approval operation
+      console.error('[approveLeaveRequest] Error creating notification:', notificationError);
+    }
+
+    // Invalidate cache tags for leave requests and activities
+    // 'max' profile enables stale-while-revalidate behavior (recommended by Next.js)
+    // This ensures fresh data is fetched in the background while serving stale content
+    revalidateTag('leave-requests', 'max');
+    revalidateTag(`user-${leaveRequest.user_id}`, 'max');
+    revalidateTag('activities', 'max');
 
     return { success: true };
   } catch (error) {
@@ -599,6 +778,18 @@ export async function rejectLeaveRequest(
       return { success: false, error: 'Rejection reason is required' };
     }
 
+    // Get the leave request to find the user_id and details for notification
+    const { data: leaveRequest, error: fetchError } = await supabase
+      .from('leave_requests')
+      .select('user_id, start_date, end_date')
+      .eq('id', requestId)
+      .single();
+
+    if (fetchError || !leaveRequest) {
+      console.error('Reject request error: Could not find leave request:', fetchError);
+      return { success: false, error: 'Leave request not found' };
+    }
+
     // Update request with status, approved_by, approved_at, and rejection_reason
     const { error } = await supabase
       .from('leave_requests')
@@ -615,6 +806,41 @@ export async function rejectLeaveRequest(
       console.error('Reject request error:', error);
       return { success: false, error: 'Failed to reject request. It may have already been processed.' };
     }
+
+    // Create notification for the employee
+    try {
+      const startDate = new Date(leaveRequest.start_date).toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric' 
+      });
+      const endDate = new Date(leaveRequest.end_date).toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric' 
+      });
+      const reasonText = rejectionReason.trim() ? ` Reason: ${rejectionReason.trim()}` : '';
+      
+      const notificationResult = await createNotification({
+        user_id: leaveRequest.user_id,
+        type: 'leave_rejected',
+        title: 'Leave request rejected',
+        description: `Your leave from ${startDate} to ${endDate} was rejected.${reasonText}`,
+        related_entity_type: 'leave_request',
+        related_entity_id: requestId,
+      });
+      if (!notificationResult.success) {
+        console.error('[rejectLeaveRequest] Failed to create notification:', notificationResult.error);
+      }
+    } catch (notificationError) {
+      // Log error but don't fail the rejection operation
+      console.error('[rejectLeaveRequest] Error creating notification:', notificationError);
+    }
+
+    // Invalidate cache tags for leave requests and activities
+    // 'max' profile enables stale-while-revalidate behavior (recommended by Next.js)
+    // This ensures fresh data is fetched in the background while serving stale content
+    revalidateTag('leave-requests', 'max');
+    revalidateTag(`user-${leaveRequest.user_id}`, 'max');
+    revalidateTag('activities', 'max');
 
     return { success: true };
   } catch (error) {
@@ -653,6 +879,12 @@ export async function cancelLeaveRequest(requestId: string): Promise<{ success: 
       console.error('Cancel request error:', error);
       return { success: false, error: 'Failed to cancel request. It may have already been processed.' };
     }
+
+    // Invalidate cache tags for leave requests and activities
+    // 'max' profile enables stale-while-revalidate behavior
+    revalidateTag('leave-requests', 'max');
+    revalidateTag(`user-${user.id}`, 'max');
+    revalidateTag('activities', 'max');
 
     return { success: true };
   } catch (error) {

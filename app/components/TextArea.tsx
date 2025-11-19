@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import type { TextareaHTMLAttributes } from 'react';
 
 interface TextAreaProps extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'className'> {

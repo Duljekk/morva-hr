@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import ToastSuccessIcon from '@/app/assets/icons/toast-success.svg';
 import ToastWarningIcon from '@/app/assets/icons/toast-warning.svg';
 import ToastDangerIcon from '@/app/assets/icons/toast-danger.svg';

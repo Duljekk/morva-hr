@@ -1,7 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
-import { revalidatePath } from 'next/cache';
+import { revalidateTag, unstable_cache } from 'next/cache';
 
 /**
  * ATTENDANCE ACTIONS
@@ -28,7 +28,28 @@ function getCurrentTimestamp(): string {
  * 1. Get current user from auth session
  * 2. Query attendance_records for today's date
  * 3. Return record or null if not found
+ * 
+ * Cached with 5-minute revalidation and user-specific tags for targeted invalidation
  */
+async function _getTodaysAttendanceUncached(userId: string, today: string) {
+  const supabase = await createClient();
+  
+  // Query today's attendance record
+  const { data, error } = await supabase
+    .from('attendance_records')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('date', today)
+    .single();
+
+  if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+    console.error('Error fetching attendance:', error);
+    return { error: error.message };
+  }
+
+  return { data: data || null };
+}
+
 export async function getTodaysAttendance() {
   try {
     const supabase = await createClient();
@@ -41,23 +62,37 @@ export async function getTodaysAttendance() {
 
     const today = getTodayDateString();
 
-    // Query today's attendance record
-    const { data, error } = await supabase
-      .from('attendance_records')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('date', today)
-      .single();
+    // Cache with 5-minute revalidation and user-specific tags
+    // Tags: 'attendance' (general) and 'user-{userId}' (user-specific)
+    try {
+      const getCachedAttendance = unstable_cache(
+        async () => {
+          return await _getTodaysAttendanceUncached(user.id, today);
+        },
+        ['attendance', `user-${user.id}`, `date-${today}`],
+        {
+          revalidate: 300, // 5 minutes
+          tags: ['attendance', `user-${user.id}`],
+        }
+      );
 
-    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-      console.error('Error fetching attendance:', error);
-      return { error: error.message };
+      return await getCachedAttendance();
+    } catch (cacheError) {
+      console.error('[getTodaysAttendance] Cache error, falling back to direct call:', cacheError);
+      console.error('[getTodaysAttendance] Cache error details:', {
+        message: cacheError instanceof Error ? cacheError.message : String(cacheError),
+        stack: cacheError instanceof Error ? cacheError.stack : undefined,
+      });
+      // Fallback to direct call if caching fails
+      return await _getTodaysAttendanceUncached(user.id, today);
     }
-
-    return { data: data || null };
   } catch (error) {
-    console.error('Unexpected error in getTodaysAttendance:', error);
-    return { error: 'Failed to fetch attendance' };
+    console.error('[getTodaysAttendance] Unexpected error:', error);
+    console.error('[getTodaysAttendance] Error details:', {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    return { error: `Failed to fetch attendance: ${error instanceof Error ? error.message : String(error)}` };
   }
 }
 
@@ -81,20 +116,40 @@ export async function checkIn() {
       return { error: 'Not authenticated' };
     }
 
-    // Get user's shift schedule
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('shift_start_hour, shift_end_hour')
-      .eq('id', user.id)
-      .single();
+    const now = new Date();
+    const today = getTodayDateString();
+    const checkInTime = getCurrentTimestamp();
+
+    // OPTIMIZED: Batch both queries in parallel using Promise.all
+    // Query 1: Get user's shift schedule (needed for check-in status calculation)
+    // Query 2: Check if already checked in today
+    // These queries are independent and can run concurrently
+    const [userDataResult, existingResult] = await Promise.all([
+      // Query 1: Get user's shift schedule
+      supabase
+        .from('users')
+        .select('shift_start_hour, shift_end_hour')
+        .eq('id', user.id)
+        .single(),
+      // Query 2: Check if already checked in today
+      supabase
+        .from('attendance_records')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('date', today)
+        .single(),
+    ]);
+
+    const { data: userData, error: userError } = userDataResult;
+    const { data: existing } = existingResult;
 
     if (userError || !userData) {
       return { error: 'Failed to fetch user data' };
     }
 
-    const now = new Date();
-    const today = getTodayDateString();
-    const checkInTime = getCurrentTimestamp();
+    if (existing) {
+      return { error: 'Already checked in today' };
+    }
 
     // Calculate shift start time for today
     const shiftStart = new Date(now);
@@ -106,18 +161,6 @@ export async function checkIn() {
     // Only 11:01:00 and later will be marked as late
     const shiftStartWithTolerance = new Date(shiftStart.getTime() + 60000); // Add 1 minute tolerance (60 seconds)
     const checkInStatus = now >= shiftStartWithTolerance ? 'late' : 'ontime';
-
-    // Check if already checked in today
-    const { data: existing } = await supabase
-      .from('attendance_records')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('date', today)
-      .single();
-
-    if (existing) {
-      return { error: 'Already checked in today' };
-    }
 
     // Insert attendance record
     const { data, error } = await supabase
@@ -136,8 +179,13 @@ export async function checkIn() {
       return { error: error.message };
     }
 
-    // Revalidate the page to show updated data
-    revalidatePath('/');
+    // Invalidate cache tags for attendance and activities
+    // Use revalidateTag for targeted cache invalidation
+    // 'max' profile enables stale-while-revalidate behavior (recommended by Next.js)
+    // This invalidates only relevant cached data instead of the entire app cache
+    revalidateTag('attendance', 'max');
+    revalidateTag(`user-${user.id}`, 'max');
+    revalidateTag('activities', 'max');
     
     return { data };
   } catch (error) {
@@ -173,13 +221,26 @@ export async function checkOut() {
     const today = getTodayDateString();
     const checkOutTime = getCurrentTimestamp();
 
-    // Get today's attendance record
-    const { data: attendance, error: fetchError } = await supabase
-      .from('attendance_records')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('date', today)
-      .single();
+    // OPTIMIZED: Batch both queries in parallel using Promise.all
+    // This reduces total query time by running queries concurrently instead of sequentially
+    const [attendanceResult, userDataResult] = await Promise.all([
+      // Query 1: Get today's attendance record
+      supabase
+        .from('attendance_records')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('date', today)
+        .single(),
+      // Query 2: Get user's shift schedule
+      supabase
+        .from('users')
+        .select('shift_start_hour, shift_end_hour')
+        .eq('id', user.id)
+        .single(),
+    ]);
+
+    const { data: attendance, error: fetchError } = attendanceResult;
+    const { data: userData, error: userError } = userDataResult;
 
     if (fetchError || !attendance) {
       return { error: 'No check-in record found for today' };
@@ -188,13 +249,6 @@ export async function checkOut() {
     if (attendance.check_out_time) {
       return { error: 'Already checked out today' };
     }
-
-    // Get user's shift schedule
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('shift_start_hour, shift_end_hour')
-      .eq('id', user.id)
-      .single();
 
     if (userError || !userData) {
       return { error: 'Failed to fetch user data' };
@@ -246,8 +300,13 @@ export async function checkOut() {
       return { error: error.message };
     }
 
-    // Revalidate the page
-    revalidatePath('/');
+    // Invalidate cache tags for attendance and activities
+    // Use revalidateTag for targeted cache invalidation
+    // 'max' profile enables stale-while-revalidate behavior (recommended by Next.js)
+    // This invalidates only relevant cached data instead of the entire app cache
+    revalidateTag('attendance', 'max');
+    revalidateTag(`user-${user.id}`, 'max');
+    revalidateTag('activities', 'max');
     
     return { data };
   } catch (error) {
@@ -272,7 +331,7 @@ export interface DayActivity {
 }
 
 /**
- * GET RECENT ACTIVITIES
+ * GET RECENT ACTIVITIES (Uncached implementation)
  * 
  * Logic:
  * 1. Get current user from auth session
@@ -281,15 +340,11 @@ export interface DayActivity {
  * 4. Format into DayActivity[] structure with check-in and check-out activities
  * 5. Return formatted activities sorted by date (newest first)
  */
-export async function getRecentActivities(days: number = 14): Promise<{ data?: DayActivity[]; error?: string }> {
-  try {
-    const supabase = await createClient();
-    
-    // Get current user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return { error: 'Not authenticated' };
-    }
+async function _getRecentActivitiesUncached(
+  userId: string,
+  days: number
+): Promise<{ data?: DayActivity[]; error?: string }> {
+  const supabase = await createClient();
 
     // Calculate date range (last N days, including today)
     // Use local timezone for date calculations to match user's local date
@@ -313,14 +368,14 @@ export async function getRecentActivities(days: number = 14): Promise<{ data?: D
     const todayDateString = formatLocalDate(todayLocal);
     const startDateString = formatLocalDate(startDate);
 
-    console.log('[getRecentActivities] Fetching activities for user:', user.id);
+    console.log('[getRecentActivities] Fetching activities for user:', userId);
     console.log('[getRecentActivities] Date range:', { startDateString, todayDateString, days });
 
     // Query attendance records for the date range (including today)
     const { data: records, error: fetchError } = await supabase
       .from('attendance_records')
       .select('date, check_in_time, check_out_time, check_in_status, check_out_status')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .gte('date', startDateString)
       .lte('date', todayDateString) // Include today
       .order('date', { ascending: false });
@@ -331,51 +386,85 @@ export async function getRecentActivities(days: number = 14): Promise<{ data?: D
     }
 
     // Query leave requests that overlap with the date range
-    // We want to show leaves where ANY date in [start_date, end_date] falls within [startDateString, todayDateString]
-    // OR where the leave starts in the future but within an extended range
+    // Optimized: Single query using PostgreSQL function to combine two conditions
+    // Condition 1: Leaves that overlap with past/current range (start_date <= today AND end_date >= startDate)
+    // Condition 2: Future leaves that start within extended range (start_date > today AND start_date <= extendedEndDate)
     // Calculate extended end date to show future leaves (extend by same number of days)
     const extendedEndDate = new Date(today);
     extendedEndDate.setDate(extendedEndDate.getDate() + days);
     const extendedEndDateString = extendedEndDate.toISOString().split('T')[0];
     
-    // Query 1: Leaves that overlap with past/current range (start_date <= today AND end_date >= startDate)
-    const { data: pastLeaves, error: pastLeaveError } = await supabase
-      .from('leave_requests')
-      .select('id, leave_type_id, start_date, end_date, status, created_at')
-      .eq('user_id', user.id)
-      .lte('start_date', todayDateString)
-      .gte('end_date', startDateString)
-      .in('status', ['pending', 'approved', 'rejected'])
-      .order('created_at', { ascending: false });
+    // Use optimized PostgreSQL function for single query with complex OR conditions
+    // This reduces database round trips from 2 to 1 (50% reduction)
+    // The composite indexes optimize this query execution
+    // Fallback to original query logic if function doesn't exist (migration not run yet)
+    let leaveRequests: any[] | null = null;
+    let leaveError: any = null;
     
-    // Query 2: Future leaves that start within extended range (start_date > today AND start_date <= extendedEndDate)
-    const { data: futureLeaves, error: futureLeaveError } = await supabase
-      .from('leave_requests')
-      .select('id, leave_type_id, start_date, end_date, status, created_at')
-      .eq('user_id', user.id)
-      .gt('start_date', todayDateString)
-      .lte('start_date', extendedEndDateString)
-      .in('status', ['pending', 'approved', 'rejected'])
-      .order('created_at', { ascending: false });
-    
-    // Merge both queries and remove duplicates
-    const allLeaves = [
-      ...(pastLeaves || []),
-      ...(futureLeaves || []),
-    ];
-    
-    const uniqueLeaves = allLeaves.filter((leave, index, self) =>
-      index === self.findIndex(l => l.id === leave.id)
-    );
-    
-    const leaveError = pastLeaveError || futureLeaveError;
-    
-    if (leaveError) {
-      console.error('[getRecentActivities] Error fetching leave requests:', leaveError);
-      // Continue without leave requests if there's an error
+    try {
+      const { data, error } = await supabase
+        .rpc('get_recent_leave_requests', {
+          p_user_id: userId,
+          p_start_date: startDateString,
+          p_today_date: todayDateString,
+          p_extended_end_date: extendedEndDateString,
+        });
+      
+      leaveRequests = data;
+      leaveError = error;
+      
+      if (leaveError) {
+        // If function doesn't exist, fallback to original query logic
+        if (leaveError.message?.includes('function') || leaveError.code === '42883') {
+          console.warn('[getRecentActivities] PostgreSQL function not found, using fallback query:', leaveError.message);
+          
+          // Fallback: Use original two-query approach
+          const extendedEndDate = new Date(today);
+          extendedEndDate.setDate(extendedEndDate.getDate() + days);
+          const extendedEndDateStringFallback = extendedEndDate.toISOString().split('T')[0];
+          
+          // Query 1: Leaves that overlap with past/current range
+          const { data: pastLeaves, error: pastLeaveError } = await supabase
+            .from('leave_requests')
+            .select('id, leave_type_id, start_date, end_date, status, created_at')
+            .eq('user_id', userId)
+            .lte('start_date', todayDateString)
+            .gte('end_date', startDateString)
+            .in('status', ['pending', 'approved', 'rejected'])
+            .order('created_at', { ascending: false });
+          
+          // Query 2: Future leaves that start within extended range
+          const { data: futureLeaves, error: futureLeaveError } = await supabase
+            .from('leave_requests')
+            .select('id, leave_type_id, start_date, end_date, status, created_at')
+            .eq('user_id', userId)
+            .gt('start_date', todayDateString)
+            .lte('start_date', extendedEndDateStringFallback)
+            .in('status', ['pending', 'approved', 'rejected'])
+            .order('created_at', { ascending: false });
+          
+          if (pastLeaveError || futureLeaveError) {
+            console.error('[getRecentActivities] Error in fallback queries:', pastLeaveError || futureLeaveError);
+            leaveRequests = [];
+          } else {
+            // Merge and deduplicate
+            const allLeaves = [
+              ...(pastLeaves || []),
+              ...(futureLeaves || []),
+            ];
+            leaveRequests = allLeaves.filter((leave, index, self) =>
+              index === self.findIndex(l => l.id === leave.id)
+            );
+          }
+        } else {
+          console.error('[getRecentActivities] Error fetching leave requests:', leaveError);
+          leaveRequests = [];
+        }
+      }
+    } catch (rpcError) {
+      console.error('[getRecentActivities] RPC call failed:', rpcError);
+      leaveRequests = [];
     }
-    
-    const leaveRequests = uniqueLeaves;
 
     console.log('[getRecentActivities] Found records:', records?.length || 0);
     console.log('[getRecentActivities] Found leave requests:', leaveRequests?.length || 0);
@@ -481,8 +570,8 @@ export async function getRecentActivities(days: number = 14): Promise<{ data?: D
 
     // Process leave requests
     // Leave requests should appear on the date they were REQUESTED (created_at), not on the leave dates
-    if (uniqueLeaves && uniqueLeaves.length > 0) {
-      for (const leave of uniqueLeaves) {
+    if (leaveRequests && leaveRequests.length > 0) {
+      for (const leave of leaveRequests) {
         // Get the date when the leave was requested (created_at)
         // Convert to local timezone to get the correct local date
         const requestDate = new Date(leave.created_at);
@@ -562,9 +651,55 @@ export async function getRecentActivities(days: number = 14): Promise<{ data?: D
     console.log('[getRecentActivities] Sample records:', records?.slice(0, 3));
 
     return { data: dayActivities };
+}
+
+/**
+ * GET RECENT ACTIVITIES (Public cached function)
+ * 
+ * Cached with 10-minute revalidation and user-specific tags for targeted invalidation
+ */
+export async function getRecentActivities(days: number = 14): Promise<{ data?: DayActivity[]; error?: string }> {
+  try {
+    const supabase = await createClient();
+    
+    // Get current user
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return { error: 'Not authenticated' };
+    }
+
+    // Cache with 10-minute revalidation and user-specific tags
+    // Tags: 'activities' (general) and 'user-{userId}' (user-specific)
+    // Include 'days' in cache key to handle different day ranges
+    try {
+      const getCachedActivities = unstable_cache(
+        async () => {
+          return await _getRecentActivitiesUncached(user.id, days);
+        },
+        ['activities', `user-${user.id}`, `days-${days}`],
+        {
+          revalidate: 600, // 10 minutes
+          tags: ['activities', `user-${user.id}`],
+        }
+      );
+
+      return await getCachedActivities();
+    } catch (cacheError) {
+      console.error('[getRecentActivities] Cache error, falling back to direct call:', cacheError);
+      console.error('[getRecentActivities] Cache error details:', {
+        message: cacheError instanceof Error ? cacheError.message : String(cacheError),
+        stack: cacheError instanceof Error ? cacheError.stack : undefined,
+      });
+      // Fallback to direct call if caching fails
+      return await _getRecentActivitiesUncached(user.id, days);
+    }
   } catch (error) {
-    console.error('Unexpected error in getRecentActivities:', error);
-    return { error: 'Failed to fetch recent activities' };
+    console.error('[getRecentActivities] Unexpected error:', error);
+    console.error('[getRecentActivities] Error details:', {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    return { error: `Failed to fetch recent activities: ${error instanceof Error ? error.message : String(error)}` };
   }
 }
 

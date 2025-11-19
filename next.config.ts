@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: '10mb', // Allow up to 10MB (5MB files + form data overhead)
     },
+    // Optimize package imports for better tree-shaking
+    optimizePackageImports: ['lottie-react'],
   },
   // Use webpack for SVG handling via SVGR
   webpack(config, { isServer }) {
@@ -49,6 +51,29 @@ const nextConfig: NextConfig = {
   // Empty turbopack config to silence the warning
   // We use webpack for SVG support via SVGR
   turbopack: {},
+  
+  // Headers for service worker
+  async headers() {
+    return [
+      {
+        source: '/sw.js',
+        headers: [
+          {
+            key: 'Content-Type',
+            value: 'application/javascript; charset=utf-8',
+          },
+          {
+            key: 'Cache-Control',
+            value: 'no-cache, no-store, must-revalidate',
+          },
+          {
+            key: 'Service-Worker-Allowed',
+            value: '/',
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

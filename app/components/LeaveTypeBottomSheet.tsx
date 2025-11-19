@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { ChevronRightIcon } from './Icons';
 import ButtonLarge from './ButtonLarge';
 import RadioButton from './RadioButton';
 import useLockBodyScroll from '../hooks/useLockBodyScroll';
+// Import icons normally for trigger button (always visible)
 import LeaveSickIcon from '@/app/assets/icons/leave-sick.svg';
 import LeaveAnnualIcon from '@/app/assets/icons/leave-annual.svg';
 import LeaveUnpaidIcon from '@/app/assets/icons/leave-unpaid.svg';

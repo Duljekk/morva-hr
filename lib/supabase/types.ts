@@ -8,6 +8,13 @@ export type CheckInStatus = 'ontime' | 'late';
 export type CheckOutStatus = 'ontime' | 'overtime' | 'leftearly';
 export type DayType = 'full' | 'half';
 export type LeaveRequestStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
+export type NotificationType = 
+  | 'leave_approved' 
+  | 'leave_rejected' 
+  | 'leave_sent' 
+  | 'payslip_ready' 
+  | 'announcement' 
+  | 'attendance_reminder';
 
 export interface Database {
   public: {
@@ -272,6 +279,129 @@ export interface Database {
           updated_at?: string;
         };
       };
+      notifications: {
+        Row: {
+          id: string;
+          user_id: string;
+          type: NotificationType;
+          title: string;
+          description: string;
+          related_entity_type: string | null;
+          related_entity_id: string | null;
+          is_read: boolean;
+          read_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          type: NotificationType;
+          title: string;
+          description: string;
+          related_entity_type?: string | null;
+          related_entity_id?: string | null;
+          is_read?: boolean;
+          read_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          type?: NotificationType;
+          title?: string;
+          description?: string;
+          related_entity_type?: string | null;
+          related_entity_id?: string | null;
+          is_read?: boolean;
+          read_at?: string | null;
+          created_at?: string;
+        };
+      };
+      payslips: {
+        Row: {
+          id: string;
+          user_id: string;
+          month: number;
+          year: number;
+          gross_salary: number;
+          net_salary: number;
+          deductions: Record<string, any> | null;
+          allowances: Record<string, any> | null;
+          pdf_url: string;
+          file_name: string;
+          file_size: number | null;
+          generated_at: string;
+          generated_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          month: number;
+          year: number;
+          gross_salary: number;
+          net_salary: number;
+          deductions?: Record<string, any> | null;
+          allowances?: Record<string, any> | null;
+          pdf_url: string;
+          file_name: string;
+          file_size?: number | null;
+          generated_at?: string;
+          generated_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          month?: number;
+          year?: number;
+          gross_salary?: number;
+          net_salary?: number;
+          deductions?: Record<string, any> | null;
+          allowances?: Record<string, any> | null;
+          pdf_url?: string;
+          file_name?: string;
+          file_size?: number | null;
+          generated_at?: string;
+          generated_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      push_subscriptions: {
+        Row: {
+          id: string;
+          user_id: string;
+          endpoint: string;
+          p256dh: string;
+          auth: string;
+          user_agent: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          endpoint: string;
+          p256dh: string;
+          auth: string;
+          user_agent?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          endpoint?: string;
+          p256dh?: string;
+          auth?: string;
+          user_agent?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
     Views: {
       [_ in never]: never;
@@ -288,6 +418,7 @@ export interface Database {
       check_out_status: CheckOutStatus;
       day_type: DayType;
       leave_request_status: LeaveRequestStatus;
+      notification_type: NotificationType;
     };
   };
 }

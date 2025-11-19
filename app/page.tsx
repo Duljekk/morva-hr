@@ -44,7 +44,8 @@ const formatDurationFromMs = (ms: number) => {
 
 export default function Home() {
   const router = useRouter();
-  const { signOut, profile } = useAuth();
+  const { signOut, profile, loading: authLoading } = useAuth();
+  const { showToast } = useToast();
   // Use ref to track current time without causing re-renders
   const nowRef = useRef(new Date());
   // State for time-dependent calculations - only updates when needed for UI
@@ -194,7 +195,7 @@ export default function Home() {
   // Uses refs to access current values without including them in dependencies
   // This prevents unnecessary callback recreation and API calls
   const loadRecentActivities = useCallback(async () => {
-    const result = await getRecentActivities(14);
+    const result = await getRecentActivities(3);
     if (result.data) {
       let activities = result.data;
       
@@ -249,6 +250,9 @@ export default function Home() {
           activities = [{ date: todayDateString, activities: todayActivities }, ...activities];
         }
       }
+      
+      // Limit to 3 days maximum (including today)
+      activities = activities.slice(0, 3);
       
       setRecentActivities(activities);
     } else if (result.error) {
@@ -474,13 +478,20 @@ export default function Home() {
       if (result.error) {
         alert(result.error);
         setShowCheckOutConfirm(false);
-      return;
-    }
+        return;
+      }
 
       // Update UI with returned data
       if (result.data?.check_out_time) {
         setCheckOutDateTime(new Date(result.data.check_out_time));
         // Recent activities will refresh automatically via useEffect
+        
+        // Show success toast notification
+        showToast(
+          'success',
+          'Checked out',
+          "You've successfully checked out. Have a great day!"
+        );
       }
       
       setShowCheckOutConfirm(false);
@@ -611,12 +622,16 @@ export default function Home() {
       {/* Main Content Container - Mobile First (375px base) */}
       <div className="mx-auto w-full max-w-[402px] pb-20">
         {/* Content */}
-        <div className="flex flex-col items-center gap-3 px-6 pt-[74px]">
+        <div className="flex flex-col items-center gap-3 px-6 pt-6">
           {/* Header Section */}
           <div className="flex w-full items-start justify-between">
             <div className="flex flex-col">
               <p className="text-xl font-semibold text-neutral-800 tracking-tight leading-[30px]">
-                Welcome, {profile?.full_name?.split(' ')[0] || profile?.username || 'User'}
+                {authLoading && !profile ? (
+                  <span className="inline-block h-[30px] w-32 animate-pulse bg-neutral-200 rounded" aria-label="Loading user name"></span>
+                ) : (
+                  `Welcome, ${profile?.full_name?.split(' ')[0] || profile?.username || 'User'}`
+                )}
               </p>
               <p className="text-sm text-neutral-500 tracking-tight leading-5">
                 {formattedDate}

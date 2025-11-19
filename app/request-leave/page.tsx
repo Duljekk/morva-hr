@@ -2,22 +2,47 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import ArrowLeftIcon from '@/app/assets/icons/arrow-left.svg';
-import Calendar from '../components/Calendar';
-import LeaveTypeBottomSheet, { leaveTypes, LeaveType } from '../components/LeaveTypeBottomSheet';
+import dynamic from 'next/dynamic';
+
+// Lazy load route-specific SVG icons - only load when on this page
+const ArrowLeftIcon = dynamic(() => import('@/app/assets/icons/arrow-left.svg'), {
+  ssr: false,
+});
+
+const ArrowCalendarIcon = dynamic(() => import('@/app/assets/icons/arrow-calendar.svg'), {
+  ssr: false,
+});
+
+const LeaveFullDayIcon = dynamic(() => import('@/app/assets/icons/leave-fullday.svg'), {
+  ssr: false,
+});
+
+const LeaveHalfDayIcon = dynamic(() => import('@/app/assets/icons/leave-halfday.svg'), {
+  ssr: false,
+});
+import { leaveTypes, LeaveType } from '../components/LeaveTypeBottomSheet';
 import DocumentAttachment from '../components/DocumentAttachment';
 import UploadedFile from '../components/UploadedFile';
 import DaysOffBadge from '../components/DaysOffBadge';
 import ButtonLarge from '../components/ButtonLarge';
 import Chip from '../components/Chip';
 import TextArea from '../components/TextArea';
-import DiscardChangesModal from '../components/DiscardChangesModal';
-import ArrowCalendarIcon from '@/app/assets/icons/arrow-calendar.svg';
-import LeaveFullDayIcon from '@/app/assets/icons/leave-fullday.svg';
-import LeaveHalfDayIcon from '@/app/assets/icons/leave-halfday.svg';
 import { uploadLeaveAttachment, deleteLeaveAttachment, submitLeaveRequest, hasActiveLeaveRequest } from '@/lib/actions/leaves';
 import { validateFile } from '@/lib/utils/fileUpload';
 import { useToast } from '@/app/contexts/ToastContext';
+
+// Lazy load heavy components - only load when needed
+const Calendar = dynamic(() => import('../components/Calendar'), {
+  ssr: false,
+});
+
+const DiscardChangesModal = dynamic(() => import('../components/DiscardChangesModal'), {
+  ssr: false,
+});
+
+const LeaveTypeBottomSheet = dynamic(() => import('../components/LeaveTypeBottomSheet').then(mod => ({ default: mod.default })), {
+  ssr: false,
+});
 
 interface UploadedFileData {
   id: string;
@@ -46,9 +71,28 @@ export default function RequestLeavePage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [showDiscardModal, setShowDiscardModal] = useState(false);
   const [activeLeaveMessage, setActiveLeaveMessage] = useState<string | null>(null);
+  const [isScrolled, setIsScrolled] = useState(false);
   
   // Check if form has any changes
   const hasChanges = reason.trim() !== '' || uploadedFiles.length > 0;
+
+  // Handle scroll detection for header shadow
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 0);
+    };
+
+    // Check initial scroll position
+    handleScroll();
+
+    // Add scroll event listener
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
 
   // Check for active leave request on page load
   useEffect(() => {
@@ -294,21 +338,22 @@ export default function RequestLeavePage() {
     <div className="relative min-h-screen w-full bg-white">
       {/* Main Content Container */}
       <div className="mx-auto w-full max-w-[402px] pb-8 overflow-visible">
-        {/* Header */}
-        <div className="flex items-center justify-center px-6 pt-[74px] pb-7">
+        {/* Sticky Header */}
+        <div className={`sticky top-0 z-10 h-16 bg-white flex items-center justify-center px-6 rounded-b-[18px] transition-shadow duration-200 ${isScrolled ? 'shadow-[0px_1px_2px_0px_rgba(28,28,28,0.08)]' : ''}`}>
           <button
             onClick={handleBackClick}
-            className="absolute left-6 flex h-10 w-10 items-center justify-center"
+            className="absolute left-6 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center"
+            aria-label="Go back"
           >
-            <ArrowLeftIcon className="h-6 w-6 text-neutral-700" />
+            <ArrowLeftIcon className="h-5 w-5 text-neutral-700" />
           </button>
-          <h1 className="text-xl font-semibold text-neutral-800 tracking-tight">
+          <h1 className="text-lg font-semibold text-neutral-800 tracking-[-0.18px] leading-[28px]">
             Request Leave
           </h1>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3 px-6 overflow-visible">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3 px-6 overflow-visible mt-2">
           {/* Date Range Cards */}
           <div className="flex items-center gap-3 mb-[2px]">
             {/* From Date */}

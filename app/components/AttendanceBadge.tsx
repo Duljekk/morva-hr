@@ -1,7 +1,5 @@
 'use client';
 
-import React from 'react';
-
 export type AttendanceStatus = 'late' | 'ontime' | 'overtime' | 'leftearly';
 export type LeaveStatus = 'pending' | 'approved' | 'rejected';
 

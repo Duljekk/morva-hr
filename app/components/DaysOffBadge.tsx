@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import BubbleInfoIcon from '@/app/assets/icons/bubble-info.svg';
 
 interface DaysOffBadgeProps {

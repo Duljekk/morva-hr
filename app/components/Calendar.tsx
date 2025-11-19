@@ -1,8 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import CalendarGrid from './CalendarGrid';
+import dynamic from 'next/dynamic';
 import useLockBodyScroll from '../hooks/useLockBodyScroll';
+
+// Lazy load CalendarGrid - only load when calendar is opened
+const CalendarGrid = dynamic(() => import('./CalendarGrid'), {
+  ssr: false,
+});
 
 interface CalendarProps {
   value?: Date;

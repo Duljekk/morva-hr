@@ -1,4 +1,3 @@
-import React from 'react';
 
 export const BellIcon = ({ className = "" }: { className?: string }) => (
   <svg

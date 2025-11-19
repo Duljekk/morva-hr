@@ -1,9 +1,14 @@
 'use client';
 
 import { useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import ButtonLarge from './ButtonLarge';
 import useLockBodyScroll from '../hooks/useLockBodyScroll';
-import NeutralModalIcon from '@/app/assets/icons/neutral-modal.svg';
+
+// Lazy load SVG icon - only load when modal is open
+const NeutralModalIcon = dynamic(() => import('@/app/assets/icons/neutral-modal.svg'), {
+  ssr: false,
+});
 
 interface DiscardChangesModalProps {
   isOpen: boolean;

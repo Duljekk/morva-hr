@@ -103,7 +103,7 @@ function CheckInSuccessContent() {
   return (
     <div className="relative h-screen w-full bg-white overflow-hidden">
       {/* Main Content Container */}
-      <div className="mx-auto flex h-full w-full max-w-[402px] flex-col items-center overflow-visible px-6 pt-8 pb-32">
+      <div className="mx-auto flex h-full w-full max-w-[402px] flex-col items-center overflow-visible px-6 pt-6 pb-32">
         {/* Top Content - Centered */}
         <div className="flex flex-col items-center flex-1 justify-center">
         {/* Illustration Container - Expanded to prevent clipping */}

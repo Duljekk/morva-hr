@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import NotificationAnnualSentIcon from '@/app/assets/icons/notification-annual-sent.svg';
 import NotificationAnnualRejectedIcon from '@/app/assets/icons/notification-annual-rejected.svg';
 import NotificationAnnualApprovedIcon from '@/app/assets/icons/notification-annual-approved.svg';

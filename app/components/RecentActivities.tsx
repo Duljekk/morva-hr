@@ -3,7 +3,7 @@
 import { memo, useMemo } from 'react';
 import CheckInNeutralIcon from '@/app/assets/icons/check-in-neutral.svg';
 import CheckOutNeutralIcon from '@/app/assets/icons/check-out-neutral.svg';
-import CalendarIcon from '@/app/assets/icons/calendar-1.svg';
+import { SpriteIcon } from './IconSprite';
 import AttendanceBadge, { type AttendanceStatus, type LeaveStatus } from './AttendanceBadge';
 
 // Leave icon imports
@@ -105,7 +105,7 @@ function RecentActivities({ activities }: RecentActivitiesProps) {
           <div key={dayIndex} className="flex flex-col gap-2.5">
             {/* Date Badge */}
             <div className="w-fit flex items-center gap-1 rounded-3xl px-2 py-0">
-              <CalendarIcon className="h-3.5 w-3.5 shrink-0" />
+              <SpriteIcon name="calendar" className="h-3.5 w-3.5 shrink-0 text-neutral-600" width={14} height={14} />
               <p className="text-xs font-semibold text-neutral-700">
                 {day.date === todayDateString ? 'Today' : day.date}
               </p>

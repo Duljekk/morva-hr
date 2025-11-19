@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useMemo, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useMemo, useCallback, useRef, type ReactNode } from 'react';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { createClient } from '../supabase/client';
 import type { Database } from '../supabase/types';
@@ -42,26 +42,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const supabase = useMemo(() => createClient(), []);
 
   // Fetch user profile from database
-  // Memoize to prevent recreation on every render
-  const fetchProfile = useMemo(
-    () => async (userId: string) => {
-      try {
-        const { data, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', userId)
-          .single();
+  // Use useCallback to prevent recreation and ensure stable reference
+  const fetchProfile = useCallback(async (userId: string): Promise<void> => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
-        if (error) throw error;
+      if (error) throw error;
 
-        setProfile(data as UserProfile);
-      } catch (error) {
-        console.error('Error fetching profile:', error);
-        setProfile(null);
-      }
-    },
-    [supabase]
-  );
+      setProfile(data as UserProfile);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      setProfile(null);
+    }
+  }, [supabase]);
 
   // Refresh profile data
   const refreshProfile = async () => {
@@ -180,31 +177,90 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setMounted(true);
   }, []);
 
+  // Use ref to track if initial session has been handled
+  // This prevents race conditions with onAuthStateChange
+  const hasHandledInitialSessionRef = useRef(false);
+
   useEffect(() => {
     if (!mounted) return;
+
+    // Reset the ref for this effect run
+    hasHandledInitialSessionRef.current = false;
 
     let isActive = true;
     let subscription: { unsubscribe: () => void } | null = null;
 
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!isActive) return;
-      
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        fetchProfile(session.user.id);
+    const initializeAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (!isActive) return;
+        
+        if (error) {
+          console.error('🔵 AuthContext: Error getting session:', error);
+          setLoading(false);
+          hasHandledInitialSessionRef.current = true;
+          return;
+        }
+        
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          // Wait for profile to load before setting loading to false
+          await fetchProfile(session.user.id);
+        } else {
+          setProfile(null);
+        }
+        
+        hasHandledInitialSessionRef.current = true;
+        setLoading(false);
+      } catch (error) {
+        console.error('🔵 AuthContext: Error initializing auth:', error);
+        if (isActive) {
+          hasHandledInitialSessionRef.current = true;
+          setLoading(false);
+        }
       }
-      
-      setLoading(false);
-    });
+    };
 
-    // Listen for auth changes
+    initializeAuth();
+
+    // Safety timeout: ensure loading is always set to false after max 10 seconds
+    // This prevents the loading state from getting stuck indefinitely
+    const loadingTimeout = setTimeout(() => {
+      if (isActive && !hasHandledInitialSessionRef.current) {
+        console.warn('🔵 AuthContext: Loading timeout - forcing loading to false');
+        hasHandledInitialSessionRef.current = true;
+        setLoading(false);
+      }
+    }, 10000);
+
+    // Listen for auth changes (only after initial session is handled)
     const {
       data: { subscription: authSubscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!isActive) return;
+      
+      // Skip INITIAL_SESSION event - we handle it with getSession()
+      if (event === 'INITIAL_SESSION') {
+        // Give initializeAuth a chance to complete
+        // If it hasn't completed after a short delay, mark as handled
+        setTimeout(() => {
+          if (!hasHandledInitialSessionRef.current && isActive) {
+            console.log('🔵 AuthContext: INITIAL_SESSION event - marking as handled');
+            hasHandledInitialSessionRef.current = true;
+            setLoading(false);
+          }
+        }, 500);
+        return;
+      }
+      
+      // Only process events after initial session is handled
+      if (!hasHandledInitialSessionRef.current) {
+        return;
+      }
       
       console.log('🔵 AuthContext: Auth state changed -', event, 'Session:', session ? 'EXISTS' : 'NULL');
       
@@ -214,23 +270,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (session?.user) {
         console.log('🔵 AuthContext: User logged in, fetching profile...');
         await fetchProfile(session.user.id);
+        setLoading(false);
       } else {
         console.log('🔵 AuthContext: No session, clearing profile');
         setProfile(null);
+        setLoading(false);
       }
-
-      setLoading(false);
     });
 
     subscription = authSubscription;
 
     return () => {
       isActive = false;
+      clearTimeout(loadingTimeout);
       if (subscription) {
         subscription.unsubscribe();
       }
     };
-  }, [mounted, supabase]);
+  }, [mounted, supabase, fetchProfile]);
 
   const value = {
     user,

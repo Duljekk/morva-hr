@@ -89,7 +89,7 @@ export default function CheckInOutWidget({
     ? "Enjoy your day off!"
     : state === 'checkedOut'
       ? "You've checked out"
-      : state === 'preCheckIn'
+    : state === 'preCheckIn'
         ? 'Ready to start your day?'
         : "You're on the clock";
 
@@ -135,8 +135,8 @@ export default function CheckInOutWidget({
   const metricColor = state === 'overtime' ? 'text-emerald-600' : 'text-neutral-800';
 
   const primaryLabel = state === 'preCheckIn' || state === 'checkedOut' 
-    ? 'Check-In' 
-    : 'Check-Out';
+      ? 'Check-In' 
+      : 'Check-Out';
 
   const primaryDisabled = (() => {
     if (isLoading) return true; // Disable during operations
@@ -199,14 +199,14 @@ export default function CheckInOutWidget({
       {/* Bottom Container */}
       <div className="flex flex-col gap-2 px-[18px] pb-[30px] pt-5">
         {!isOnLeaveToday && (
-          <ButtonLarge
-            onClick={handlePrimaryClick}
-            disabled={primaryDisabled}
-            variant="primary"
+        <ButtonLarge
+          onClick={handlePrimaryClick}
+          disabled={primaryDisabled}
+          variant="primary"
             isLoading={isLoading}
-          >
-            {primaryLabel}
-          </ButtonLarge>
+        >
+          {primaryLabel}
+        </ButtonLarge>
         )}
         {hasActiveLeave && activeLeaveInfo ? (
           <LeaveStatusCard
@@ -216,13 +216,13 @@ export default function CheckInOutWidget({
             onClick={onOpenLeaveDetails || onRequestLeave}
           />
         ) : (
-          <ButtonLarge
-            onClick={onRequestLeave}
-            variant="secondary"
-            disabled={hasActiveLeave}
-          >
+        <ButtonLarge
+          onClick={onRequestLeave}
+          variant="secondary"
+          disabled={hasActiveLeave}
+        >
             Request Leave
-          </ButtonLarge>
+        </ButtonLarge>
         )}
       </div>
     </div>
