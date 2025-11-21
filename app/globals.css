@@ -53,4 +53,13 @@ body {
   .animate-out {
     animation: slide-out-to-top 0.3s cubic-bezier(0.19, 1, 0.22, 1);
   }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari and Opera */
+  }
 }

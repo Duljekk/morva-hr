@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { isHRAdmin } from '@/lib/auth/utils';
 import { useToast } from '@/app/contexts/ToastContext';
 import { createClient } from '@/lib/supabase/client';
 import FormInput from '../components/FormInput';
@@ -15,13 +16,20 @@ import EyeClosedIcon from '@/app/assets/icons/eye-closed.svg';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { signIn } = useAuth();
+  const { signIn, profile, loading: authLoading } = useAuth();
   const { showToast } = useToast();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Redirect HR admins to /hr if already authenticated
+  useEffect(() => {
+    if (!authLoading && profile && isHRAdmin(profile)) {
+      router.replace('/hr');
+    }
+  }, [authLoading, profile, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,9 +68,28 @@ export default function LoginPage() {
         return;
       }
 
-      // Redirect to home on success
-      router.push('/');
-      router.refresh();
+      // Fetch user profile to check role for redirect
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        const { data: userProfile } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+
+        // Redirect HR admins to /hr, others to home
+        if (userProfile?.role === 'hr_admin') {
+          router.push('/hr');
+        } else {
+          router.push('/');
+        }
+        router.refresh();
+      } else {
+        router.push('/');
+        router.refresh();
+      }
     } catch (err) {
       const errorMessage = 'An unexpected error occurred';
       setError(errorMessage);

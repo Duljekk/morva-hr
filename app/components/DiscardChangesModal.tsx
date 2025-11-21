@@ -2,8 +2,10 @@
 
 import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import { motion, AnimatePresence } from 'framer-motion';
 import ButtonLarge from './ButtonLarge';
 import useLockBodyScroll from '../hooks/useLockBodyScroll';
+import { backdropVariants, modalVariants } from '../lib/animations/modalVariants';
 
 // Lazy load SVG icon - only load when modal is open
 const NeutralModalIcon = dynamic(() => import('@/app/assets/icons/neutral-modal.svg'), {
@@ -34,8 +36,6 @@ export default function DiscardChangesModal({
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
-
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
       onClose();
@@ -48,22 +48,35 @@ export default function DiscardChangesModal({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-      onClick={handleBackdropClick}
-    >
-      <div 
-        className="mx-6 w-full max-w-[354px] bg-white flex flex-col gap-3"
-        style={{
-          borderRadius: '14px',
-          paddingTop: '24px',
-          paddingBottom: '20px',
-          paddingLeft: '20px',
-          paddingRight: '20px',
-          boxShadow: '0px 2px 8px 0px rgba(28,28,28,0.12), 0px 0px 4px 0px rgba(28,28,28,0.06)',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          onClick={handleBackdropClick}
+          variants={backdropVariants}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+        >
+          <motion.div 
+            className="mx-6 w-full max-w-[354px] bg-white flex flex-col gap-3"
+            style={{
+              borderRadius: '14px',
+              paddingTop: '24px',
+              paddingBottom: '20px',
+              paddingLeft: '20px',
+              paddingRight: '20px',
+              boxShadow: '0px 2px 8px 0px rgba(28,28,28,0.12), 0px 0px 4px 0px rgba(28,28,28,0.06)',
+              transformOrigin: 'center center',
+              marginLeft: 'auto',
+              marginRight: 'auto',
+            }}
+            onClick={(e) => e.stopPropagation()}
+            variants={modalVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+          >
         {/* Neutral Icon */}
         <div className="shrink-0">
           <NeutralModalIcon className="h-10 w-10" />
@@ -96,8 +109,10 @@ export default function DiscardChangesModal({
             </button>
           </div>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 

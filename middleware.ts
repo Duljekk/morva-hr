@@ -78,12 +78,56 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // If authenticated and trying to access login page, redirect to home
-  if (pathname === '/login' && user) {
-    console.log(`🟢 Middleware: User authenticated, redirecting /login -> /`);
+  // Fetch user profile once if authenticated (for role-based redirects)
+  let userProfile: { role: string } | null = null;
+  if (user && (pathname === '/login' || pathname === '/' || pathname.startsWith('/hr'))) {
+    const { data: profile } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+    userProfile = profile;
+  }
+
+  // If authenticated and trying to access login page, redirect based on role
+  if (pathname === '/login' && user && userProfile) {
+    const redirectPath = userProfile.role === 'hr_admin' ? '/hr' : '/';
+    console.log(`🟢 Middleware: User authenticated, redirecting /login -> ${redirectPath}`);
     const url = request.nextUrl.clone();
-    url.pathname = '/';
+    url.pathname = redirectPath;
     return NextResponse.redirect(url);
+  }
+
+  // Redirect HR admins from home page to /hr
+  if (pathname === '/' && user && userProfile?.role === 'hr_admin') {
+    console.log(`🟢 Middleware: HR admin accessing home, redirecting / -> /hr`);
+    const url = request.nextUrl.clone();
+    url.pathname = '/hr';
+    return NextResponse.redirect(url);
+  }
+
+  // Check HR role for /hr routes
+  if (pathname.startsWith('/hr') && user) {
+    if (!userProfile) {
+      const { data: profile, error } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+      userProfile = profile;
+      
+      if (error || !userProfile || userProfile.role !== 'hr_admin') {
+        console.log(`🟢 Middleware: User ${user.id} does not have HR role, redirecting ${pathname} -> /`);
+        const url = request.nextUrl.clone();
+        url.pathname = '/';
+        return NextResponse.redirect(url);
+      }
+    } else if (userProfile.role !== 'hr_admin') {
+      console.log(`🟢 Middleware: User ${user.id} does not have HR role, redirecting ${pathname} -> /`);
+      const url = request.nextUrl.clone();
+      url.pathname = '/';
+      return NextResponse.redirect(url);
+    }
   }
 
   console.log(`🟢 Middleware: Allowing access to ${pathname}`);

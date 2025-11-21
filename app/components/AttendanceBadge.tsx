@@ -1,62 +1,54 @@
 'use client';
 
+import Badge, { type BadgeVariant } from './Badge';
+
 export type AttendanceStatus = 'late' | 'ontime' | 'overtime' | 'leftearly';
 export type LeaveStatus = 'pending' | 'approved' | 'rejected';
 
 export interface AttendanceBadgeProps {
   status: AttendanceStatus | LeaveStatus;
+  size?: 'sm' | 'md';
   className?: string;
 }
 
-const statusStyles = {
+// Map statuses to Badge variants
+const statusToVariant: Record<AttendanceStatus | LeaveStatus, BadgeVariant> = {
   // Attendance statuses
-  late: {
-    bg: 'bg-[#fffbeb]',
-    text: 'text-[#e17100]',
-    label: 'Late',
-  },
-  ontime: {
-    bg: 'bg-[#dcfce7]',
-    text: 'text-[#008236]',
-    label: 'On Time',
-  },
-  overtime: {
-    bg: 'bg-neutral-100',
-    text: 'text-neutral-600',
-    label: 'Overtime',
-  },
-  leftearly: {
-    bg: 'bg-[#fffbeb]',
-    text: 'text-[#e17100]',
-    label: 'Left Early',
-  },
+  late: 'warning',
+  ontime: 'success',
+  overtime: 'neutral',
+  leftearly: 'warning',
   // Leave statuses
-  pending: {
-    bg: 'bg-[#fffbeb]',
-    text: 'text-[#e17100]',
-    label: 'Pending',
-  },
-  approved: {
-    bg: 'bg-[#f0fdf4]',
-    text: 'text-[#00a63e]',
-    label: 'Approved',
-  },
-  rejected: {
-    bg: 'bg-[#fef2f2]',
-    text: 'text-[#e7000b]',
-    label: 'Rejected',
-  },
+  pending: 'warning',
+  approved: 'success',
+  rejected: 'danger',
 };
 
-export default function AttendanceBadge({ status, className = '' }: AttendanceBadgeProps) {
-  const styles = statusStyles[status];
+// Status labels
+const statusLabels: Record<AttendanceStatus | LeaveStatus, string> = {
+  // Attendance statuses
+  late: 'Late',
+  ontime: 'On Time',
+  overtime: 'Overtime',
+  leftearly: 'Left Early',
+  // Leave statuses
+  pending: 'Pending',
+  approved: 'Approved',
+  rejected: 'Rejected',
+};
+
+export default function AttendanceBadge({ 
+  status, 
+  size = 'sm',
+  className = '' 
+}: AttendanceBadgeProps) {
+  const variant = statusToVariant[status];
+  const label = statusLabels[status];
 
   return (
-    <div className={`rounded-xl px-2 py-0.5 ${styles.bg} ${className}`}>
-      <p className={`text-xs font-semibold tracking-[-0.1px] ${styles.text}`}>
-        {styles.label}
-      </p>
-    </div>
+    <Badge variant={variant} size={size} showIcon={false} className={className}>
+      {label}
+    </Badge>
   );
 }
 

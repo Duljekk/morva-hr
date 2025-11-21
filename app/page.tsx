@@ -327,7 +327,7 @@ export default function Home() {
     hasMountedRef.current = true;
 
     const loadActivities = () => {
-      loadRecentActivities();
+    loadRecentActivities();
     };
 
     if (shouldDebounce) {
@@ -432,6 +432,7 @@ export default function Home() {
       
       if (result.error) {
         alert(result.error);
+        setIsLoading(false);
       return;
     }
 
@@ -440,24 +441,47 @@ export default function Home() {
         const checkInTime = new Date(result.data.check_in_time);
         const checkInStatus = result.data.check_in_status || 'ontime';
         
+        console.log('✅ Check-in successful, preparing redirect...', {
+          checkInTime: checkInTime.toISOString(),
+          status: checkInStatus
+        });
+        
         // Calculate time difference from shift start
         const shiftStart = setToHour(checkInTime, SHIFT_START_HOUR);
         const timeDiffMs = checkInTime.getTime() - shiftStart.getTime();
         const timeDiffMinutes = Math.floor(timeDiffMs / 60000);
         
-        // Redirect to success page with check-in data as URL params
+        // Build URL params for success page
         const params = new URLSearchParams({
           time: checkInTime.toISOString(),
           status: checkInStatus,
           minutesDiff: timeDiffMinutes.toString(),
         });
-        router.push(`/check-in-success?${params.toString()}`);
-        return; // Don't update state here, let the success page handle it
+        
+        const successUrl = `/check-in-success?${params.toString()}`;
+        console.log('🔀 Redirecting to:', successUrl);
+        
+        // Reset loading state before redirect
+        setIsLoading(false);
+        
+        // Use window.location.href for a hard redirect to ensure it completes
+        // This is more reliable than router.replace() for post-action redirects
+        // According to Context7: For critical redirects after server actions, 
+        // hard redirects ensure the navigation completes even if there are state updates
+        window.location.href = successUrl;
+        
+        // Return early - the hard redirect will navigate away
+        // No need for finally block cleanup since we're navigating away
+        return;
+      } else {
+        // No check-in data returned - unexpected error
+        console.error('Check-in succeeded but no data returned');
+        alert('Check-in completed but failed to retrieve data. Please refresh the page.');
+        setIsLoading(false);
       }
     } catch (error) {
       console.error('Check-in error:', error);
       alert('Failed to check in. Please try again.');
-    } finally {
       setIsLoading(false);
     }
   };
@@ -478,8 +502,8 @@ export default function Home() {
       if (result.error) {
         alert(result.error);
         setShowCheckOutConfirm(false);
-        return;
-      }
+      return;
+    }
 
       // Update UI with returned data
       if (result.data?.check_out_time) {
@@ -593,8 +617,8 @@ export default function Home() {
 
   const checkoutLeftEarlyMs = useMemo(() => {
     return checkOutDateTime && checkOutDateTime.getTime() < shiftEnd.getTime()
-      ? shiftEnd.getTime() - checkOutDateTime.getTime()
-      : 0;
+    ? shiftEnd.getTime() - checkOutDateTime.getTime()
+    : 0;
   }, [checkOutDateTime, shiftEnd]);
 
   const checkoutDuration = useMemo(() => {

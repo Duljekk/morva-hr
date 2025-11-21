@@ -2,8 +2,10 @@
 
 import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import { motion, AnimatePresence } from 'framer-motion';
 import ButtonLarge from './ButtonLarge';
 import useLockBodyScroll from '../hooks/useLockBodyScroll';
+import { backdropVariants, modalVariants } from '../lib/animations/modalVariants';
 
 // Lazy load SVG icon - only load when modal is open
 const WarningModalIcon = dynamic(() => import('@/app/assets/icons/warning-modal.svg'), {
@@ -44,8 +46,6 @@ export default function ConfirmationModal({
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
-
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
       onClose();
@@ -58,22 +58,33 @@ export default function ConfirmationModal({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-6"
-      onClick={handleBackdropClick}
-    >
-      <div 
-        className="w-full max-w-[354px] bg-white flex flex-col gap-3"
-        style={{
-          borderRadius: '14px',
-          paddingTop: '24px',
-          paddingBottom: '20px',
-          paddingLeft: '20px',
-          paddingRight: '20px',
-          boxShadow: '0px 2px 8px 0px rgba(28,28,28,0.12), 0px 0px 4px 0px rgba(28,28,28,0.06)',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-6"
+          onClick={handleBackdropClick}
+          variants={backdropVariants}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+        >
+          <motion.div 
+            className="w-full max-w-[354px] bg-white flex flex-col gap-3 mx-auto"
+            style={{
+              borderRadius: '14px',
+              paddingTop: '24px',
+              paddingBottom: '20px',
+              paddingLeft: '20px',
+              paddingRight: '20px',
+              boxShadow: '0px 2px 8px 0px rgba(28,28,28,0.12), 0px 0px 4px 0px rgba(28,28,28,0.06)',
+              transformOrigin: 'center center',
+            }}
+            onClick={(e) => e.stopPropagation()}
+            variants={modalVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+          >
         {/* Warning Icon - Lazy loaded */}
         <div className="shrink-0">
           <WarningModalIcon className="h-10 w-10" />
@@ -127,8 +138,10 @@ export default function ConfirmationModal({
             </button>
           </div>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 

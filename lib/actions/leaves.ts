@@ -609,11 +609,16 @@ export async function submitLeaveRequest(
       day: 'numeric' 
     });
     
+    // Format date range for notification
+    const dateRange = formattedStartDate === formattedEndDate 
+      ? formattedStartDate 
+      : `${formattedStartDate} to ${formattedEndDate}`;
+    
     const notificationResult = await createNotification({
       user_id: user.id,
       type: 'leave_sent',
       title: 'Leave request sent',
-      description: `Your leave request from ${formattedStartDate} to ${formattedEndDate} has been submitted and is pending approval.`,
+      description: `Your leave request for ${dateRange} is awaiting review.`,
       related_entity_type: 'leave_request',
       related_entity_id: leaveRequest.id,
     });
@@ -676,7 +681,7 @@ export async function approveLeaveRequest(
     // Get the leave request to find the user_id and details for notification
     const { data: leaveRequest, error: fetchError } = await supabase
       .from('leave_requests')
-      .select('user_id, start_date, end_date')
+      .select('user_id, start_date, end_date, leave_type_id')
       .eq('id', requestId)
       .single();
 
@@ -712,11 +717,16 @@ export async function approveLeaveRequest(
         day: 'numeric' 
       });
       
+      // Format date range for notification
+      const dateRange = startDate === endDate 
+        ? startDate 
+        : `${startDate} to ${endDate}`;
+      
       const notificationResult = await createNotification({
         user_id: leaveRequest.user_id,
         type: 'leave_approved',
         title: 'Leave request approved',
-        description: `Your leave from ${startDate} to ${endDate} has been approved.`,
+        description: `Your leave on ${dateRange} has been approved.`,
         related_entity_type: 'leave_request',
         related_entity_id: requestId,
       });

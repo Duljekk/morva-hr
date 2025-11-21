@@ -48,6 +48,7 @@ export async function GET(request: NextRequest) {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
+        detectSessionInUrl: false, // Prevent accidental client-side exposure
       },
     });
 

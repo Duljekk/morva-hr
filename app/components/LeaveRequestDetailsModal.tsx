@@ -2,8 +2,10 @@
 
 import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import { motion, AnimatePresence } from 'framer-motion';
 import useLockBodyScroll from '../hooks/useLockBodyScroll';
 import LeaveRequestStatusTimeline, { StatusItem } from './LeaveRequestStatusTimeline';
+import { backdropVariants, modalVariants } from '../lib/animations/modalVariants';
 
 // Lazy load SVG icon - only load when modal is open
 const ArrowCalendarIcon = dynamic(() => import('@/app/assets/icons/arrow-calendar.svg'), {
@@ -54,8 +56,6 @@ export default function LeaveRequestDetailsModal({
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
@@ -163,17 +163,28 @@ export default function LeaveRequestDetailsModal({
   const statusHistory = buildStatusHistory();
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-6"
-      onClick={handleBackdropClick}
-    >
-      <div
-        className="w-full max-w-[354px] bg-white flex flex-col rounded-[14px] overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          boxShadow: '0px 2px 8px 0px rgba(28,28,28,0.12), 0px 0px 4px 0px rgba(28,28,28,0.06)',
-        }}
-      >
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-6"
+          onClick={handleBackdropClick}
+          variants={backdropVariants}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+        >
+          <motion.div
+            className="w-full max-w-[354px] bg-white flex flex-col rounded-[14px] overflow-hidden mx-auto"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              boxShadow: '0px 2px 8px 0px rgba(28,28,28,0.12), 0px 0px 4px 0px rgba(28,28,28,0.06)',
+              transformOrigin: 'center center',
+            }}
+            variants={modalVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+          >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-neutral-100 pl-5 pr-[14px] py-4">
           <h2 className="text-base font-semibold text-neutral-800 leading-5 tracking-[-0.16px]">
@@ -305,8 +316,10 @@ export default function LeaveRequestDetailsModal({
             />
           </div>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 

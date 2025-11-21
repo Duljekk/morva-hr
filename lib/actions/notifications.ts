@@ -5,7 +5,7 @@
  * Handles fetching, marking as read, and creating notifications
  */
 
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { revalidateTag } from 'next/cache';
 import { getUserPushSubscriptions } from './pushNotifications';
 import { sendPushNotificationsToSubscriptions } from '@/lib/utils/sendPushNotification';
@@ -440,7 +440,67 @@ export async function createNotification(
       title: data.title,
     });
     
-    const supabase = await createClient();
+    // Use service role client for system operations (bypasses RLS)
+    // This allows creating notifications for any user, not just the current authenticated user
+    const supabase = createServiceRoleClient();
+    
+    if (!supabase) {
+      console.error('[createNotification] Service role client not available. SUPABASE_SERVICE_ROLE_KEY may not be set.');
+      // Fallback to regular client (may fail due to RLS, but better than nothing)
+      const fallbackSupabase = await createClient();
+      const { data: insertedNotification, error } = await fallbackSupabase
+        .from('notifications')
+        .insert({
+          user_id: data.user_id,
+          type: data.type,
+          title: data.title,
+          description: data.description,
+          related_entity_type: data.related_entity_type || null,
+          related_entity_id: data.related_entity_id || null,
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        const errorMessage = error.message || 'Unknown error';
+        console.error('[createNotification] Error creating notification (fallback):', {
+          message: errorMessage,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+        });
+        return { success: false, error: `Failed to create notification: ${errorMessage}. Please ensure SUPABASE_SERVICE_ROLE_KEY is set in .env.local` };
+      }
+      
+      if (!insertedNotification) {
+        console.error('[createNotification] No notification returned after insert (fallback)');
+        return { success: false, error: 'Notification insert succeeded but no data returned' };
+      }
+      
+      // Continue with success path below
+      console.log('[createNotification] ✅ Notification created successfully (fallback):', {
+        id: insertedNotification.id,
+        user_id: data.user_id,
+        type: data.type,
+      });
+      
+      // Invalidate cache tags for the user
+      revalidateTag('notifications', 'max');
+      revalidateTag(`user-${data.user_id}`, 'max');
+
+      // Send push notification if user has subscriptions
+      sendPushNotificationForUser(data.user_id, {
+        title: data.title,
+        body: data.description,
+        notificationId: insertedNotification.id,
+        relatedEntityType: data.related_entity_type || undefined,
+        relatedEntityId: data.related_entity_id || undefined,
+      }).catch((error) => {
+        console.error('[createNotification] Error sending push notification:', error);
+      });
+      
+      return { success: true };
+    }
     
     const { data: insertedNotification, error } = await supabase
       .from('notifications')
@@ -479,8 +539,10 @@ export async function createNotification(
         console.error('[createNotification] Error code:', error.code);
         
         // Try using the PostgreSQL function to bypass PostgREST schema cache
+        // Use service role client for RPC as well
+        const rpcSupabase = createServiceRoleClient() || supabase;
         try {
-          const { data: functionResult, error: rpcError } = await supabase.rpc('insert_notification', {
+          const { data: functionResult, error: rpcError } = await rpcSupabase.rpc('insert_notification', {
             p_user_id: data.user_id,
             p_type: data.type,
             p_title: data.title,

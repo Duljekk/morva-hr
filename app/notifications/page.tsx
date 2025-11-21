@@ -26,6 +26,7 @@ interface Notification {
   time: string;
   isUnread: boolean;
   illustration?: 'default' | 'rejected' | 'approved';
+  leaveType?: 'annual' | 'sick' | 'unpaid';
   type?: string;
   related_entity_type?: string | null;
   related_entity_id?: string | null;
@@ -54,6 +55,8 @@ export default function NotificationsPage() {
   } | null>(null);
   const [isLoadingLeaveRequest, setIsLoadingLeaveRequest] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [processingNotificationIds, setProcessingNotificationIds] = useState<Set<string>>(new Set());
+  const [hasMarkedAllAsRead, setHasMarkedAllAsRead] = useState(false);
   
   // Handle scroll detection for header shadow
   useEffect(() => {
@@ -84,8 +87,43 @@ export default function NotificationsPage() {
     enableRealtime: true,
   });
 
+  // Mark all notifications as read when page is visited
+  useEffect(() => {
+    // Only mark as read once when page is visited and notifications are loaded
+    if (!loading && !hasMarkedAllAsRead && notificationData.length > 0) {
+      const unreadNotifications = notificationData.filter(n => !n.is_read);
+      
+      // Only mark if there are unread notifications
+      if (unreadNotifications.length > 0) {
+        setHasMarkedAllAsRead(true);
+        
+        // Mark all as read in backend
+        // The real-time subscription will automatically update the UI
+        markAllNotificationsAsRead().catch((error) => {
+          console.error('Failed to mark all notifications as read on page visit:', error);
+          // Reset flag on error so it can retry
+          setHasMarkedAllAsRead(false);
+        });
+      }
+    }
+  }, [loading, notificationData, hasMarkedAllAsRead]);
+
   // Handle notification click - check if it's a leave notification and open modal
   const handleNotificationClick = useCallback(async (notification: Notification) => {
+    // Prevent duplicate clicks
+    if (processingNotificationIds.has(notification.id)) {
+      return;
+    }
+
+    // Only mark as read if it's currently unread
+    const shouldMarkAsRead = notification.isUnread;
+
+    // Mark as processing
+    setProcessingNotificationIds(prev => new Set(prev).add(notification.id));
+
+    // Optimistically mark as read immediately (UI update)
+    // The real-time subscription will confirm the change from the server
+    
     // Check if this is a leave-related notification
     const isLeaveNotification = notification.type && 
       ['leave_sent', 'leave_approved', 'leave_rejected'].includes(notification.type);
@@ -122,15 +160,33 @@ export default function NotificationsPage() {
       }
     }
     
-    // Mark notification as read in backend
+    // Mark notification as read in backend (only if it's unread)
     // The real-time subscription will automatically update the UI
-    const result = await markNotificationAsRead(notification.id);
-    if (!result.success) {
-      console.error('Failed to mark notification as read:', result.error);
-      // Refresh to sync state
-      await refreshNotifications();
+    if (shouldMarkAsRead) {
+      try {
+        const result = await markNotificationAsRead(notification.id);
+        if (!result.success) {
+          console.error('Failed to mark notification as read:', result.error);
+          // Refresh to sync state
+          await refreshNotifications();
+        }
+      } finally {
+        // Remove from processing set
+        setProcessingNotificationIds(prev => {
+          const next = new Set(prev);
+          next.delete(notification.id);
+          return next;
+        });
+      }
+    } else {
+      // Remove from processing set immediately if already read
+      setProcessingNotificationIds(prev => {
+        const next = new Set(prev);
+        next.delete(notification.id);
+        return next;
+      });
     }
-  }, [refreshNotifications]);
+  }, [refreshNotifications, processingNotificationIds]);
 
   // Handle modal close
   const handleCloseModal = useCallback(() => {
@@ -138,17 +194,6 @@ export default function NotificationsPage() {
     setLeaveRequestData(null);
   }, []);
 
-  // Handle marking all as read
-  const handleMarkAllAsRead = useCallback(async () => {
-    // Mark all as read in backend
-    // The real-time subscription will automatically update the UI
-    const result = await markAllNotificationsAsRead();
-    if (!result.success) {
-      console.error('Failed to mark all notifications as read:', result.error);
-      // Refresh to sync state
-      await refreshNotifications();
-    }
-  }, [refreshNotifications]);
 
   // Map notification type to illustration
   const getIllustration = (type: string): 'default' | 'rejected' | 'approved' => {
@@ -157,6 +202,49 @@ export default function NotificationsPage() {
     // All other types (leave_sent, payslip_ready, announcement, attendance_reminder) use default
     return 'default';
   };
+
+  // Fetch leave types for leave notifications
+  const fetchLeaveTypes = useCallback(async (notifications: NotificationData[]): Promise<Map<string, 'annual' | 'sick' | 'unpaid'>> => {
+    const leaveNotifications = notifications.filter(
+      n => n.type && ['leave_sent', 'leave_approved', 'leave_rejected'].includes(n.type) 
+        && n.related_entity_type === 'leave_request' 
+        && n.related_entity_id
+    );
+
+    if (leaveNotifications.length === 0) {
+      return new Map();
+    }
+
+    try {
+      // Fetch all leave requests in parallel
+      const leaveRequestPromises = leaveNotifications.map(notification => 
+        getLeaveRequest(notification.related_entity_id!)
+      );
+
+      const results = await Promise.all(leaveRequestPromises);
+      const leaveTypeMap = new Map<string, 'annual' | 'sick' | 'unpaid'>();
+
+      results.forEach((result, index) => {
+        if (result.data) {
+          const notification = leaveNotifications[index];
+          // Map leave type name to id (normalize to lowercase and handle variations)
+          const leaveTypeName = result.data.leaveType.toLowerCase().trim();
+          if (leaveTypeName.includes('annual')) {
+            leaveTypeMap.set(notification.id, 'annual');
+          } else if (leaveTypeName.includes('sick')) {
+            leaveTypeMap.set(notification.id, 'sick');
+          } else if (leaveTypeName.includes('unpaid')) {
+            leaveTypeMap.set(notification.id, 'unpaid');
+          }
+        }
+      });
+
+      return leaveTypeMap;
+    } catch (error) {
+      console.error('Error fetching leave types:', error);
+      return new Map();
+    }
+  }, []);
 
   // Format time from ISO string
   const formatTime = (isoString: string): string => {
@@ -168,6 +256,16 @@ export default function NotificationsPage() {
     const displayMinutes = minutes.toString().padStart(2, '0');
     return `${displayHours}:${displayMinutes} ${ampm}`;
   };
+
+  // State for leave types map
+  const [leaveTypesMap, setLeaveTypesMap] = useState<Map<string, 'annual' | 'sick' | 'unpaid'>>(new Map());
+
+  // Fetch leave types when notifications change
+  useEffect(() => {
+    if (notificationData.length > 0) {
+      fetchLeaveTypes(notificationData).then(setLeaveTypesMap);
+    }
+  }, [notificationData, fetchLeaveTypes]);
 
   // Group notifications by date
   const groupNotificationsByDate = (notifications: NotificationData[]): NotificationGroup[] => {
@@ -208,6 +306,9 @@ export default function NotificationsPage() {
         };
       }
 
+      // Get leave type from map if available
+      const leaveType = leaveTypesMap.get(notification.id);
+
       currentGroup.notifications.push({
         id: notification.id,
         title: notification.title,
@@ -215,6 +316,7 @@ export default function NotificationsPage() {
         time: formatTime(notification.created_at),
         isUnread: !notification.is_read,
         illustration: getIllustration(notification.type),
+        leaveType: leaveType,
         type: notification.type,
         related_entity_type: notification.related_entity_type,
         related_entity_id: notification.related_entity_id,
@@ -230,7 +332,6 @@ export default function NotificationsPage() {
   };
 
   const notificationGroups = groupNotificationsByDate(notificationData);
-  const hasUnread = notificationData.some(n => !n.is_read);
 
   const handleBackClick = () => {
     router.back();
@@ -241,34 +342,26 @@ export default function NotificationsPage() {
       {/* Main Content Container */}
       <div className="mx-auto w-full max-w-[402px] pb-8">
         {/* Sticky Header */}
-        <div className={`sticky top-0 z-10 h-16 bg-white flex flex-col justify-center px-6 rounded-b-[18px] transition-shadow duration-200 ${isScrolled ? 'shadow-[0px_1px_2px_0px_rgba(28,28,28,0.08)]' : ''}`}>
+        <div className={`sticky top-0 z-10 bg-white px-6 pt-6 pb-4 rounded-b-[18px] transition-shadow duration-200 ${isScrolled ? 'shadow-[0px_1px_2px_0px_rgba(28,28,28,0.08)]' : ''}`}>
           {/* Back Button */}
           <button
             onClick={handleBackClick}
-            className="absolute left-6 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center"
+            className="flex h-5 w-5 items-center justify-center mb-[14px]"
             aria-label="Go back"
           >
             <ArrowLeftIcon className="h-5 w-5 text-neutral-700" />
           </button>
 
-          {/* Title and Mark All as Read */}
+          {/* Title */}
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-semibold text-neutral-800 tracking-[-0.24px] leading-[28px]">
               Notification
             </h1>
-            {hasUnread && (
-              <button
-                onClick={handleMarkAllAsRead}
-                className="text-sm font-medium text-neutral-600 hover:text-neutral-800 transition-colors"
-              >
-                Mark all as read
-              </button>
-            )}
           </div>
         </div>
 
         {/* Content */}
-        <div className="px-6 mt-2">
+        <div className="px-6">
           {/* Loading State */}
           {loading && (
             <div className="flex items-center justify-center py-8">
@@ -292,7 +385,7 @@ export default function NotificationsPage() {
 
           {/* Notification Groups */}
           {!loading && !error && notificationGroups.length > 0 && (
-            <div className="flex flex-col gap-6 mt-[18px]">
+            <div className="flex flex-col gap-6 mt-2">
               {notificationGroups.map((group, groupIndex) => (
                 <div key={groupIndex} className="flex flex-col gap-2">
                   {/* Date Header */}
@@ -307,13 +400,14 @@ export default function NotificationsPage() {
                         key={notification.id}
                         onClick={() => handleNotificationClick(notification)}
                         className={`flex gap-3 items-center cursor-pointer hover:bg-neutral-100 rounded-lg p-2 -mx-2 transition-colors ${
-                          isLoadingLeaveRequest ? 'opacity-50 pointer-events-none' : ''
+                          isLoadingLeaveRequest || processingNotificationIds.has(notification.id) ? 'opacity-50 pointer-events-none' : ''
                         }`}
                       >
                         {/* Notification Illustration */}
                         <NotificationIllustration
                           isUnread={notification.isUnread}
                           illustration={notification.illustration || 'default'}
+                          leaveType={notification.leaveType}
                           className="shrink-0"
                         />
 
