@@ -11,6 +11,7 @@ import AnnouncementIcon from '@/app/assets/icons/announcement.svg';
 import TimerIcon from '@/app/assets/icons/timer.svg';
 import CalendarIcon from '@/app/assets/icons/calendar-1.svg';
 import EmojiIcon from '@/app/assets/icons/emoji.svg';
+import { useAnnouncementReactions } from '@/lib/hooks/useAnnouncementReactions';
 
 export interface Announcement {
   id: string;
@@ -18,6 +19,10 @@ export interface Announcement {
   date: string; // Format: "Nov 21, 2025"
   time: string; // Format: "11.00 AM"
   body: string;
+  /**
+   * @deprecated Reactions are now fetched via useAnnouncementReactions hook
+   * This property is kept for backward compatibility but will be ignored
+   */
   reactions?: Array<{ emoji: string; count: number }>;
 }
 
@@ -37,6 +42,16 @@ export default function AnnouncementBottomSheet({
   // State management
   const [state, setState] = useState<'collapsed' | 'expanded'>('collapsed');
   const [isDragging, setIsDragging] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  
+  // Real-time reactions hook
+  const { reactions, loading: reactionsLoading, toggleReaction, addReaction } = useAnnouncementReactions(
+    announcement.id,
+    {
+      enableRealtime: true,
+      autoFetch: isOpen, // Only fetch when sheet is open
+    }
+  );
   
   // Motion values for drag
   const y = useMotionValue(0);
@@ -48,32 +63,42 @@ export default function AnnouncementBottomSheet({
   const maxDragDistance = 200; // Maximum drag distance (327px to 357px = 30px, but we use larger range for smooth interaction)
 
   // Transform drag position to height based on Figma states
-  // Collapsed: 327px, Expanded: 357px
-  // Map drag from 0 to -maxDragDistance to height from 327px to 357px
-  const height = useTransform(y, [0, -maxDragDistance], [327, 357], {
+  // Collapsed: 327px, Expanded: 381px
+  // Map drag from 0 to -maxDragDistance to height from 327px to 381px
+  const height = useTransform(y, [0, -maxDragDistance], [327, 381], {
     clamp: true,
   });
+
+  // Transform backdrop opacity to rgba string for style
+  const backdropColor = useTransform(
+    backdropOpacity,
+    (opacity) => `rgba(0, 0, 0, ${opacity})`
+  );
 
   // Calculate expand/collapse thresholds based on spec
   const expandThreshold = maxDragDistance * ANNOUNCEMENT_ANIMATION_SPEC.gesture.thresholds.expandDistancePct; // 30% = 60px
   const collapseThreshold = maxDragDistance * ANNOUNCEMENT_ANIMATION_SPEC.gesture.thresholds.collapseDistancePct; // 40% = 80px
   const snapVelocity = ANNOUNCEMENT_ANIMATION_SPEC.gesture.velocity.snapVelocity; // 800 px/s
 
-  // Update backdrop opacity based on state
+  // Update backdrop opacity based on state and isOpen
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      backdropOpacity.set(0);
+      return;
+    }
     
+    // When open, backdrop should be visible
+    // The spec's "collapsed" backdrop opacity (0) refers to when sheet is closed
+    // When open, we show backdrop and it can vary based on expanded/collapsed state
     const targetOpacity = state === 'expanded' 
       ? ANNOUNCEMENT_ANIMATION_SPEC.backdropOpacity.expanded 
-      : ANNOUNCEMENT_ANIMATION_SPEC.backdropOpacity.collapsed;
+      : 0.3; // Show backdrop when open but in collapsed state
     
     animate(backdropOpacity, targetOpacity, {
       duration: state === 'expanded' 
         ? ANNOUNCEMENT_ANIMATION_SPEC.durations.backdropFadeIn / 1000
-        : ANNOUNCEMENT_ANIMATION_SPEC.durations.backdropFadeOut / 1000,
-      ease: state === 'expanded' 
-        ? ANNOUNCEMENT_ANIMATION_SPEC.easings.standardEaseOut
-        : ANNOUNCEMENT_ANIMATION_SPEC.easings.fastIn,
+        : ANNOUNCEMENT_ANIMATION_SPEC.durations.backdropFadeIn / 1000, // Use fade in for both when opening
+      ease: ANNOUNCEMENT_ANIMATION_SPEC.easings.standardEaseOut,
     });
   }, [state, isOpen, backdropOpacity]);
 
@@ -96,9 +121,16 @@ export default function AnnouncementBottomSheet({
     }
   }, [isDragging, state]);
 
-  // Reset when modal closes
+  // Initialize backdrop and reset when modal opens/closes
   useEffect(() => {
-    if (!isOpen) {
+    if (isOpen) {
+      // When opening, animate backdrop in
+      animate(backdropOpacity, 0.3, {
+        duration: ANNOUNCEMENT_ANIMATION_SPEC.durations.backdropFadeIn / 1000,
+        ease: ANNOUNCEMENT_ANIMATION_SPEC.easings.standardEaseOut,
+      });
+    } else {
+      // When closing, reset everything
       y.set(0);
       setState('collapsed');
       setIsDragging(false);
@@ -129,10 +161,45 @@ export default function AnnouncementBottomSheet({
     onClose();
   };
 
-  const defaultReactions = announcement.reactions || [
-    { emoji: '❤️', count: 1 },
-    { emoji: '👍', count: 3 },
-  ];
+  // Common emojis for quick selection
+  const commonEmojis = ['❤️', '👍', '🎉', '👏', '🔥', '💯', '😊', '🙌'];
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+
+  const handleEmojiClick = async (emoji: string) => {
+    try {
+      await toggleReaction(emoji);
+    } catch (error) {
+      console.error('[AnnouncementBottomSheet] Error toggling reaction:', error);
+    }
+  };
+
+  const handleAddEmoji = async (emoji: string) => {
+    try {
+      await addReaction(emoji);
+      setShowEmojiPicker(false);
+    } catch (error) {
+      console.error('[AnnouncementBottomSheet] Error adding reaction:', error);
+    }
+  };
+
+  // Close emoji picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        emojiPickerRef.current &&
+        !emojiPickerRef.current.contains(event.target as Node)
+      ) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    if (showEmojiPicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [showEmojiPicker]);
 
   return (
     <AnimatePresence>
@@ -141,7 +208,7 @@ export default function AnnouncementBottomSheet({
           className="fixed inset-0 z-50 backdrop-blur-sm"
           onClick={onClose}
           style={{
-            backgroundColor: `rgba(0, 0, 0, ${backdropOpacity})`,
+            backgroundColor: backdropColor,
           }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -158,9 +225,46 @@ export default function AnnouncementBottomSheet({
               ref={scrollContainerRef}
               className="w-full max-w-[402px] rounded-t-3xl bg-white shadow-2xl flex flex-col overflow-hidden"
               onClick={(e) => e.stopPropagation()}
-              variants={announcementSheetVariants}
-              initial="collapsed"
-              animate={state}
+              initial={{ 
+                y: '100%', 
+                height: 327,
+                opacity: 0 
+              }}
+              animate={{ 
+                y: 0, 
+                height: announcementSheetVariants[state].height,
+                opacity: 1,
+                transition: {
+                  y: {
+                    duration: 0.3,
+                    ease: [0.19, 1, 0.22, 1] as const, // smooth slide up
+                  },
+                  height: announcementSheetVariants[state].transition,
+                  opacity: {
+                    duration: 0.2,
+                    ease: [0.16, 1, 0.3, 1] as const,
+                  }
+                }
+              }}
+              exit={{ 
+                y: '100%',
+                height: 327,
+                opacity: 0,
+                transition: { 
+                  y: {
+                    duration: ANNOUNCEMENT_ANIMATION_SPEC.durations.collapseY / 1000, // 220ms
+                    ease: ANNOUNCEMENT_ANIMATION_SPEC.easings.fastIn, // [0.4, 0, 1, 1]
+                  },
+                  height: {
+                    duration: ANNOUNCEMENT_ANIMATION_SPEC.durations.collapseY / 1000,
+                    ease: ANNOUNCEMENT_ANIMATION_SPEC.easings.fastIn,
+                  },
+                  opacity: {
+                    duration: ANNOUNCEMENT_ANIMATION_SPEC.durations.backdropFadeOut / 1000, // 140ms
+                    ease: ANNOUNCEMENT_ANIMATION_SPEC.easings.fastIn,
+                  }
+                } 
+              }}
               layout
               drag="y"
               dragConstraints={{ 
@@ -250,20 +354,20 @@ export default function AnnouncementBottomSheet({
               style={{
                 height: `${height}px`,
                 paddingTop: '20px',
-                paddingBottom: '24px',
+                paddingBottom: '20px',
                 paddingLeft: '24px',
                 paddingRight: '24px',
               }}
             >
               {/* Handle Bar and Content Container */}
-              <div className="flex flex-col gap-[12px] items-center flex-1 min-h-0">
+              <div className="flex flex-col gap-[8px] items-center flex-1 min-h-0">
                 {/* Handle Bar */}
                 <div className="flex justify-center shrink-0">
                   <div className="h-1 w-12 rounded-full bg-neutral-300"></div>
                 </div>
 
                 {/* Content - Not scrollable, fixed layout */}
-                <div className="flex flex-col gap-[20px] items-start w-full flex-1 min-h-0">
+                <div className="flex flex-col items-start w-full flex-1 min-h-0">
                   {/* Icon and Title Section */}
                   <div className="flex flex-col gap-[8px] items-start w-full shrink-0">
                     {/* Icon */}
@@ -290,19 +394,22 @@ export default function AnnouncementBottomSheet({
                     </div>
                   </div>
 
+                  {/* Gap between icon/title section and masked content */}
+                  <div className="h-[8px] shrink-0"></div>
+
                   {/* Masked Content Area - Body text and reactions */}
                   <motion.div 
-                    className="flex flex-col gap-[8px] items-start w-full"
+                    className="flex flex-col gap-[8px] items-start w-full relative"
                     variants={announcementContentVariants}
                     animate={state}
                     style={{
-                      height: state === 'expanded' ? '104px' : '74px',
+                      maxHeight: state === 'expanded' ? 'none' : '82px',
                       maskImage: state === 'expanded'
                         ? 'none'
-                        : 'linear-gradient(to bottom, black 0%, black calc(100% - 20px), transparent 100%)',
+                        : 'linear-gradient(to bottom, black 0%, black calc(100% - 44px), rgba(0, 0, 0, 0.5) calc(100% - 28px), rgba(0, 0, 0, 0.2) calc(100% - 12px), transparent 100%)',
                       WebkitMaskImage: state === 'expanded'
                         ? 'none'
-                        : 'linear-gradient(to bottom, black 0%, black calc(100% - 20px), transparent 100%)',
+                        : 'linear-gradient(to bottom, black 0%, black calc(100% - 44px), rgba(0, 0, 0, 0.5) calc(100% - 28px), rgba(0, 0, 0, 0.2) calc(100% - 12px), transparent 100%)',
                       maskComposite: state === 'expanded' ? 'normal' : 'intersect',
                       WebkitMaskComposite: state === 'expanded' ? 'normal' : 'source-in',
                       overflow: 'hidden',
@@ -314,39 +421,77 @@ export default function AnnouncementBottomSheet({
                     </p>
 
                     {/* Emoji Reactions */}
-                    <div className="flex gap-[4px] items-start">
-                      {defaultReactions.map((reaction, index) => (
-                        <EmojiChip
-                          key={index}
-                          emoji={reaction.emoji}
-                          count={reaction.count}
-                          onClick={() => {
-                            // Handle reaction click
-                            console.log(`Clicked ${reaction.emoji}`);
-                          }}
-                        />
-                      ))}
-                      {/* Add Reaction Button */}
-                      <button
-                        type="button"
-                        className="
-                          bg-neutral-100 
-                          flex 
-                          items-center 
-                          justify-center 
-                          h-6 
-                          w-7 
-                          rounded-lg 
-                          px-1 
-                          py-0
-                          transition-colors
-                          hover:bg-neutral-200
-                        "
-                      >
-                        <EmojiIcon className="h-3.5 w-3.5 text-neutral-400" />
-                      </button>
+                    <div className="flex gap-[8px] items-start w-full flex-wrap">
+                      {reactionsLoading && reactions.length === 0 ? (
+                        // Loading state - show skeleton or placeholder
+                        <div className="text-xs text-neutral-400">Loading reactions...</div>
+                      ) : (
+                        <>
+                          {reactions.map((reaction) => (
+                            <EmojiChip
+                              key={reaction.emoji}
+                              emoji={reaction.emoji}
+                              count={reaction.count}
+                              onClick={() => handleEmojiClick(reaction.emoji)}
+                            />
+                          ))}
+                          {/* Add Reaction Button with Emoji Picker */}
+                          <div className="relative" ref={emojiPickerRef}>
+                            <button
+                              type="button"
+                              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                              className="
+                                bg-neutral-100 
+                                flex 
+                                items-center 
+                                justify-center 
+                                h-6 
+                                w-7 
+                                rounded-lg 
+                                px-1 
+                                py-0
+                                transition-colors
+                                hover:bg-neutral-200
+                                active:bg-neutral-300
+                              "
+                              aria-label="Add reaction"
+                              aria-expanded={showEmojiPicker}
+                            >
+                              <EmojiIcon className="h-3.5 w-3.5 text-neutral-400" />
+                            </button>
+                            
+                            {/* Simple Emoji Picker Dropdown */}
+                            {showEmojiPicker && (
+                              <div className="absolute bottom-full left-0 mb-2 bg-white border border-neutral-200 rounded-lg shadow-lg p-2 z-10">
+                                <div className="flex gap-1 flex-wrap" style={{ width: '200px' }}>
+                                  {commonEmojis.map((emoji) => {
+                                    const existingReaction = reactions.find((r) => r.emoji === emoji);
+                                    return (
+                                      <button
+                                        key={emoji}
+                                        type="button"
+                                        onClick={() => handleAddEmoji(emoji)}
+                                        className={`
+                                          text-lg p-1 rounded hover:bg-neutral-100 transition-colors
+                                          ${existingReaction?.userReacted ? 'bg-blue-50 ring-1 ring-blue-300' : ''}
+                                        `}
+                                        aria-label={`Add ${emoji} reaction`}
+                                      >
+                                        {emoji}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
                     </div>
                   </motion.div>
+
+                  {/* Gap between masked content and continue button - 20px */}
+                  <div className="h-[20px] shrink-0"></div>
 
                   {/* Continue Button - Always visible, fixed at bottom */}
                   <div className="w-full shrink-0">

@@ -29,7 +29,7 @@ export const announcementSheetVariants = {
     },
   },
   expanded: {
-    height: 357,
+    height: 381,
     transition: {
       duration: 0.26, // expand_y: 260ms
       ease: [0.16, 1, 0.3, 1] as const, // soft_out

@@ -51,32 +51,32 @@ export default function DiscardChangesModal({
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-          onClick={handleBackdropClick}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      onClick={handleBackdropClick}
           variants={backdropVariants}
           initial="hidden"
           animate="visible"
           exit="exit"
-        >
+    >
           <motion.div 
-            className="mx-6 w-full max-w-[354px] bg-white flex flex-col gap-3"
-            style={{
-              borderRadius: '14px',
-              paddingTop: '24px',
-              paddingBottom: '20px',
-              paddingLeft: '20px',
-              paddingRight: '20px',
-              boxShadow: '0px 2px 8px 0px rgba(28,28,28,0.12), 0px 0px 4px 0px rgba(28,28,28,0.06)',
+        className="mx-6 w-full max-w-[354px] bg-white flex flex-col gap-3"
+        style={{
+          borderRadius: '14px',
+          paddingTop: '24px',
+          paddingBottom: '20px',
+          paddingLeft: '20px',
+          paddingRight: '20px',
+          boxShadow: '0px 2px 8px 0px rgba(28,28,28,0.12), 0px 0px 4px 0px rgba(28,28,28,0.06)',
               transformOrigin: 'center center',
               marginLeft: 'auto',
               marginRight: 'auto',
-            }}
-            onClick={(e) => e.stopPropagation()}
+        }}
+        onClick={(e) => e.stopPropagation()}
             variants={modalVariants}
             initial="hidden"
             animate="visible"
             exit="exit"
-          >
+      >
         {/* Neutral Icon */}
         <div className="shrink-0">
           <NeutralModalIcon className="h-10 w-10" />

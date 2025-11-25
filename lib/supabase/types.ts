@@ -279,6 +279,29 @@ export interface Database {
           updated_at?: string;
         };
       };
+      announcement_reactions: {
+        Row: {
+          id: string;
+          announcement_id: string;
+          user_id: string;
+          emoji: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          announcement_id: string;
+          user_id: string;
+          emoji: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          announcement_id?: string;
+          user_id?: string;
+          emoji?: string;
+          created_at?: string;
+        };
+      };
       notifications: {
         Row: {
           id: string;

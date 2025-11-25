@@ -117,43 +117,43 @@ function HRRecentActivities({ activities }: HRRecentActivitiesProps) {
 
                 // Handle check-in/check-out
                 return (
-                  <div 
-                    key={actIndex}
-                    className="flex items-center gap-3 rounded-xl bg-white p-3 shadow-sm border border-neutral-100"
-                  >
-                    {/* Avatar / Icon */}
-                    <div className="h-10 w-10 shrink-0 rounded-full bg-neutral-100 flex items-center justify-center overflow-hidden">
-                      {activity.user.avatar_url ? (
-                        <img src={activity.user.avatar_url} alt={activity.user.full_name} className="h-full w-full object-cover" />
-                      ) : (
-                         // Initials
-                        <span className="text-sm font-bold text-neutral-500">
-                          {activity.user.full_name?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'U'}
-                        </span>
-                      )}
-                    </div>
+                <div 
+                  key={actIndex}
+                  className="flex items-center gap-3 rounded-xl bg-white p-3 shadow-sm border border-neutral-100"
+                >
+                  {/* Avatar / Icon */}
+                  <div className="h-10 w-10 shrink-0 rounded-full bg-neutral-100 flex items-center justify-center overflow-hidden">
+                    {activity.user.avatar_url ? (
+                      <img src={activity.user.avatar_url} alt={activity.user.full_name} className="h-full w-full object-cover" />
+                    ) : (
+                       // Initials
+                      <span className="text-sm font-bold text-neutral-500">
+                        {activity.user.full_name?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'U'}
+                      </span>
+                    )}
+                  </div>
 
-                    {/* Content */}
-                    <div className="flex flex-1 flex-col">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-semibold text-neutral-900">
-                          {activity.user.full_name}
-                        </p>
-                        <p className="text-xs text-neutral-500">
-                          {activity.time}
-                        </p>
-                      </div>
-                      
-                      <div className="flex items-center gap-2 mt-0.5">
-                          <span className={`text-xs font-medium ${activity.type === 'checkin' ? 'text-green-700' : 'text-amber-700'}`}>
-                            {activity.type === 'checkin' ? 'Checked In' : 'Checked Out'}
-                          </span>
-                          {activity.status && (
-                               <AttendanceBadge status={activity.status as AttendanceStatus} size="sm" />
-                          )}
-                      </div>
+                  {/* Content */}
+                  <div className="flex flex-1 flex-col">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold text-neutral-900">
+                        {activity.user.full_name}
+                      </p>
+                      <p className="text-xs text-neutral-500">
+                        {activity.time}
+                      </p>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 mt-0.5">
+                        <span className={`text-xs font-medium ${activity.type === 'checkin' ? 'text-green-700' : 'text-amber-700'}`}>
+                          {activity.type === 'checkin' ? 'Checked In' : 'Checked Out'}
+                        </span>
+                        {activity.status && (
+                             <AttendanceBadge status={activity.status as AttendanceStatus} size="sm" />
+                        )}
                     </div>
                   </div>
+                </div>
                 );
               })}
             </div>

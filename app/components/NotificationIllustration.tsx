@@ -1,86 +1,78 @@
 'use client';
 
-// Annual leave icons
-import NotificationAnnualSentIcon from '@/app/assets/icons/notification-annual-sent.svg';
-import NotificationAnnualRejectedIcon from '@/app/assets/icons/notification-annual-rejected.svg';
-import NotificationAnnualApprovedIcon from '@/app/assets/icons/notification-annual-approved.svg';
-
-// Sick leave icons
-import NotificationSickSentIcon from '@/app/assets/icons/notification-sick-sent.svg';
-import NotificationSickRejectedIcon from '@/app/assets/icons/notification-sick-rejected.svg';
-import NotificationSickApprovedIcon from '@/app/assets/icons/notification-sick-approved.svg';
-
-// Unpaid leave icons
-import NotificationUnpaidSentIcon from '@/app/assets/icons/notification-unpaid-sent.svg';
-import NotificationUnpaidRejectedIcon from '@/app/assets/icons/notification-unpaid-rejected.svg';
-import NotificationUnpaidApprovedIcon from '@/app/assets/icons/notification-unpaid-approved.svg';
-
+import { ComponentType, SVGProps } from 'react';
 import EclipseSkyIcon from '@/app/assets/icons/eclipse-sky.svg';
 
 interface NotificationIllustrationProps {
+  /**
+   * Whether the notification is unread
+   * When true, displays a blue circle indicator in the top-right corner
+   */
   isUnread?: boolean;
-  illustration?: 'default' | 'rejected' | 'approved';
-  leaveType?: 'annual' | 'sick' | 'unpaid';
+  
+  /**
+   * The illustration component to display
+   * This is a swappable React component (typically an SVG icon)
+   * Should be 40px x 40px
+   */
+  illustration?: ComponentType<SVGProps<SVGSVGElement>> | React.ReactNode | null;
+  
+  /**
+   * Optional className for the container
+   */
   className?: string;
 }
 
-// Helper function to get the correct icon based on leave type and status
-function getLeaveIcon(leaveType: 'annual' | 'sick' | 'unpaid', status: 'sent' | 'approved' | 'rejected') {
-  if (leaveType === 'annual') {
-    if (status === 'approved') return NotificationAnnualApprovedIcon;
-    if (status === 'rejected') return NotificationAnnualRejectedIcon;
-    return NotificationAnnualSentIcon;
-  }
-  if (leaveType === 'sick') {
-    if (status === 'approved') return NotificationSickApprovedIcon;
-    if (status === 'rejected') return NotificationSickRejectedIcon;
-    return NotificationSickSentIcon;
-  }
-  // unpaid
-  if (status === 'approved') return NotificationUnpaidApprovedIcon;
-  if (status === 'rejected') return NotificationUnpaidRejectedIcon;
-  return NotificationUnpaidSentIcon;
-}
-
+/**
+ * NotificationIllustration Component
+ * 
+ * Displays a notification illustration with an optional unread indicator.
+ * Based on Figma design:
+ * - Container: 41px x 41px
+ * - Illustration: 40px x 40px (swappable component)
+ * - Unread indicator: 6px circle at left-[35px] top-0
+ */
 export default function NotificationIllustration({ 
   isUnread = false,
-  illustration = 'default',
-  leaveType,
+  illustration = null,
   className = '' 
 }: NotificationIllustrationProps) {
-  // If leaveType is provided, use it to determine the icon
-  // Otherwise, fall back to the old illustration prop
-  let IllustrationIcon;
-  
-  if (leaveType) {
-    // Map illustration prop to status
-    const status = illustration === 'approved' ? 'approved' 
-      : illustration === 'rejected' ? 'rejected' 
-      : 'sent';
-    IllustrationIcon = getLeaveIcon(leaveType, status);
-  } else {
-    // Fallback to old behavior (annual leave icons)
-    IllustrationIcon = illustration === 'rejected' 
-      ? NotificationAnnualRejectedIcon 
-      : illustration === 'approved'
-      ? NotificationAnnualApprovedIcon
-      : NotificationAnnualSentIcon;
-  }
+  // Render the illustration component
+  const renderIllustration = () => {
+    if (!illustration) {
+      return null;
+    }
+
+    // Check if it's a React component (function component)
+    // SVG components imported from .svg files are React function components
+    if (typeof illustration === 'function') {
+      const IllustrationComponent = illustration as ComponentType<SVGProps<SVGSVGElement>>;
+      return (
+        <div className="absolute bottom-0 left-0 overflow-clip rounded-[8px] size-[40px]">
+          <IllustrationComponent className="h-full w-full" />
+        </div>
+      );
+    }
+
+    // If it's already a React node (JSX element), render it directly
+    return (
+      <div className="absolute bottom-0 left-0 overflow-clip rounded-[8px] size-[40px]">
+        {illustration}
+      </div>
+    );
+  };
 
   return (
     <div className={`relative size-[41px] overflow-visible ${className}`}>
-      {/* SVG - Already includes container with background and rounded corners */}
-      <div className="absolute left-0 top-px overflow-visible">
-        <IllustrationIcon className="h-10 w-10" />
-      </div>
+      {/* Illustration Container - 40px x 40px */}
+      {renderIllustration()}
 
-      {/* Unread Indicator - Eclipse Sky SVG wrapped in container */}
+      {/* Unread Indicator - 6px circle at top-right */}
       {isUnread && (
-        <div className="absolute left-[33px] top-[-2px] size-[10px] overflow-visible">
-          <EclipseSkyIcon className="h-full w-full" />
+        <div className="absolute left-[35px] top-0 size-[6px] overflow-visible">
+          <div className="absolute inset-0 rounded-full bg-[rgba(0,132,209,1)]" />
         </div>
       )}
     </div>
   );
 }
-

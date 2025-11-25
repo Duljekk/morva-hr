@@ -39,3 +39,5 @@ COMMENT ON COLUMN push_subscriptions.auth IS 'Auth secret for encryption';
 
 
 
+
+

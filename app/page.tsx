@@ -6,6 +6,8 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { useToast } from '@/app/contexts/ToastContext';
 import { getTodaysAttendance, checkIn, checkOut, getRecentActivities, type DayActivity } from '@/lib/actions/attendance';
 import { hasActiveLeaveRequest, getLeaveRequest } from '@/lib/actions/leaves';
+import { getActiveAnnouncements } from '@/lib/actions/announcements';
+import type { Announcement as AnnouncementComponentType } from './components/AnnouncementBottomSheet';
 import NotificationButton from './components/NotificationButton';
 import AnnouncementBanner from './components/AnnouncementBanner';
 import CheckInOutWidget from './components/CheckInOutWidget';
@@ -13,6 +15,7 @@ import AttendanceCard from './components/AttendanceCard';
 import RecentActivities from './components/RecentActivities';
 import ConfirmationModal from './components/ConfirmationModal';
 import LeaveRequestDetailsModal from './components/LeaveRequestDetailsModal';
+import AnnouncementBottomSheet from './components/AnnouncementBottomSheet';
 
 const SHIFT_START_HOUR = 11;
 const SHIFT_END_HOUR = 19;
@@ -69,6 +72,8 @@ export default function Home() {
     leaveType: string;
     reason: string;
   } | null>(null);
+  const [showAnnouncementBottomSheet, setShowAnnouncementBottomSheet] = useState(false);
+  const [currentAnnouncement, setCurrentAnnouncement] = useState<AnnouncementComponentType | null>(null);
 
   // Fetch today's attendance from database on mount
   useEffect(() => {
@@ -85,6 +90,32 @@ export default function Home() {
       }
     }
     loadAttendance();
+  }, []);
+
+  // Fetch active announcements on mount
+  useEffect(() => {
+    async function loadAnnouncements() {
+      const result = await getActiveAnnouncements();
+      if (result.data && result.data.length > 0) {
+        // Use the most recent announcement
+        const announcement = result.data[0];
+        const announcementDate = new Date(announcement.created_at);
+        
+        // Map database announcement to component format
+        setCurrentAnnouncement({
+          id: announcement.id,
+          title: announcement.title,
+          date: announcementDate.toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric', 
+            year: 'numeric' 
+          }),
+          time: formatTimeWithPeriod(announcementDate),
+          body: announcement.content || '',
+        });
+      }
+    }
+    loadAnnouncements();
   }, []);
 
   // Fetch active leave status on mount
@@ -556,7 +587,7 @@ export default function Home() {
   };
 
   const handleAnnouncementClick = () => {
-    alert('Announcement details would open here');
+    setShowAnnouncementBottomSheet(true);
   };
 
   // Check-in card data
@@ -808,6 +839,15 @@ export default function Home() {
           rejectionReason={leaveDetailsData.rejectionReason}
           leaveType={leaveDetailsData.leaveType}
           reason={leaveDetailsData.reason}
+        />
+      )}
+
+      {/* Announcement Bottom Sheet */}
+      {currentAnnouncement && (
+        <AnnouncementBottomSheet
+          isOpen={showAnnouncementBottomSheet}
+          onClose={() => setShowAnnouncementBottomSheet(false)}
+          announcement={currentAnnouncement}
         />
       )}
     </div>

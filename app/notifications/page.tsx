@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useCallback, useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import { ComponentType, SVGProps } from 'react';
 import ArrowLeftIcon from '@/app/assets/icons/arrow-left.svg';
 import NotificationIllustration from '@/app/components/NotificationIllustration';
 import { 
@@ -12,6 +13,21 @@ import {
 } from '@/lib/actions/notifications';
 import { useNotifications } from '@/lib/hooks/useNotifications';
 import { getLeaveRequest } from '@/lib/actions/leaves';
+
+// Annual leave icons
+import NotificationAnnualSentIcon from '@/app/assets/icons/notification-annual-sent.svg';
+import NotificationAnnualRejectedIcon from '@/app/assets/icons/notification-annual-rejected.svg';
+import NotificationAnnualApprovedIcon from '@/app/assets/icons/notification-annual-approved.svg';
+
+// Sick leave icons
+import NotificationSickSentIcon from '@/app/assets/icons/notification-sick-sent.svg';
+import NotificationSickRejectedIcon from '@/app/assets/icons/notification-sick-rejected.svg';
+import NotificationSickApprovedIcon from '@/app/assets/icons/notification-sick-approved.svg';
+
+// Unpaid leave icons
+import NotificationUnpaidSentIcon from '@/app/assets/icons/notification-unpaid-sent.svg';
+import NotificationUnpaidRejectedIcon from '@/app/assets/icons/notification-unpaid-rejected.svg';
+import NotificationUnpaidApprovedIcon from '@/app/assets/icons/notification-unpaid-approved.svg';
 
 // Lazy load modal component
 const LeaveRequestDetailsModal = dynamic(
@@ -25,8 +41,7 @@ interface Notification {
   description: string;
   time: string;
   isUnread: boolean;
-  illustration?: 'default' | 'rejected' | 'approved';
-  leaveType?: 'annual' | 'sick' | 'unpaid';
+  illustration?: ComponentType<SVGProps<SVGSVGElement>> | null;
   type?: string;
   related_entity_type?: string | null;
   related_entity_id?: string | null;
@@ -56,7 +71,8 @@ export default function NotificationsPage() {
   const [isLoadingLeaveRequest, setIsLoadingLeaveRequest] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [processingNotificationIds, setProcessingNotificationIds] = useState<Set<string>>(new Set());
-  const [hasMarkedAllAsRead, setHasMarkedAllAsRead] = useState(false);
+  // Track which notifications have been viewed (opened) but not yet marked as read
+  const [viewedNotificationIds, setViewedNotificationIds] = useState<Set<string>>(new Set());
   
   // Handle scroll detection for header shadow
   useEffect(() => {
@@ -87,26 +103,23 @@ export default function NotificationsPage() {
     enableRealtime: true,
   });
 
-  // Mark all notifications as read when page is visited
+  // Mark viewed notifications as read when leaving the page
   useEffect(() => {
-    // Only mark as read once when page is visited and notifications are loaded
-    if (!loading && !hasMarkedAllAsRead && notificationData.length > 0) {
-      const unreadNotifications = notificationData.filter(n => !n.is_read);
-      
-      // Only mark if there are unread notifications
-      if (unreadNotifications.length > 0) {
-        setHasMarkedAllAsRead(true);
+    // Cleanup function runs when component unmounts (user navigates away)
+    return () => {
+      // Mark all viewed notifications as read when leaving the page
+      if (viewedNotificationIds.size > 0) {
+        const notificationIds = Array.from(viewedNotificationIds);
         
-        // Mark all as read in backend
-        // The real-time subscription will automatically update the UI
-        markAllNotificationsAsRead().catch((error) => {
-          console.error('Failed to mark all notifications as read on page visit:', error);
-          // Reset flag on error so it can retry
-          setHasMarkedAllAsRead(false);
+        // Mark each viewed notification as read
+        Promise.all(
+          notificationIds.map(id => markNotificationAsRead(id))
+        ).catch((error) => {
+          console.error('Failed to mark viewed notifications as read on page leave:', error);
         });
       }
-    }
-  }, [loading, notificationData, hasMarkedAllAsRead]);
+    };
+  }, [viewedNotificationIds]);
 
   // Handle notification click - check if it's a leave notification and open modal
   const handleNotificationClick = useCallback(async (notification: Notification) => {
@@ -115,14 +128,14 @@ export default function NotificationsPage() {
       return;
     }
 
-    // Only mark as read if it's currently unread
-    const shouldMarkAsRead = notification.isUnread;
-
     // Mark as processing
     setProcessingNotificationIds(prev => new Set(prev).add(notification.id));
 
-    // Optimistically mark as read immediately (UI update)
-    // The real-time subscription will confirm the change from the server
+    // Track this notification as viewed (will be marked as read when leaving the page)
+    // Only track if it's currently unread
+    if (notification.isUnread) {
+      setViewedNotificationIds(prev => new Set(prev).add(notification.id));
+    }
     
     // Check if this is a leave-related notification
     const isLeaveNotification = notification.type && 
@@ -151,7 +164,6 @@ export default function NotificationsPage() {
           setIsModalOpen(true);
         } else {
           console.error('Failed to fetch leave request:', result.error);
-          // Still mark notification as read even if fetch fails
         }
       } catch (error) {
         console.error('Error fetching leave request:', error);
@@ -160,33 +172,13 @@ export default function NotificationsPage() {
       }
     }
     
-    // Mark notification as read in backend (only if it's unread)
-    // The real-time subscription will automatically update the UI
-    if (shouldMarkAsRead) {
-      try {
-        const result = await markNotificationAsRead(notification.id);
-        if (!result.success) {
-          console.error('Failed to mark notification as read:', result.error);
-          // Refresh to sync state
-          await refreshNotifications();
-        }
-      } finally {
-        // Remove from processing set
-        setProcessingNotificationIds(prev => {
-          const next = new Set(prev);
-          next.delete(notification.id);
-          return next;
-        });
-      }
-    } else {
-      // Remove from processing set immediately if already read
-      setProcessingNotificationIds(prev => {
-        const next = new Set(prev);
-        next.delete(notification.id);
-        return next;
-      });
-    }
-  }, [refreshNotifications, processingNotificationIds]);
+    // Remove from processing set
+    setProcessingNotificationIds(prev => {
+      const next = new Set(prev);
+      next.delete(notification.id);
+      return next;
+    });
+  }, [processingNotificationIds]);
 
   // Handle modal close
   const handleCloseModal = useCallback(() => {
@@ -195,13 +187,53 @@ export default function NotificationsPage() {
   }, []);
 
 
-  // Map notification type to illustration
-  const getIllustration = (type: string): 'default' | 'rejected' | 'approved' => {
-    if (type === 'leave_approved') return 'approved';
-    if (type === 'leave_rejected') return 'rejected';
-    // All other types (leave_sent, payslip_ready, announcement, attendance_reminder) use default
-    return 'default';
-  };
+  // Helper function to get the correct icon component based on leave type and status
+  const getLeaveIcon = useCallback((
+    leaveType: 'annual' | 'sick' | 'unpaid' | undefined,
+    status: 'sent' | 'approved' | 'rejected'
+  ): ComponentType<SVGProps<SVGSVGElement>> => {
+    if (leaveType === 'annual') {
+      if (status === 'approved') return NotificationAnnualApprovedIcon;
+      if (status === 'rejected') return NotificationAnnualRejectedIcon;
+      return NotificationAnnualSentIcon;
+    }
+    if (leaveType === 'sick') {
+      if (status === 'approved') return NotificationSickApprovedIcon;
+      if (status === 'rejected') return NotificationSickRejectedIcon;
+      return NotificationSickSentIcon;
+    }
+    // unpaid
+    if (status === 'approved') return NotificationUnpaidApprovedIcon;
+    if (status === 'rejected') return NotificationUnpaidRejectedIcon;
+    return NotificationUnpaidSentIcon;
+  }, []);
+
+  // Get the appropriate illustration component for a notification
+  const getNotificationIllustration = useCallback((
+    notificationType: string | undefined,
+    leaveType: 'annual' | 'sick' | 'unpaid' | undefined
+  ): ComponentType<SVGProps<SVGSVGElement>> | null => {
+    // Determine status from notification type
+    const isApproved = notificationType === 'leave_approved';
+    const isRejected = notificationType === 'leave_rejected';
+    const isSent = notificationType === 'leave_sent';
+    
+    // If it's a leave notification and we have a leave type
+    if ((isApproved || isRejected || isSent) && leaveType) {
+      const status = isApproved ? 'approved' : isRejected ? 'rejected' : 'sent';
+      return getLeaveIcon(leaveType, status);
+    }
+    
+    // Fallback: use annual sent icon for leave notifications without leave type
+    if (isApproved || isRejected || isSent) {
+      const status = isApproved ? 'approved' : isRejected ? 'rejected' : 'sent';
+      return getLeaveIcon('annual', status);
+    }
+    
+    // For other notification types (payslip_ready, announcement, attendance_reminder, etc.)
+    // Return null - the parent component can handle default illustration
+    return null;
+  }, [getLeaveIcon]);
 
   // Fetch leave types for leave notifications
   const fetchLeaveTypes = useCallback(async (notifications: NotificationData[]): Promise<Map<string, 'annual' | 'sick' | 'unpaid'>> => {
@@ -309,14 +341,16 @@ export default function NotificationsPage() {
       // Get leave type from map if available
       const leaveType = leaveTypesMap.get(notification.id);
 
+      // Get the appropriate illustration component
+      const illustrationComponent = getNotificationIllustration(notification.type, leaveType);
+
       currentGroup.notifications.push({
         id: notification.id,
         title: notification.title,
         description: notification.description,
         time: formatTime(notification.created_at),
         isUnread: !notification.is_read,
-        illustration: getIllustration(notification.type),
-        leaveType: leaveType,
+        illustration: illustrationComponent,
         type: notification.type,
         related_entity_type: notification.related_entity_type,
         related_entity_id: notification.related_entity_id,
@@ -406,8 +440,7 @@ export default function NotificationsPage() {
                         {/* Notification Illustration */}
                         <NotificationIllustration
                           isUnread={notification.isUnread}
-                          illustration={notification.illustration || 'default'}
-                          leaveType={notification.leaveType}
+                          illustration={notification.illustration}
                           className="shrink-0"
                         />
 

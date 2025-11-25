@@ -147,16 +147,16 @@ export async function getAllRecentActivities(limit: number = 20): Promise<{ data
     const [recordsResult, leaveRequestsResult] = await Promise.all([
       // Fetch today's attendance records joined with user info
       supabase
-        .from('attendance_records')
-        .select(`
-          *,
+      .from('attendance_records')
+      .select(`
+        *,
           user:users!user_id (
-            id,
-            full_name
-          )
-        `)
+          id,
+          full_name
+        )
+      `)
         .eq('date', today)
-        .order('created_at', { ascending: false })
+      .order('created_at', { ascending: false })
         .limit(limit),
       
       // Fetch leave requests created today
@@ -401,18 +401,18 @@ export async function getPendingLeaveRequests(): Promise<{ data?: PendingLeaveRe
       const leaveTypeData = req.leave_type as any;
 
       return {
-        id: req.id,
-        user: {
+      id: req.id,
+      user: {
           id: userData?.id || '',
           full_name: userData?.full_name || 'Unknown User',
           avatar_url: undefined // users table doesn't have avatar_url column
-        },
+      },
         leaveType: leaveTypeData?.name || 'Unknown',
-        startDate: req.start_date,
-        endDate: req.end_date,
-        days: req.total_days,
-        reason: req.reason || '',
-        createdAt: req.created_at
+      startDate: req.start_date,
+      endDate: req.end_date,
+      days: req.total_days,
+      reason: req.reason || '',
+      createdAt: req.created_at
       };
     });
 

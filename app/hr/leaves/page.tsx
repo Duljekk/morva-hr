@@ -18,13 +18,13 @@ export default function LeaveRequestsPage() {
   async function loadRequests() {
     setLoading(true);
     try {
-      const result = await getPendingLeaveRequests();
+    const result = await getPendingLeaveRequests();
       if (result.error) {
         console.error('Error loading leave requests:', result.error);
         alert(`Error: ${result.error}`);
       }
-      if (result.data) {
-        setRequests(result.data);
+    if (result.data) {
+      setRequests(result.data);
         console.log('Loaded leave requests:', result.data.length);
       } else {
         setRequests([]);
@@ -33,7 +33,7 @@ export default function LeaveRequestsPage() {
       console.error('Error in loadRequests:', error);
       alert('Failed to load leave requests. Please try again.');
     } finally {
-      setLoading(false);
+    setLoading(false);
     }
   }
 

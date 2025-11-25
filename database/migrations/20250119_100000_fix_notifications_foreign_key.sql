@@ -22,3 +22,5 @@ COMMENT ON COLUMN notifications.user_id IS 'User ID from auth.users. No foreign 
 
 
 
+
+
