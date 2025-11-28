@@ -54,6 +54,27 @@ const config: Config = {
       animation: {
         'slide-up': 'slideUp 0.3s cubic-bezier(0.19, 1, 0.22, 1)',
       },
+      // Typography system: Line heights based on font weight
+      // Regular (400): font-size + 8px
+      // Medium (500), Semibold (600), Bold (700): font-size + 4px
+      lineHeight: {
+        // For Regular (400) weight
+        'regular-xs': '20px',   // 12px + 8px
+        'regular-sm': '22px',   // 14px + 8px
+        'regular-base': '24px', // 16px + 8px
+        'regular-lg': '26px',   // 18px + 8px
+        'regular-xl': '28px',   // 20px + 8px
+        'regular-2xl': '32px',  // 24px + 8px
+        'regular-30': '38px',   // 30px + 8px
+        // For Medium (500), Semibold (600), Bold (700) weights
+        'bold-xs': '16px',      // 12px + 4px
+        'bold-sm': '18px',      // 14px + 4px
+        'bold-base': '20px',    // 16px + 4px
+        'bold-lg': '22px',      // 18px + 4px
+        'bold-xl': '24px',      // 20px + 4px
+        'bold-2xl': '28px',     // 24px + 4px
+        'bold-30': '34px',      // 30px + 4px
+      },
     },
   },
   plugins: [],

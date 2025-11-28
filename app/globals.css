@@ -21,6 +21,23 @@ body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  /* Typography Standard: Remove letter-spacing for fonts 12px-30px */
+  .text-xs,
+  .text-sm,
+  .text-base,
+  .text-lg,
+  .text-xl,
+  .text-2xl,
+  [class*="text-\[12px\]"],
+  [class*="text-\[14px\]"],
+  [class*="text-\[16px\]"],
+  [class*="text-\[18px\]"],
+  [class*="text-\[20px\]"],
+  [class*="text-\[24px\]"],
+  [class*="text-\[30px\]"] {
+    letter-spacing: 0 !important;
+  }
 }
 
 @layer utilities {

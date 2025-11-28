@@ -13,7 +13,7 @@ import {
   removeReaction as removeReactionAction,
   toggleReaction as toggleReactionAction,
   type Reaction,
-} from '@/lib/actions/announcementReactions';
+} from '@/lib/actions/shared/announcementReactions';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 interface UseAnnouncementReactionsOptions {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import useLockBodyScroll from '../hooks/useLockBodyScroll';
 import { announcementBackdropVariants, announcementSheetVariants, announcementContentVariants, ANNOUNCEMENT_ANIMATION_SPEC } from '../lib/animations/announcementBottomSheetVariants';
@@ -57,18 +57,107 @@ export default function AnnouncementBottomSheet({
   const y = useMotionValue(0);
   const backdropOpacity = useMotionValue(0);
   
-  // Ref for scrollable container
+  // Ref for scrollable container and content measurement
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const dragStartY = useRef(0);
   const maxDragDistance = 200; // Maximum drag distance (327px to 357px = 30px, but we use larger range for smooth interaction)
+  
+  // State for dynamic expanded height
+  const [expandedHeight, setExpandedHeight] = useState(381); // Default to 381px, will be calculated
+  const collapsedHeight = 327;
 
-  // Transform drag position to height based on Figma states
-  // Collapsed: 327px, Expanded: 381px
-  // Map drag from 0 to -maxDragDistance to height from 327px to 381px
-  const height = useTransform(y, [0, -maxDragDistance], [327, 381], {
-    clamp: true,
-  });
+  // Calculate expanded height based on content
+  const calculateExpandedHeight = useCallback(() => {
+    if (!scrollContainerRef.current || !contentRef.current) return;
+    
+    // Temporarily remove maxHeight constraint to measure full content
+    const maskedContent = contentRef.current.querySelector('[style*="maxHeight"]') as HTMLElement;
+    const originalMaxHeight = maskedContent?.style.maxHeight;
+    const originalOverflow = maskedContent?.style.overflow;
+    
+    // Also temporarily remove flex constraints
+    const originalFlex = contentRef.current.style.flex;
+    const originalMinH = contentRef.current.style.minHeight;
+    
+    if (maskedContent) {
+      maskedContent.style.maxHeight = 'none';
+      maskedContent.style.overflow = 'visible';
+    }
+    
+    // Remove flex constraints temporarily to get true height
+    contentRef.current.style.flex = 'none';
+    contentRef.current.style.minHeight = 'auto';
+    
+    // Force a reflow
+    void contentRef.current.offsetHeight;
+    
+    // Measure the actual content height
+    const contentHeight = contentRef.current.scrollHeight;
+    
+    // Restore original styles
+    if (maskedContent) {
+      if (originalMaxHeight) maskedContent.style.maxHeight = originalMaxHeight;
+      if (originalOverflow) maskedContent.style.overflow = originalOverflow;
+    }
+    
+    contentRef.current.style.flex = originalFlex;
+    contentRef.current.style.minHeight = originalMinH;
+    
+    // Calculate total height needed:
+    // - Handle bar: 4px (h-1)
+    // - Gap after handle: 8px (gap-[8px])
+    // - Content: contentHeight
+    // - Padding: 20px top + 20px bottom = 40px
+    const handleBarHeight = 4;
+    const gapAfterHandle = 8;
+    const paddingTop = 20;
+    const paddingBottom = 20;
+    const calculatedHeight = handleBarHeight + gapAfterHandle + contentHeight + paddingTop + paddingBottom;
+    
+    // Set a minimum height and maximum (to prevent it from being too large)
+    const minHeight = 381;
+    const maxHeight = window.innerHeight * 0.9; // Max 90% of viewport height
+    setExpandedHeight(Math.max(minHeight, Math.min(calculatedHeight, maxHeight)));
+  }, []);
 
+  useEffect(() => {
+    if (isOpen) {
+      // Calculate height when sheet opens
+      const rafId = requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          calculateExpandedHeight();
+        });
+      });
+      
+      return () => cancelAnimationFrame(rafId);
+    }
+  }, [isOpen, calculateExpandedHeight]);
+
+  // Recalculate when content changes or state becomes expanded
+  useEffect(() => {
+    if (isOpen && state === 'expanded') {
+      // Recalculate when expanded to ensure full content is visible
+      const timeoutId = setTimeout(() => {
+        calculateExpandedHeight();
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isOpen, state, announcement.body, reactions.length, calculateExpandedHeight]);
+
+  // Transform drag position to height based on calculated expanded height
+  // Map drag from 0 to -maxDragDistance to height from collapsedHeight to expandedHeight
+  // Use a function to ensure it updates when expandedHeight changes
+  const height = useTransform(
+    y,
+    [0, -maxDragDistance],
+    [collapsedHeight, expandedHeight],
+    {
+      clamp: true,
+    }
+  );
+  
   // Transform backdrop opacity to rgba string for style
   const backdropColor = useTransform(
     backdropOpacity,
@@ -79,6 +168,14 @@ export default function AnnouncementBottomSheet({
   const expandThreshold = maxDragDistance * ANNOUNCEMENT_ANIMATION_SPEC.gesture.thresholds.expandDistancePct; // 30% = 60px
   const collapseThreshold = maxDragDistance * ANNOUNCEMENT_ANIMATION_SPEC.gesture.thresholds.collapseDistancePct; // 40% = 80px
   const snapVelocity = ANNOUNCEMENT_ANIMATION_SPEC.gesture.velocity.snapVelocity; // 800 px/s
+
+  // Update height transform when expandedHeight changes
+  useEffect(() => {
+    if (state === 'expanded' && y.get() <= -expandThreshold) {
+      // If already expanded, update the height immediately
+      height.set(expandedHeight);
+    }
+  }, [expandedHeight, state, height, expandThreshold, y]);
 
   // Update backdrop opacity based on state and isOpen
   useEffect(() => {
@@ -223,7 +320,7 @@ export default function AnnouncementBottomSheet({
             {/* Bottom Sheet */}
             <motion.div
               ref={scrollContainerRef}
-              className="w-full max-w-[402px] rounded-t-3xl bg-white shadow-2xl flex flex-col overflow-hidden"
+              className={`w-full max-w-[402px] rounded-t-3xl bg-white shadow-2xl flex flex-col ${state === 'expanded' ? 'overflow-visible' : 'overflow-hidden'}`}
               onClick={(e) => e.stopPropagation()}
               initial={{ 
                 y: '100%', 
@@ -232,7 +329,7 @@ export default function AnnouncementBottomSheet({
               }}
               animate={{ 
                 y: 0, 
-                height: announcementSheetVariants[state].height,
+                height: state === 'expanded' ? expandedHeight : collapsedHeight,
                 opacity: 1,
                 transition: {
                   y: {
@@ -352,7 +449,7 @@ export default function AnnouncementBottomSheet({
               }}
               transformTemplate={({ y }) => `translateY(0)`} // Override drag transform to keep anchored
               style={{
-                height: `${height}px`,
+                height: state === 'expanded' ? `${expandedHeight}px` : `${height}px`,
                 paddingTop: '20px',
                 paddingBottom: '20px',
                 paddingLeft: '24px',
@@ -360,14 +457,14 @@ export default function AnnouncementBottomSheet({
               }}
             >
               {/* Handle Bar and Content Container */}
-              <div className="flex flex-col gap-[8px] items-center flex-1 min-h-0">
+              <div className="flex flex-col gap-[8px] items-center w-full">
                 {/* Handle Bar */}
                 <div className="flex justify-center shrink-0">
                   <div className="h-1 w-12 rounded-full bg-neutral-300"></div>
                 </div>
 
-                {/* Content - Not scrollable, fixed layout */}
-                <div className="flex flex-col items-start w-full flex-1 min-h-0">
+              {/* Content - Not scrollable, fixed layout */}
+              <div ref={contentRef} className="flex flex-col items-start w-full">
                   {/* Icon and Title Section */}
                   <div className="flex flex-col gap-[8px] items-start w-full shrink-0">
                     {/* Icon */}
@@ -378,7 +475,7 @@ export default function AnnouncementBottomSheet({
                     {/* Title and Metadata */}
                     <div className="flex flex-col gap-[8px] items-start w-full">
                       {/* Title */}
-                      <h2 className="text-xl font-semibold text-neutral-700 leading-[30px] tracking-[-0.2px]">
+                      <h2 className="text-xl font-semibold text-neutral-700 leading-bold-xl">
                         {announcement.title}
                       </h2>
 
@@ -404,6 +501,7 @@ export default function AnnouncementBottomSheet({
                     animate={state}
                     style={{
                       maxHeight: state === 'expanded' ? 'none' : '82px',
+                      height: state === 'expanded' ? 'auto' : undefined,
                       maskImage: state === 'expanded'
                         ? 'none'
                         : 'linear-gradient(to bottom, black 0%, black calc(100% - 44px), rgba(0, 0, 0, 0.5) calc(100% - 28px), rgba(0, 0, 0, 0.2) calc(100% - 12px), transparent 100%)',
@@ -412,11 +510,11 @@ export default function AnnouncementBottomSheet({
                         : 'linear-gradient(to bottom, black 0%, black calc(100% - 44px), rgba(0, 0, 0, 0.5) calc(100% - 28px), rgba(0, 0, 0, 0.2) calc(100% - 12px), transparent 100%)',
                       maskComposite: state === 'expanded' ? 'normal' : 'intersect',
                       WebkitMaskComposite: state === 'expanded' ? 'normal' : 'source-in',
-                      overflow: 'hidden',
+                      overflow: state === 'expanded' ? 'visible' : 'hidden',
                     }}
                   >
                     {/* Body Text */}
-                    <p className="text-base font-normal text-neutral-500 leading-6 tracking-[-0.16px] w-full">
+                    <p className="text-base font-normal text-neutral-500 leading-regular-base w-full whitespace-normal break-words">
                       {announcement.body}
                     </p>
 

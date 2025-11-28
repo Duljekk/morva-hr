@@ -11,7 +11,7 @@ import {
   getNotifications, 
   getUnreadNotificationCount,
   type Notification 
-} from '@/lib/actions/notifications';
+} from '@/lib/actions/shared/notifications';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 interface UseNotificationsOptions {

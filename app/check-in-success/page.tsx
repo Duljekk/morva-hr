@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, Suspense } from 'react';
-import ButtonLarge from '../components/ButtonLarge';
+import ButtonLarge from '@/components/shared/ButtonLarge';
 import CheckInClockIcon from '@/app/assets/icons/check-in-clock.svg';
 import CheckInBadgeIcon from '@/app/assets/icons/check-in-badge.svg';
 import SparkleStarIcon from '@/app/assets/icons/sparkle-star.svg';
@@ -141,10 +141,10 @@ function CheckInSuccessContent() {
         {/* Text Content */}
           {timeMessage && (
         <div className="mb-12 flex w-full max-w-[283px] flex-col items-center gap-1 text-center">
-          <h1 className="text-2xl font-semibold leading-7 tracking-[-0.24px] text-neutral-800">
+          <h1 className="text-2xl font-semibold leading-bold-2xl text-neutral-800">
             You&apos;re checked in
           </h1>
-          <div className="flex flex-col items-center text-lg leading-7 tracking-[-0.18px] text-neutral-600">
+          <div className="flex flex-col items-center text-lg font-normal leading-regular-lg text-neutral-600">
                 {timeMessage.status === 'ontime' ? (
                   <>
                     <p className="font-normal break-words">{timeMessage.text}</p>

@@ -3,7 +3,8 @@
  * These types provide TypeScript autocomplete and type safety for database queries
  */
 
-export type UserRole = 'employee' | 'hr_admin';
+// Re-export UserRole from centralized types module
+export type { UserRole } from '@/lib/types/roles';
 export type CheckInStatus = 'ontime' | 'late';
 export type CheckOutStatus = 'ontime' | 'overtime' | 'leftearly';
 export type DayType = 'full' | 'half';

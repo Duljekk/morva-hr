@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
-import Toast, { ToastVariant } from '../components/Toast';
+import Toast, { ToastVariant } from '@/components/shared/Toast';
 
 export interface ToastData {
   id: string;
