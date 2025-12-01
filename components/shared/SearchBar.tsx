@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, type KeyboardEvent } from 'react';
-import SearchIcon from '@/app/assets/icons/search.svg';
-import CommandIcon from '@/app/assets/icons/command.svg';
+import { SearchIcon, CommandIcon } from '@/components/icons';
 
 interface SearchBarProps {
   /**
@@ -192,21 +191,16 @@ export default function SearchBar({
       {/* Command + K Shortcut Indicator */}
       {enableKeyboardShortcut && !disabled && (
         <div 
-          className="flex gap-[0.5px] items-center relative shrink-0"
+          className="flex items-center relative shrink-0"
           id="search-shortcut"
           aria-label="Press Command K or Control K to focus search"
         >
           {/* Command Icon */}
-          <div className="overflow-clip relative shrink-0 size-[16px]">
+          <div className="overflow-clip relative shrink-0 w-[25px] h-[12.33px] flex items-center justify-center">
             <CommandIcon 
-              className="w-4 h-4 text-neutral-500"
+              className="w-[25px] h-[12.33px] text-neutral-500"
               aria-hidden="true"
             />
-          </div>
-          
-          {/* K Key */}
-          <div className="flex flex-col font-medium justify-center leading-[0] relative shrink-0 text-neutral-500 text-sm">
-            <p className="leading-bold-sm whitespace-pre">K</p>
           </div>
         </div>
       )}

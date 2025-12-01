@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useState, isValidElement, cloneElement, type ReactNode, type ReactElement } from 'react';
 import Link from 'next/link';
-import DashboardIcon from '@/app/assets/icons/dashboard.svg';
+import { DashboardIcon } from '@/components/icons';
 
 interface SidebarMenuItemProps {
   /**
@@ -63,9 +63,9 @@ interface SidebarMenuItemProps {
  * - Height: 36px
  * - Border radius: 8px
  * - Padding: 10px horizontal, 4px vertical
- * - Active: bg-[rgba(64,64,64,0.08)], text neutral-800, icon rgba(64,64,64,1)
- * - Hover: bg-[rgba(64,64,64,0.04)], text neutral-600, icon rgba(161,161,161,1)
- * - Default: no background, text neutral-600, icon rgba(161,161,161,1)
+ * - Active: bg-[rgba(64,64,64,0.08)], text neutral-700, icon neutral-700
+ * - Hover: bg-[rgba(64,64,64,0.04)], text neutral-600, icon neutral-400 (only background changes)
+ * - Default: no background, text neutral-600, icon neutral-400
  * - Text: 14px, medium weight, line height 20px, tracking -0.07px
  * - Icon: 16px
  */
@@ -84,20 +84,28 @@ export default function SidebarMenuItem({
   // Determine the actual state
   const actualState = state || (isActive ? 'Active' : isHovered ? 'Hover' : 'Default');
   
+  // Icon color:
+  // - Active = neutral-700
+  // - Hover/Default = neutral-400 (same color, only background changes on hover)
+  const iconColorClass = actualState === 'Active' ? 'text-neutral-700' : 'text-neutral-400';
+
   // Default icon to DashboardIcon if not provided
-  // Icon color: Active = neutral-800 (#404040), Default/Hover = neutral-500 (#A1A1A1)
-  const displayIcon = icon || (
-    <DashboardIcon 
-      className={`w-4 h-4 ${
-        actualState === 'Active' 
-          ? 'text-neutral-800' 
-          : 'text-neutral-500'
-      }`}
-      style={{
-        fill: actualState === 'Active' ? '#404040' : '#A1A1A1'
-      }}
-    />
-  );
+  // For custom icons, we merge the state-based color class into the icon's className
+  let displayIcon: ReactNode;
+
+  if (icon && isValidElement(icon)) {
+    const typedIcon = icon as ReactElement<{ className?: string }>;
+    const existingClassName = typedIcon.props.className ?? '';
+    displayIcon = cloneElement(typedIcon, {
+      className: `${existingClassName} ${iconColorClass}`.trim(),
+    });
+  } else {
+    displayIcon = (
+      <DashboardIcon
+        className={`w-4 h-4 ${iconColorClass}`}
+      />
+    );
+  }
 
   // Get styles based on state
   const getStateStyles = () => {
@@ -105,12 +113,12 @@ export default function SidebarMenuItem({
       case 'Active':
         return {
           container: 'bg-[rgba(64,64,64,0.08)]',
-          text: 'text-neutral-800',
+          text: 'text-neutral-700',
         };
       case 'Hover':
         return {
           container: 'bg-[rgba(64,64,64,0.04)]',
-          text: 'text-neutral-600',
+          text: 'text-neutral-600', // Same as default, only background changes
         };
       default:
         return {
@@ -136,12 +144,12 @@ export default function SidebarMenuItem({
   const content = (
     <>
       {/* Icon */}
-      <div className="relative shrink-0 size-[16px] flex items-center justify-center">
+      <div className="relative shrink-0 size-[16px] flex items-center justify-center -mt-[1px]">
         {displayIcon}
       </div>
       
       {/* Text */}
-      <div className="box-border flex gap-[10px] items-center justify-start px-[4px] py-0 relative shrink-0 flex-1 min-w-0">
+      <div className="box-border flex gap-[10px] items-center justify-start px-[6px] py-0 relative shrink-0 flex-1 min-w-0">
         <p className={`
           ${actualState === 'Active' ? 'font-semibold' : 'font-medium'} leading-bold-sm relative shrink-0 text-sm
           text-nowrap whitespace-pre
@@ -202,4 +210,3 @@ export default function SidebarMenuItem({
     </div>
   );
 }
-

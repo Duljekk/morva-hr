@@ -3,17 +3,21 @@
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
-import LogotypeIcon from '@/app/assets/icons/logotype.svg';
-import SidebarIcon from '@/app/assets/icons/sidebar.svg';
 import SearchBar from '@/components/shared/SearchBar';
 import SidebarMenuItem from '@/components/shared/SidebarMenuItem';
-import DashboardIcon from '@/app/assets/icons/dashboard.svg';
-import AttendanceIcon from '@/app/assets/icons/attendance.svg';
-import EmployeesIcon from '@/app/assets/icons/employees.svg';
-import AnnouncementsIcon from '@/app/assets/icons/announcements.svg';
-import LeaveRequestsIcon from '@/app/assets/icons/leave-requests.svg';
-import PayrollIcon from '@/app/assets/icons/payroll.svg';
-import SettingsIcon from '@/app/assets/icons/gear.svg';
+import WeatherWidget from '@/components/hr/WeatherWidget';
+import type { HRWeather } from '@/lib/weather/hrWeather';
+import {
+  SidebarIcon,
+  DashboardIcon,
+  AttendanceIcon,
+  EmployeesIcon,
+  AnnouncementsIcon,
+  LeaveRequestsIcon,
+  PayrollIcon,
+  SettingsIcon,
+  LogoutIcon,
+} from '@/components/icons';
 
 /**
  * HR Sidebar Component
@@ -31,7 +35,11 @@ import SettingsIcon from '@/app/assets/icons/gear.svg';
  * - Gap between sections: 12px
  * - Gap between menu items: 18px
  */
-export default function HRSidebar() {
+interface HRSidebarProps {
+  weather?: HRWeather | null;
+}
+
+export default function HRSidebar({ weather }: HRSidebarProps) {
   const pathname = usePathname();
   const { signOut } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -79,14 +87,14 @@ export default function HRSidebar() {
   };
 
   return (
-    <div className="box-border flex flex-col gap-[12px] items-start justify-center px-[14px] py-[24px] relative h-screen w-[275px] bg-neutral-50">
-      {/* Top Section: Logo, Toggle, and Search */}
-      <div className="flex flex-col gap-[18px] items-end relative shrink-0 w-full">
-        {/* Logo and Toggle Button */}
+    <div className="box-border flex flex-col gap-[12px] items-start justify-center px-[14px] pt-[18px] pb-[16px] relative h-screen w-[275px] bg-neutral-50">
+      {/* Top Section: Weather widget, Toggle, and Search */}
+      <div className="flex flex-col gap-[8px] items-end relative shrink-0 w-full">
+        {/* Weather widget placeholder and Toggle Button */}
         <div className="box-border flex items-center justify-between px-[4px] py-0 relative shrink-0 w-full">
-          {/* Logo */}
+          {/* Weather widget (replaces logotype) */}
           <div className="flex gap-[8px] items-center relative shrink-0">
-            <LogotypeIcon className="h-8 w-auto" />
+            <WeatherWidget weather={weather} />
           </div>
           
           {/* Sidebar Toggle Button */}
@@ -126,22 +134,17 @@ export default function HRSidebar() {
         </div>
 
         {/* Settings and Logout at Bottom - Separated from other menu items */}
-        <div className="w-full mt-auto flex flex-col gap-0">
+        <div className="w-full mt-auto flex flex-col gap-[8px]">
           <SidebarMenuItem
             text="Settings"
             icon={<SettingsIcon className="w-4 h-4" />}
             href="/hr/settings"
             isActive={pathname === '/hr/settings'}
           />
-          <SidebarMenuItem
-            text="Logout"
-            icon={
-              <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M6 14H3.33333C2.97971 14 2.64057 13.8595 2.39052 13.6095C2.14048 13.3594 2 13.0203 2 12.6667V3.33333C2 2.97971 2.14048 2.64057 2.39052 2.39052C2.64057 2.14048 2.97971 2 3.33333 2H6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M10.6667 11.3333L14 8L10.6667 4.66667" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M14 8H6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            }
+          {/* Figma-styled Logout button */}
+          <button
+            type="button"
+            className="bg-[rgba(64,64,64,0.05)] box-border flex h-[36px] w-[247px] items-center justify-center rounded-[8px] px-[20px] py-[6px] text-neutral-600 text-sm font-medium leading-[18px] hover:bg-[rgba(64,64,64,0.08)] transition-colors"
             onClick={async () => {
               try {
                 await signOut();
@@ -156,7 +159,12 @@ export default function HRSidebar() {
                 window.location.replace('/login');
               }
             }}
-          />
+          >
+            <span className="flex items-center gap-[6px]">
+              <LogoutIcon className="w-4 h-4 text-neutral-600 -mt-[1px]" />
+              <span className="whitespace-pre">Log Out</span>
+            </span>
+          </button>
         </div>
       </div>
     </div>
