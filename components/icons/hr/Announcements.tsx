@@ -47,4 +47,3 @@ AnnouncementsIcon.displayName = 'AnnouncementsIcon';
 
 export default AnnouncementsIcon;
 
-

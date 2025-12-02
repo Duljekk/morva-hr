@@ -47,4 +47,3 @@ SettingsIcon.displayName = 'SettingsIcon';
 
 export default SettingsIcon;
 
-

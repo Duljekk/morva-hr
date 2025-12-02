@@ -50,4 +50,3 @@ CommandIcon.displayName = 'CommandIcon';
 
 export default CommandIcon;
 
-

@@ -47,4 +47,3 @@ LogoutIcon.displayName = 'LogoutIcon';
 
 export default LogoutIcon;
 
-

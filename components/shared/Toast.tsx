@@ -40,7 +40,7 @@ export default function Toast({ variant, title, message, onClose }: ToastProps) 
 
   return (
     <div
-      className={`${styles.bg} flex gap-2 items-start p-[14px] rounded-[12px] w-full max-w-[354px]`}
+      className={`${styles.bg} flex gap-2 items-start p-[14px] rounded-[12px] w-full max-w-[354px] relative`}
     >
       {/* Icon */}
       <div className="shrink-0 w-6 h-6">
@@ -60,7 +60,31 @@ export default function Toast({ variant, title, message, onClose }: ToastProps) 
           {message}
         </p>
       </div>
+
+      {/* Close Button */}
+      {onClose && (
+        <button
+          onClick={onClose}
+          className="absolute top-2 right-2 p-1 rounded hover:bg-black/5 transition-colors"
+          aria-label="Close notification"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="none"
+            className={styles.text}
+          >
+            <path
+              d="M12 4L4 12M4 4l8 8"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }
-

@@ -57,4 +57,3 @@ DashboardIcon.displayName = 'DashboardIcon';
 
 export default DashboardIcon;
 
-

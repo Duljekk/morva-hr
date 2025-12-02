@@ -29,6 +29,27 @@ export type { SettingsIconProps } from './shared/Settings';
 export { default as LogoutIcon } from './shared/Logout';
 export type { LogoutIconProps } from './shared/Logout';
 
+export { default as BellIcon } from './shared/Bell';
+export type { BellIconProps } from './shared/Bell';
+
+export { default as ReceiptIcon } from './shared/Receipt';
+export type { ReceiptIconProps } from './shared/Receipt';
+
+export { default as CircleCheckIcon } from './shared/CircleCheck';
+export type { CircleCheckIconProps } from './shared/CircleCheck';
+
+export { default as TriangleWarningIcon } from './shared/TriangleWarning';
+export type { TriangleWarningIconProps } from './shared/TriangleWarning';
+
+export { default as ClockIcon } from './shared/Clock';
+export type { ClockIconProps } from './shared/Clock';
+
+export { default as CheckIcon } from './shared/Check';
+export type { CheckIconProps } from './shared/Check';
+
+export { default as CrossIcon } from './shared/Cross';
+export type { CrossIconProps } from './shared/Cross';
+
 // ============================================================================
 // HR Icons - HR-specific icons
 // ============================================================================
@@ -72,6 +93,13 @@ export type IconName =
   | 'SidebarIcon'
   | 'SettingsIcon'
   | 'LogoutIcon'
+  | 'BellIcon'
+  | 'ReceiptIcon'
+  | 'CircleCheckIcon'
+  | 'TriangleWarningIcon'
+  | 'ClockIcon'
+  | 'CheckIcon'
+  | 'CrossIcon'
   // HR icons
   | 'DashboardIcon'
   | 'AttendanceIcon'
@@ -91,5 +119,4 @@ export {
   isIconName,
   type IconRegistryProps,
 } from './IconRegistry';
-
 

@@ -35,3 +35,8 @@ ALTER PUBLICATION supabase_realtime ADD TABLE announcement_reactions;
 
 
 
+
+
+
+
+

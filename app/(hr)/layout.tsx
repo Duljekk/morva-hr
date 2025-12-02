@@ -18,4 +18,3 @@ export default function HRLayout({
 }) {
   return <>{children}</>;
 }
-

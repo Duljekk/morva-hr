@@ -47,4 +47,3 @@ SearchIcon.displayName = 'SearchIcon';
 
 export default SearchIcon;
 
-

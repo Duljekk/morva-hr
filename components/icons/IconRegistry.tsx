@@ -30,6 +30,13 @@ const iconComponents: Record<IconName, () => Promise<{ default: ComponentType<SV
   SidebarIcon: () => import('./shared/Sidebar'),
   SettingsIcon: () => import('./shared/Settings'),
   LogoutIcon: () => import('./shared/Logout'),
+  BellIcon: () => import('./shared/Bell'),
+  ReceiptIcon: () => import('./shared/Receipt'),
+  CircleCheckIcon: () => import('./shared/CircleCheck'),
+  TriangleWarningIcon: () => import('./shared/TriangleWarning'),
+  ClockIcon: () => import('./shared/Clock'),
+  CheckIcon: () => import('./shared/Check'),
+  CrossIcon: () => import('./shared/Cross'),
   
   // HR icons
   DashboardIcon: () => import('./hr/Dashboard'),
@@ -171,5 +178,6 @@ export function isIconName(name: string): name is IconName {
 }
 
 export default IconRegistry;
+
 
 
