@@ -156,3 +156,4 @@ const RecentActivitiesCard = memo(function RecentActivitiesCard({
 RecentActivitiesCard.displayName = 'RecentActivitiesCard';
 
 export default RecentActivitiesCard;
+

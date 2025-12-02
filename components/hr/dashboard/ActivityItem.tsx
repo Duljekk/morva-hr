@@ -196,3 +196,4 @@ const ActivityItem = memo(function ActivityItem({
 ActivityItem.displayName = 'ActivityItem';
 
 export default ActivityItem;
+

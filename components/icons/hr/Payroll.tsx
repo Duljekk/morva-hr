@@ -47,3 +47,4 @@ PayrollIcon.displayName = 'PayrollIcon';
 
 export default PayrollIcon;
 
+

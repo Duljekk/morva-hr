@@ -88,3 +88,4 @@ export default function Toast({ variant, title, message, onClose }: ToastProps) 
     </div>
   );
 }
+

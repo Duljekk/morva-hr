@@ -142,3 +142,4 @@ const AttendanceFeedItem = memo(function AttendanceFeedItem({
 AttendanceFeedItem.displayName = 'AttendanceFeedItem';
 
 export default AttendanceFeedItem;
+

@@ -216,6 +216,7 @@ const LeaveRequestSection = memo(function LeaveRequestSection({
           displayedRequests.map((request, index) => {
             const isFirst = index === 0;
             const isLast = index === displayedRequests.length - 1;
+            const isSingle = displayedRequests.length === 1;
             const leaveStyles = getLeaveTypeStyles(request.leaveType);
 
             // Determine container padding and border based on position
@@ -224,6 +225,14 @@ const LeaveRequestSection = memo(function LeaveRequestSection({
             // - Middle: h-[76px] total height, py-[18px] (18px top + 18px bottom = 36px padding), border-bottom, item centered
             // - Last: pt-[18px], pb-0, no border-bottom, no item offset (follows first item structure)
             const getContainerStyles = () => {
+              // Single item: no border and no extra vertical padding
+              if (isSingle) {
+                return {
+                  container: 'pt-0 pb-0 px-0',
+                  itemOffset: '',
+                };
+              }
+
               if (isFirst) {
                 return {
                   container: 'border-b border-neutral-100 pb-[18px] pt-0 px-0',
@@ -286,3 +295,4 @@ const LeaveRequestSection = memo(function LeaveRequestSection({
 LeaveRequestSection.displayName = 'LeaveRequestSection';
 
 export default LeaveRequestSection;
+

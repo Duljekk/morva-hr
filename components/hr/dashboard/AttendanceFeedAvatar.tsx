@@ -184,3 +184,4 @@ const AttendanceFeedAvatar = memo(function AttendanceFeedAvatar({
 AttendanceFeedAvatar.displayName = 'AttendanceFeedAvatar';
 
 export default AttendanceFeedAvatar;
+

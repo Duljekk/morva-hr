@@ -272,3 +272,4 @@ When migrating existing `.svg` imports to `.tsx` components:
 - Check `IconTemplate.tsx` for the complete template
 - Review existing icons in `shared/` or `hr/` for examples
 - Follow the optimization checklist in Step 2 above
+
