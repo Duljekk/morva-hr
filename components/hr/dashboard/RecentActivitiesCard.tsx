@@ -2,6 +2,7 @@
 
 import { memo, useMemo } from 'react';
 import ActivityItem from './ActivityItem';
+import RecentActivitiesSkeleton from './RecentActivitiesSkeleton';
 import type { RecentActivity } from '@/lib/actions/hr/dashboard';
 
 export interface RecentActivitiesCardProps {
@@ -81,6 +82,11 @@ const RecentActivitiesCard = memo(function RecentActivitiesCard({
   loading = false,
   error,
 }: RecentActivitiesCardProps) {
+  // Show skeleton during loading (when loading === true and no cached activities)
+  if (loading && !activities) {
+    return <RecentActivitiesSkeleton />;
+  }
+
   // Use placeholder data if no activities provided
   const activitiesToDisplay = activities ?? PLACEHOLDER_ACTIVITIES;
   

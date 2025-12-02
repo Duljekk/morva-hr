@@ -2,7 +2,6 @@
 
 import { memo, useMemo } from 'react';
 import LeaveRequestItem from '../LeaveRequestItem';
-import { LeaveRequestsIcon } from '@/components/icons';
 
 export interface LeaveRequest {
   /**
@@ -84,36 +83,6 @@ export interface LeaveRequestSectionProps {
    * Whether the buttons are disabled
    */
   disabled?: boolean;
-}
-
-/**
- * Get background color and icon color based on leave type
- */
-function getLeaveTypeStyles(leaveType: string): {
-  backgroundColor: string;
-  iconColor: string;
-} {
-  const normalizedType = leaveType.toLowerCase();
-
-  if (normalizedType.includes('unpaid')) {
-    return {
-      backgroundColor: 'bg-[#fef3c6]', // amber-100 from Figma
-      iconColor: 'text-amber-600',
-    };
-  }
-
-  if (normalizedType.includes('sick')) {
-    return {
-      backgroundColor: 'bg-[#d0fae5]', // emerald-100 from Figma
-      iconColor: 'text-green-600',
-    };
-  }
-
-  // Default: Annual Leave or other types
-  return {
-    backgroundColor: 'bg-[#dff2fe]', // sky-100 from Figma
-    iconColor: 'text-blue-600',
-  };
 }
 
 /**
@@ -217,7 +186,6 @@ const LeaveRequestSection = memo(function LeaveRequestSection({
             const isFirst = index === 0;
             const isLast = index === displayedRequests.length - 1;
             const isSingle = displayedRequests.length === 1;
-            const leaveStyles = getLeaveTypeStyles(request.leaveType);
 
             // Determine container padding and border based on position
             // Matching Figma specs exactly:
@@ -270,13 +238,6 @@ const LeaveRequestSection = memo(function LeaveRequestSection({
                     onApprove={() => onApprove?.(request.id)}
                     onReject={() => onReject?.(request.id)}
                     disabled={disabled}
-                    backgroundColor={leaveStyles.backgroundColor}
-                    icon={
-                      <LeaveRequestsIcon
-                        size={24}
-                        className={leaveStyles.iconColor}
-                      />
-                    }
                   />
                 </div>
               </div>

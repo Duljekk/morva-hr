@@ -1,7 +1,7 @@
 'use client';
 
-import { memo } from 'react';
-import { LeaveRequestsIcon } from '@/components/icons';
+import { memo, useMemo } from 'react';
+import LeaveIllustration, { type LeaveVariant } from './LeaveIllustration';
 import ButtonIconOnly from './ButtonIconOnly';
 
 export interface LeaveRequestItemProps {
@@ -55,6 +55,24 @@ export interface LeaveRequestItemProps {
 }
 
 /**
+ * Map leave type string to LeaveIllustration variant
+ */
+function getLeaveVariant(leaveType: string): LeaveVariant {
+  const normalizedType = leaveType.toLowerCase();
+  
+  if (normalizedType.includes('unpaid')) {
+    return 'unpaid';
+  }
+  
+  if (normalizedType.includes('sick')) {
+    return 'sick';
+  }
+  
+  // Default: Annual Leave or other types
+  return 'annual';
+}
+
+/**
  * Leave Request Item Component
  *
  * Displays a single leave request item with employee name, date range,
@@ -63,20 +81,24 @@ export interface LeaveRequestItemProps {
  * Figma specs (node 428:2770 "Leave Request Item"):
  * - Container: flex, items-center, full width (389px), height 40px
  * - Content + Illustration: flex, gap-14px, grow
- *   - Illustration: 40x40px, rounded-8px, sky-100 bg (#dff2fe)
+ *   - Illustration: 40x40px, rounded-8px, background color based on leave type
+ *     - Annual Leave: sky-100 (#dff2fe)
+ *     - Unpaid Leave: amber-100 (#fef3c6)
+ *     - Sick Leave: emerald-100 (#d0fae5)
  *   - Contents: flex-col, gap-2px
  *     - Title: text-sm/medium, neutral-700, leading-18px
  *     - Date: text-sm/medium, neutral-400, leading-18px
  * - Button Group: flex, gap-4px, shrink-0
  *   - Two ButtonIconOnly buttons (Approve and Reject)
  *
- * Uses the same illustration pattern as ActivityItem from Recent Activities section.
+ * Uses LeaveIllustration component with SVG illustrations for each leave type.
  *
  * @example
  * ```tsx
  * <LeaveRequestItem
  *   name="Achmad Rafi"
  *   dateRange="25-26 Nov 2025"
+ *   leaveType="Annual Leave"
  *   onApprove={() => handleApprove(id)}
  *   onReject={() => handleReject(id)}
  * />
@@ -93,9 +115,17 @@ const LeaveRequestItem = memo(function LeaveRequestItem({
   icon,
   backgroundColor,
 }: LeaveRequestItemProps) {
-  // Use sky-100 background for leave requests (same as ActivityItem for 'leave' type)
-  const displayBg = backgroundColor || 'bg-[#dff2fe]'; // sky-100 from Figma
-  const displayIcon = icon || <LeaveRequestsIcon size={24} className="text-blue-600" />;
+  // Map leave type to illustration variant
+  const leaveVariant = useMemo(() => getLeaveVariant(leaveType), [leaveType]);
+  
+  // Use custom icon if provided (for backward compatibility), otherwise use LeaveIllustration
+  const displayIllustration = icon ? (
+    <div className="size-[40px] flex items-center justify-center">
+      {icon}
+    </div>
+  ) : (
+    <LeaveIllustration variant={leaveVariant} size={40} />
+  );
 
   return (
     <div
@@ -111,18 +141,11 @@ const LeaveRequestItem = memo(function LeaveRequestItem({
       >
         {/* Illustration Container - 40x40px with rounded background */}
         <div
-          className={`${displayBg} overflow-clip relative rounded-[8px] shrink-0 size-[40px] flex items-center justify-center`}
+          className="shrink-0"
           data-name={`Illustration/${leaveType}`}
           data-node-id="428:2772"
         >
-          {/* Icon centered - 24x24px */}
-          <div
-            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-            data-name="leave, calendar, time-off"
-            data-node-id="I428:2772;71:1104"
-          >
-            {displayIcon}
-          </div>
+          {displayIllustration}
         </div>
 
         {/* Contents Section */}

@@ -1,12 +1,28 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
 import SearchBar from '@/components/shared/SearchBar';
 import SidebarMenuItem from '@/components/shared/SidebarMenuItem';
-import WeatherWidget from '@/components/hr/WeatherWidget';
 import type { HRWeather } from '@/lib/weather/hrWeather';
+
+// Lazy load WeatherWidget for better initial page load performance
+const WeatherWidget = dynamic(
+  () => import('@/components/hr/WeatherWidget'),
+  {
+    ssr: false, // Weather widget fetches client-side data
+    loading: () => (
+      <div className="content-stretch flex h-[32px] w-[115px] items-center">
+        <div className="h-[28px] w-[28px] bg-neutral-200 rounded-[10px] animate-pulse shrink-0" />
+        <div className="box-border flex shrink-0 items-start gap-[2px] px-[8px] py-0 leading-[18px]">
+          <div className="h-[18px] w-[60px] bg-neutral-200 rounded-[4px] animate-pulse" />
+        </div>
+      </div>
+    ),
+  }
+);
 import {
   SidebarIcon,
   DashboardIcon,

@@ -1,11 +1,39 @@
 'use server';
 
+import dynamic from 'next/dynamic';
 import HRSidebar from '@/components/hr/HRSidebar';
 import { getHRWeather } from '@/lib/weather/hrWeather';
 import HRDashboardHeader from '@/components/hr/dashboard/HRDashboardHeader';
-import RecentActivitiesCard from '@/components/hr/dashboard/RecentActivitiesCard';
-import AttendanceFeedClient from '@/components/hr/dashboard/AttendanceFeedClient';
-import LeaveRequestSectionClient from '@/components/hr/dashboard/LeaveRequestSectionClient';
+
+// Import skeleton components directly (they're client components but can be imported in server components)
+import AttendanceFeedSkeleton from '@/components/hr/dashboard/AttendanceFeedSkeleton';
+import LeaveRequestSectionSkeleton from '@/components/hr/dashboard/LeaveRequestSectionSkeleton';
+import RecentActivitiesSkeleton from '@/components/hr/dashboard/RecentActivitiesSkeleton';
+
+// Lazy load dashboard widgets for better initial page load performance
+// These widgets are client components that fetch data client-side
+// Note: We can't use ssr: false in Server Components, but since these are client components,
+// they will only render on the client side anyway
+const AttendanceFeedClient = dynamic(
+  () => import('@/components/hr/dashboard/AttendanceFeedClient'),
+  {
+    loading: () => <AttendanceFeedSkeleton />,
+  }
+);
+
+const LeaveRequestSectionClient = dynamic(
+  () => import('@/components/hr/dashboard/LeaveRequestSectionClient'),
+  {
+    loading: () => <LeaveRequestSectionSkeleton />,
+  }
+);
+
+const RecentActivitiesCard = dynamic(
+  () => import('@/components/hr/dashboard/RecentActivitiesCard'),
+  {
+    loading: () => <RecentActivitiesSkeleton />,
+  }
+);
 
 /**
  * HR Dashboard Page

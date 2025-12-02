@@ -82,7 +82,7 @@ const ActivityItem = memo(function ActivityItem({
     switch (type) {
       case 'announcement':
         return {
-          icon: <BellIcon size={24} className="text-blue-600" />,
+          icon: <BellIcon size={24} className="text-[#0069A8]" />, // sky-600 from Figma: #0069A8 (rgba(0, 105, 168, 1))
           bg: 'bg-[#dff2fe]', // sky-100 from Figma: var(--sky/100,#dff2fe)
         };
       case 'payslip':
@@ -102,7 +102,7 @@ const ActivityItem = memo(function ActivityItem({
         };
       default:
         return {
-          icon: <BellIcon size={24} className="text-blue-600" />,
+          icon: <BellIcon size={24} className="text-[#0069A8]" />, // sky-600 from Figma: #0069A8 (rgba(0, 105, 168, 1))
           bg: 'bg-[#dff2fe]', // sky-100 from Figma
         };
     }
@@ -126,7 +126,7 @@ const ActivityItem = memo(function ActivityItem({
       >
         {/* Icon centered - 24x24px */}
         <div
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+          className="flex items-center justify-center"
           data-name="bell, notification, activity, alert"
           data-node-id="428:2816"
         >
