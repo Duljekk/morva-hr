@@ -1,23 +1,19 @@
 'use client';
 
 import { useMemo } from 'react';
+import Logo from '@/app/assets/icons/logo.svg';
 
 /**
  * HR Dashboard Header Component
  * 
  * Displays the dashboard header with:
- * - Logo (48px circle placeholder)
+ * - Logo (48px circle with logo SVG)
  * - Current date in format "Monday, 1 December 2025"
  * 
  * Figma specs (node 428:2647 "Header"):
  * - Container: flex column, centered items, gap-14px
  * - Logo: 48x48 circle
  * - Date text: Display xs/Semibold, 24px, line-height 28px, neutral-700
- * 
- * Logo format decision:
- * - The logotype.svg is complex (gradients, filters) so it should remain as SVG
- * - For the 48px circle logo, we'll use a placeholder div for now
- * - When the actual logo is available, it can be imported as SVG or Image component
  */
 export default function HRDashboardHeader() {
   const formattedDate = useMemo(() => {
@@ -36,15 +32,14 @@ export default function HRDashboardHeader() {
       data-name="Header"
       data-node-id="428:2647"
     >
-      {/* Logo - 48px circle placeholder */}
+      {/* Logo - 48px circle container */}
       <div 
         className="grid-cols-[max-content] grid-rows-[max-content] inline-grid leading-[0] place-items-start relative shrink-0"
         data-name="Logo"
         data-node-id="428:2648"
       >
-        <div className="relative shrink-0 size-[48px] rounded-full bg-neutral-200 flex items-center justify-center">
-          {/* Placeholder - will be replaced with actual logo */}
-          <span className="text-neutral-400 text-xs font-semibold">M</span>
+        <div className="relative shrink-0 size-[48px] rounded-full overflow-hidden flex items-center justify-center">
+          <Logo className="w-full h-full" />
         </div>
       </div>
 
