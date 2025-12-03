@@ -2,18 +2,36 @@
 
 import { memo } from 'react';
 
+export interface AttendanceFeedSkeletonProps {
+  /**
+   * Number of skeleton items to display.
+   * Uses a reasonable default (10) to balance visual feedback and performance.
+   * The actual fetch limit is 50, but showing 10 skeleton items provides
+   * good UX without overwhelming the UI.
+   * @default 10
+   */
+  count?: number;
+}
+
 /**
  * AttendanceFeedSkeleton Component
  *
  * Skeleton loading state for AttendanceFeed component.
  * Matches the structure and layout of AttendanceFeed with animated placeholders.
  *
+ * Best practices:
+ * - Uses reasonable count (10) instead of matching full fetch limit (50)
+ * - Provides visual feedback without overwhelming the UI
+ * - Performance impact is negligible for 10 items
+ *
  * Figma specs (matching node 428:2662 "Attendance Feed"):
  * - Container: white bg, rounded-[12px], shadow, padding pt-[20px] pb-[24px] px-[24px]
  * - Header: flex, justify-between, with title and tabs skeleton
  * - Items: flex-col, gap between items, matching AttendanceFeedItem structure
  */
-const AttendanceFeedSkeleton = memo(function AttendanceFeedSkeleton() {
+const AttendanceFeedSkeleton = memo(function AttendanceFeedSkeleton({
+  count = 10,
+}: AttendanceFeedSkeletonProps) {
   return (
     <div
       className="bg-white box-border content-stretch flex flex-col gap-[20px] items-start overflow-clip pb-[24px] pt-[20px] px-[24px] relative rounded-[12px] shadow-[0px_4px_4px_-2px_rgba(0,0,0,0.05),0px_0px_1px_1px_rgba(0,0,0,0.1)] size-full animate-pulse"
@@ -49,10 +67,10 @@ const AttendanceFeedSkeleton = memo(function AttendanceFeedSkeleton() {
         data-name="Attendance Items Group"
         data-node-id="428:2670"
       >
-        {/* Skeleton Items - Show 4 items */}
-        {Array.from({ length: 4 }).map((_, index) => {
+        {/* Skeleton Items - Dynamic count with reasonable default */}
+        {Array.from({ length: count }).map((_, index) => {
           const isFirst = index === 0;
-          const isLast = index === 3;
+          const isLast = index === count - 1;
 
           const borderClasses = isLast ? '' : 'border-b border-neutral-100';
           const paddingClasses = isFirst
@@ -94,5 +112,6 @@ const AttendanceFeedSkeleton = memo(function AttendanceFeedSkeleton() {
 AttendanceFeedSkeleton.displayName = 'AttendanceFeedSkeleton';
 
 export default AttendanceFeedSkeleton;
+
 
 

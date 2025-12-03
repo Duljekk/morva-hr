@@ -1,10 +1,10 @@
 'use client';
 
 import { memo } from 'react';
-import { BellIcon, ReceiptIcon } from '@/components/icons';
+import { BellIcon, ReceiptIcon, CalendarIcon, ClockIcon, CircleCheckIcon, CircleCrossIcon } from '@/components/icons';
 import type { ReactNode } from 'react';
 
-export type ActivityType = 'announcement' | 'payslip' | 'leave' | 'attendance';
+export type ActivityType = 'announcement' | 'payslip' | 'leave' | 'attendance' | 'approval' | 'rejection';
 
 export interface ActivityItemProps {
   /**
@@ -78,6 +78,7 @@ const ActivityItem = memo(function ActivityItem({
   className = '',
 }: ActivityItemProps) {
   // Determine icon and background color based on type
+  // Following Figma design patterns with specific colors
   const getTypeStyles = () => {
     switch (type) {
       case 'announcement':
@@ -87,18 +88,28 @@ const ActivityItem = memo(function ActivityItem({
         };
       case 'payslip':
         return {
-          icon: <ReceiptIcon size={24} className="text-purple-600" />,
+          icon: <ReceiptIcon size={24} className="text-[#7008E7]" />, // violet-600 from Figma: rgba(112, 8, 231, 1)
           bg: 'bg-[#ede9fe]', // violet-100 from Figma: var(--violet/100,#ede9fe)
         };
       case 'leave':
         return {
-          icon: <BellIcon size={24} className="text-amber-600" />,
-          bg: 'bg-amber-50',
+          icon: <CalendarIcon size={24} className="text-[#497D00]" />, // lime-700 from Figma: rgba(73, 125, 0, 1)
+          bg: 'bg-[#ecfcca]', // lime-100 from Figma: var(--lime/100,#ecfcca)
         };
       case 'attendance':
         return {
-          icon: <BellIcon size={24} className="text-green-600" />,
-          bg: 'bg-green-50',
+          icon: <ClockIcon size={24} className="text-[#2563eb]" />, // blue-600
+          bg: 'bg-[#dbeafe]', // blue-100
+        };
+      case 'approval':
+        return {
+          icon: <CircleCheckIcon size={24} className="text-[#008236]" />, // green-700 from Figma: rgba(0, 130, 54, 1)
+          bg: 'bg-[#dcfce7]', // green-100 from Figma: var(--green/100,#dcfce7)
+        };
+      case 'rejection':
+        return {
+          icon: <CircleCrossIcon size={24} className="text-[#c10007]" />, // red-700 from Figma: rgba(193, 0, 7, 1)
+          bg: 'bg-[#ffe2e2]', // red-100 from Figma: var(--red/100,#ffe2e2)
         };
       default:
         return {

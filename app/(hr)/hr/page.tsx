@@ -4,6 +4,8 @@ import dynamic from 'next/dynamic';
 import HRSidebar from '@/components/hr/HRSidebar';
 import { getHRWeather } from '@/lib/weather/hrWeather';
 import HRDashboardHeader from '@/components/hr/dashboard/HRDashboardHeader';
+import { getAttendanceFeedCount } from '@/lib/actions/hr/dashboard';
+import { getPendingLeaveRequestsCount } from '@/lib/actions/hr/leaves';
 
 // Import skeleton components directly (they're client components but can be imported in server components)
 import AttendanceFeedSkeleton from '@/components/hr/dashboard/AttendanceFeedSkeleton';
@@ -14,24 +16,27 @@ import RecentActivitiesSkeleton from '@/components/hr/dashboard/RecentActivities
 // These widgets are client components that fetch data client-side
 // Note: We can't use ssr: false in Server Components, but since these are client components,
 // they will only render on the client side anyway
+// The loading fallback uses default counts, but the actual skeleton shown by the client
+// components will use the server-fetched counts passed as props
 const AttendanceFeedClient = dynamic(
   () => import('@/components/hr/dashboard/AttendanceFeedClient'),
   {
-    loading: () => <AttendanceFeedSkeleton />,
+    loading: () => <AttendanceFeedSkeleton count={10} />, // Brief fallback during bundle load
   }
 );
 
 const LeaveRequestSectionClient = dynamic(
   () => import('@/components/hr/dashboard/LeaveRequestSectionClient'),
   {
-    loading: () => <LeaveRequestSectionSkeleton />,
+    loading: () => <LeaveRequestSectionSkeleton count={5} />, // Brief fallback during bundle load
   }
 );
 
 const RecentActivitiesCard = dynamic(
   () => import('@/components/hr/dashboard/RecentActivitiesCard'),
   {
-    loading: () => <RecentActivitiesSkeleton />,
+    // Match maxItems default (5) for accurate visual feedback
+    loading: () => <RecentActivitiesSkeleton count={5} />,
   }
 );
 
@@ -51,7 +56,19 @@ const RecentActivitiesCard = dynamic(
 export default async function HRDashboard() {
   const weather = await getHRWeather();
 
+  // Fetch counts server-side to pass to skeleton components
+  // This ensures skeletons match the exact number of items that will be loaded
+  const [attendanceCountResult, leaveRequestsCountResult] = await Promise.all([
+    getAttendanceFeedCount(),
+    getPendingLeaveRequestsCount(),
+  ]);
+
+  const attendanceCount = attendanceCountResult.data ?? 10; // Fallback to 10 if error
+  const leaveRequestsCount = leaveRequestsCountResult.data ?? 5; // Fallback to 5 if error
+
   console.log('[HRDashboard] Weather for sidebar:', weather);
+  console.log('[HRDashboard] Attendance feed count:', attendanceCount);
+  console.log('[HRDashboard] Leave requests count:', leaveRequestsCount);
 
   return (
     <div className="bg-neutral-50 flex items-start relative h-screen w-full">
@@ -72,14 +89,14 @@ export default async function HRDashboard() {
             <div className="content-stretch flex flex-col lg:flex-row gap-[24px] items-start relative shrink-0" data-name="Contents" data-node-id="428:2661">
               {/* Attendance Feed - Left column */}
               <div className="w-full lg:w-[420px] lg:shrink-0" data-name="Attendance Feed" data-node-id="428:2662">
-                <AttendanceFeedClient />
+                <AttendanceFeedClient initialCount={attendanceCount} />
               </div>
 
               {/* Leave Request + Recent Activities - Right column */}
               <div className="content-stretch flex flex-col gap-[20px] items-start relative self-stretch w-full lg:w-[437px] lg:shrink-0" data-name="Leave Request + Recent Activities" data-node-id="428:2761">
                 {/* Leave Request Section */}
                 <div className="shrink-0 w-full" data-name="Leave Request" data-node-id="428:2762">
-                  <LeaveRequestSectionClient />
+                  <LeaveRequestSectionClient initialCount={leaveRequestsCount} />
                 </div>
 
                 {/* Recent Activities Card */}

@@ -3,7 +3,7 @@ import { memo } from 'react';
 export interface CircleCheckIconProps extends React.SVGProps<SVGSVGElement> {
   /**
    * Size of the icon in pixels or CSS units
-   * @default 13
+   * @default 12
    */
   size?: number | string;
 }
@@ -20,13 +20,13 @@ export interface CircleCheckIconProps extends React.SVGProps<SVGSVGElement> {
  * ```
  */
 const CircleCheckIcon = memo(function CircleCheckIcon({
-  size = 13,
+  size = 12,
   className = '',
   ...props
 }: CircleCheckIconProps) {
   return (
     <svg
-      viewBox="0 0 13 13"
+      viewBox="0 0 12 12"
       width={size}
       height={size}
       fill="none"
@@ -48,5 +48,6 @@ const CircleCheckIcon = memo(function CircleCheckIcon({
 CircleCheckIcon.displayName = 'CircleCheckIcon';
 
 export default CircleCheckIcon;
+
 
 

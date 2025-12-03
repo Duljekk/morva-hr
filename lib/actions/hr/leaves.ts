@@ -31,6 +31,39 @@ export interface PendingLeaveRequest {
  * GET PENDING LEAVE REQUESTS
  * Returns all pending leave requests for HR review
  */
+/**
+ * GET PENDING LEAVE REQUESTS COUNT
+ * 
+ * Returns the total count of pending leave requests.
+ * This is a lightweight query to get the count before fetching full data.
+ */
+export async function getPendingLeaveRequestsCount(): Promise<{ data?: number; error?: string }> {
+  try {
+    // Require HR admin role
+    const { supabase } = await requireHRAdmin();
+
+    console.log('[getPendingLeaveRequestsCount] Counting pending leave requests');
+
+    const { count, error } = await supabase
+      .from('leave_requests')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'pending');
+
+    if (error) {
+      console.error('[getPendingLeaveRequestsCount] Query error:', error);
+      return { error: 'Failed to count pending leave requests' };
+    }
+
+    const totalCount = count || 0;
+    console.log('[getPendingLeaveRequestsCount] Total pending requests:', totalCount);
+    return { data: totalCount };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('[getPendingLeaveRequestsCount] Error:', errorMessage);
+    return { error: errorMessage };
+  }
+}
+
 export async function getPendingLeaveRequests(): Promise<{ data?: PendingLeaveRequest[]; error?: string }> {
   try {
     // Require HR admin role
@@ -260,6 +293,7 @@ export async function rejectLeaveRequest(
     return { success: false, error: errorMessage };
   }
 }
+
 
 
 

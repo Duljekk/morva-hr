@@ -29,7 +29,7 @@ export interface RecentActivitiesCardProps {
   error?: string;
 }
 
-// Placeholder data matching Figma design
+// Placeholder data matching Figma design with all 5 variants
 const PLACEHOLDER_ACTIVITIES: RecentActivity[] = [
   {
     id: 'placeholder-1',
@@ -46,6 +46,30 @@ const PLACEHOLDER_ACTIVITIES: RecentActivity[] = [
     timestamp: '1h',
     type: 'payslip',
     createdAt: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
+  },
+  {
+    id: 'placeholder-3',
+    title: 'Annual Leave (24–25 Nov 2025)',
+    subtitle: 'Requested by Mariatul Qibtiah',
+    timestamp: 'Now',
+    type: 'leave',
+    createdAt: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
+  },
+  {
+    id: 'placeholder-4',
+    title: 'Leave Request Rejected',
+    subtitle: 'You rejected Mariatul Qibtiah\'s request',
+    timestamp: 'Now',
+    type: 'rejection',
+    createdAt: new Date(Date.now() - 10800000).toISOString(), // 3 hours ago
+  },
+  {
+    id: 'placeholder-5',
+    title: 'Leave Request Approved',
+    subtitle: 'You approved Mariatul Qibtiah\'s request',
+    timestamp: 'Now',
+    type: 'approval',
+    createdAt: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
   },
 ];
 
@@ -130,25 +154,46 @@ const RecentActivitiesCard = memo(function RecentActivitiesCard({
             {error}
           </div>
         ) : displayedActivities.length > 0 ? (
-          displayedActivities.map((activity, index) => (
-            <div
-              key={activity.id}
-              className={`${
-                index < displayedActivities.length - 1
-                  ? 'border-b border-neutral-100 pb-[18px]'
-                  : 'pt-[18px]'
-              } box-border content-stretch flex gap-[8px] items-center relative shrink-0 w-full`}
-              data-name="Activity Item Container"
-              data-node-id={index === 0 ? '428:2813' : '428:2825'}
-            >
-              <ActivityItem
-                title={activity.title}
-                subtitle={activity.subtitle}
-                timestamp={activity.timestamp}
-                type={activity.type}
-              />
-            </div>
-          ))
+          displayedActivities.map((activity, index) => {
+            const isFirst = index === 0;
+            const isLast = index === displayedActivities.length - 1;
+            const isSingle = displayedActivities.length === 1;
+
+            // Determine container padding and border based on position
+            // - Top item: 18px bottom padding + 1px bottom border
+            // - Middle item: 18px top and bottom padding + 1px bottom border
+            // - Bottom item: 18px top padding, no border
+            // - Single item: no padding at all
+            const getContainerStyles = () => {
+              if (isSingle) {
+                return 'pt-0 pb-0 px-0';
+              }
+              if (isFirst) {
+                return 'border-b border-neutral-100 pb-[18px] pt-0 px-0';
+              }
+              if (isLast) {
+                return 'pt-[18px] pb-0 px-0';
+              }
+              // Middle item
+              return 'border-b border-neutral-100 py-[18px] px-0';
+            };
+
+            return (
+              <div
+                key={activity.id}
+                className={`${getContainerStyles()} box-border content-stretch flex gap-[8px] items-center relative shrink-0 w-full`}
+                data-name="Activity Item Container"
+                data-node-id={index === 0 ? '428:2813' : '428:2825'}
+              >
+                <ActivityItem
+                  title={activity.title}
+                  subtitle={activity.subtitle}
+                  timestamp={activity.timestamp}
+                  type={activity.type}
+                />
+              </div>
+            );
+          })
         ) : (
           <div className="flex items-center justify-center py-8 text-neutral-500">
             No recent activities

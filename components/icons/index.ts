@@ -38,6 +38,9 @@ export type { ReceiptIconProps } from './shared/Receipt';
 export { default as CircleCheckIcon } from './shared/CircleCheck';
 export type { CircleCheckIconProps } from './shared/CircleCheck';
 
+export { default as CircleCrossIcon } from './shared/CircleCross';
+export type { CircleCrossIconProps } from './shared/CircleCross';
+
 export { default as TriangleWarningIcon } from './shared/TriangleWarning';
 export type { TriangleWarningIconProps } from './shared/TriangleWarning';
 
@@ -49,6 +52,9 @@ export type { CheckIconProps } from './shared/Check';
 
 export { default as CrossIcon } from './shared/Cross';
 export type { CrossIconProps } from './shared/Cross';
+
+export { default as CalendarIcon } from './shared/Calendar';
+export type { CalendarIconProps } from './shared/Calendar';
 
 // ============================================================================
 // HR Icons - HR-specific icons
@@ -96,10 +102,12 @@ export type IconName =
   | 'BellIcon'
   | 'ReceiptIcon'
   | 'CircleCheckIcon'
+  | 'CircleCrossIcon'
   | 'TriangleWarningIcon'
   | 'ClockIcon'
   | 'CheckIcon'
   | 'CrossIcon'
+  | 'CalendarIcon'
   // HR icons
   | 'DashboardIcon'
   | 'AttendanceIcon'

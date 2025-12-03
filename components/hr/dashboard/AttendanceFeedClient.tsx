@@ -6,6 +6,14 @@ import AttendanceFeedSkeleton from './AttendanceFeedSkeleton';
 import { getAttendanceFeed, type AttendanceFeedEntry as ServerAttendanceFeedEntry } from '@/lib/actions/hr/dashboard';
 import { useToast } from '@/app/contexts/ToastContext';
 
+export interface AttendanceFeedClientProps {
+  /**
+   * Initial count of items from server-side fetch.
+   * Used to show accurate skeleton loading that matches the actual data count.
+   */
+  initialCount?: number;
+}
+
 /**
  * AttendanceFeedClient
  *
@@ -15,8 +23,9 @@ import { useToast } from '@/app/contexts/ToastContext';
  * - Manages loading and error states
  * - Caches successful results to prevent unnecessary refetches
  * - Falls back to AttendanceFeed's placeholders when no data
+ * - Uses initialCount from server to show accurate skeleton loading
  */
-export default function AttendanceFeedClient() {
+export default function AttendanceFeedClient({ initialCount = 10 }: AttendanceFeedClientProps) {
   const [entries, setEntries] = useState<AttendanceFeedEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | undefined>();
@@ -115,8 +124,9 @@ export default function AttendanceFeedClient() {
   }, [loadData]); // Only re-run if loadData changes (which it shouldn't)
 
   // Show skeleton during initial loading (when loading === true and no cached entries)
+  // Use initialCount from server to match exact number of items that will be loaded
   if (loading && entries.length === 0) {
-    return <AttendanceFeedSkeleton />;
+    return <AttendanceFeedSkeleton count={initialCount} />;
   }
 
   return <AttendanceFeed entries={entries} loading={loading} error={error} />;

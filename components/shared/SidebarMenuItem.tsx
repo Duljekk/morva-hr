@@ -2,6 +2,7 @@
 
 import { useState, isValidElement, cloneElement, type ReactNode, type ReactElement } from 'react';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 import { DashboardIcon } from '@/components/icons';
 
 interface SidebarMenuItemProps {
@@ -46,12 +47,19 @@ interface SidebarMenuItemProps {
    * Disable the menu item
    */
   disabled?: boolean;
+  
+  /**
+   * Whether the sidebar is collapsed (icon-only mode)
+   * @default false
+   */
+  collapsed?: boolean;
 }
 
 /**
  * SidebarMenuItem Component
  * 
  * A sidebar menu item component with three states: Active, Hover, and Default
+ * Supports both expanded and collapsed (icon-only) variants
  * Following Next.js and React best practices:
  * - Accessible with proper ARIA labels
  * - Keyboard navigation support
@@ -59,6 +67,8 @@ interface SidebarMenuItemProps {
  * - Automatic active state detection
  * 
  * Design specifications from Figma:
+ * 
+ * Expanded variant:
  * - Width: 247px
  * - Height: 36px
  * - Border radius: 8px
@@ -68,6 +78,15 @@ interface SidebarMenuItemProps {
  * - Default: no background, text neutral-600, icon neutral-400
  * - Text: 14px, medium weight, line height 20px, tracking -0.07px
  * - Icon: 16px
+ * 
+ * Collapsed variant (icon-only):
+ * - Size: 36x36px (square)
+ * - Border radius: 8px
+ * - Padding: 10px horizontal, 4px vertical
+ * - Active: bg-[rgba(64,64,64,0.08)], icon neutral-700
+ * - Hover: bg-[rgba(64,64,64,0.04)], icon neutral-400
+ * - Default: no background, icon neutral-400
+ * - Icon: 16px, centered
  */
 export default function SidebarMenuItem({
   text = 'Dashboard',
@@ -78,6 +97,7 @@ export default function SidebarMenuItem({
   isActive = false,
   className = '',
   disabled = false,
+  collapsed = false,
 }: SidebarMenuItemProps) {
   const [isHovered, setIsHovered] = useState(false);
   
@@ -130,18 +150,27 @@ export default function SidebarMenuItem({
 
   const styles = getStateStyles();
 
-  // Base classes
+  // Width values for animation
+  const width = collapsed ? 36 : 247;
+
+  // Base classes - shared for both variants
   const baseClasses = `
     box-border flex h-[36px] items-center overflow-hidden
-    px-[10px] py-[4px] relative rounded-[8px] w-[247px]
+    px-[10px] py-[4px] relative rounded-[8px]
     transition-colors duration-200
     ${styles.container}
     ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
     ${className}
   `;
 
-  // Content structure
-  const content = (
+  // Content structure - different for collapsed vs expanded
+  const content = collapsed ? (
+    // Collapsed: Icon only, centered
+    <div className="relative shrink-0 size-[16px] flex items-center justify-center">
+      {displayIcon}
+    </div>
+  ) : (
+    // Expanded: Icon + Text
     <>
       {/* Icon */}
       <div className="relative shrink-0 size-[16px] flex items-center justify-center -mt-[1px]">
@@ -149,15 +178,30 @@ export default function SidebarMenuItem({
       </div>
       
       {/* Text */}
-      <div className="box-border flex gap-[10px] items-center justify-start px-[6px] py-0 relative shrink-0 flex-1 min-w-0">
-        <p className={`
-          ${actualState === 'Active' ? 'font-semibold' : 'font-medium'} leading-bold-sm relative shrink-0 text-sm
-          text-nowrap whitespace-pre
-          ${styles.text}
-        `}>
-          {text}
-        </p>
-      </div>
+      <AnimatePresence mode="wait">
+        {!collapsed && (
+          <motion.div
+            key="text"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{
+              type: 'spring',
+              stiffness: 400,
+              damping: 25,
+            }}
+            className="box-border flex gap-[10px] items-center justify-start px-[6px] py-0 relative shrink-0 flex-1 min-w-0"
+          >
+            <p className={`
+              ${actualState === 'Active' ? 'font-semibold' : 'font-medium'} leading-bold-sm relative shrink-0 text-sm
+              text-nowrap whitespace-pre
+              ${styles.text}
+            `}>
+              {text}
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 
@@ -176,22 +220,52 @@ export default function SidebarMenuItem({
   // Render with Link if href is provided
   if (href && !disabled) {
     return (
-      <Link
-        href={href}
+      <motion.div
+        layout
+        initial={false}
+        animate={{
+          width,
+          justifyContent: collapsed ? 'center' : 'flex-start',
+        }}
+        transition={{
+          type: 'spring',
+          stiffness: 300,
+          damping: 30,
+          mass: 0.8,
+        }}
         className={baseClasses}
-        onMouseEnter={() => !disabled && setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-        onClick={handleClick}
-        aria-current={isActive ? 'page' : undefined}
       >
-        {content}
-      </Link>
+        <Link
+          href={href}
+          className="flex items-center w-full h-full"
+          onMouseEnter={() => !disabled && setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          onClick={handleClick}
+          aria-current={isActive ? 'page' : undefined}
+          aria-label={collapsed ? text : undefined}
+          title={collapsed ? text : undefined}
+        >
+          {content}
+        </Link>
+      </motion.div>
     );
   }
 
   // Render as button/div if no href
   return (
-    <div
+    <motion.div
+      layout
+      initial={false}
+      animate={{
+        width,
+        justifyContent: collapsed ? 'center' : 'flex-start',
+      }}
+      transition={{
+        type: 'spring',
+        stiffness: 300,
+        damping: 30,
+        mass: 0.8,
+      }}
       className={baseClasses}
       onMouseEnter={() => !disabled && setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -205,8 +279,10 @@ export default function SidebarMenuItem({
         }
       }}
       aria-disabled={disabled}
+      aria-label={collapsed ? text : undefined}
+      title={collapsed ? text : undefined}
     >
       {content}
-    </div>
+    </motion.div>
   );
 }

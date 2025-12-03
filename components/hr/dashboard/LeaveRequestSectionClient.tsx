@@ -7,6 +7,14 @@ import { getPendingLeaveRequestsForDashboard } from '@/lib/actions/hr/dashboard'
 import { approveLeaveRequest, rejectLeaveRequest } from '@/lib/actions/hr/leaves';
 import { useToast } from '@/app/contexts/ToastContext';
 
+export interface LeaveRequestSectionClientProps {
+  /**
+   * Initial count of items from server-side fetch.
+   * Used to show accurate skeleton loading that matches the actual data count.
+   */
+  initialCount?: number;
+}
+
 /**
  * LeaveRequestSectionClient
  *
@@ -16,11 +24,12 @@ import { useToast } from '@/app/contexts/ToastContext';
  * - Manages loading / error / processing states
  * - Caches successful results to prevent unnecessary refetches
  * - Shows toast notifications for user feedback
+ * - Uses initialCount from server to show accurate skeleton loading
  *
  * When there is no data, the underlying LeaveRequestSection will still
  * render its own placeholder state (via its internal placeholder dataset).
  */
-export default function LeaveRequestSectionClient() {
+export default function LeaveRequestSectionClient({ initialCount = 5 }: LeaveRequestSectionClientProps) {
   const [requests, setRequests] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | undefined>();
@@ -165,8 +174,9 @@ export default function LeaveRequestSectionClient() {
   const isDisabled = isPending || processingIds.size > 0;
 
   // Show skeleton during initial loading (when loading === true and no cached requests)
+  // Use initialCount from server to match exact number of items that will be loaded
   if (loading && requests.length === 0) {
-    return <LeaveRequestSectionSkeleton />;
+    return <LeaveRequestSectionSkeleton count={initialCount} />;
   }
 
   return (

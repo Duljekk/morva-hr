@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/lib/auth/AuthContext';
 import SearchBar from '@/components/shared/SearchBar';
 import SidebarMenuItem from '@/components/shared/SidebarMenuItem';
@@ -58,7 +59,15 @@ interface HRSidebarProps {
 export default function HRSidebar({ weather }: HRSidebarProps) {
   const pathname = usePathname();
   const { signOut } = useAuth();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false); // Start expanded
+  const [isWeatherHovered, setIsWeatherHovered] = useState(false);
+
+  // Reset hover state when sidebar expands
+  useEffect(() => {
+    if (!isCollapsed) {
+      setIsWeatherHovered(false);
+    }
+  }, [isCollapsed]);
 
   // Menu items configuration
   const menuItems = [
@@ -102,88 +111,256 @@ export default function HRSidebar({ weather }: HRSidebarProps) {
     return pathname.startsWith(href);
   };
 
+  // Sidebar width: 64px when collapsed (14px padding * 2 + 36px item), 275px when expanded
+  const sidebarWidth = isCollapsed ? 64 : 275;
+
   return (
-    <div className="box-border flex flex-col gap-[12px] items-start justify-center px-[14px] pt-[18px] pb-[16px] relative h-screen w-[275px] bg-neutral-50">
+    <motion.div
+      className="box-border flex flex-col gap-[12px] items-start justify-center px-[14px] pt-[18px] pb-[16px] relative h-screen bg-neutral-50"
+      initial={{
+        width: 275, // Start with expanded width
+      }}
+      animate={{
+        width: sidebarWidth,
+      }}
+      transition={{
+        type: 'spring',
+        stiffness: 300,
+        damping: 30,
+        mass: 0.8,
+      }}
+    >
       {/* Top Section: Weather widget, Toggle, and Search */}
-      <div className="flex flex-col gap-[8px] items-end relative shrink-0 w-full">
-        {/* Weather widget placeholder and Toggle Button */}
-        <div className="box-border flex items-center justify-between px-[4px] py-0 relative shrink-0 w-full">
-          {/* Weather widget (replaces logotype) */}
-          <div className="flex gap-[8px] items-center relative shrink-0">
-            <WeatherWidget weather={weather} />
+      <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
+        {/* Weather widget and Toggle Button */}
+        <div 
+          className={`box-border flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} relative shrink-0 w-full ${!isCollapsed ? 'py-[2px]' : ''}`}
+          onMouseLeave={() => setIsWeatherHovered(false)}
+        >
+          {/* Weather widget - Shows sidebar icon on hover when collapsed */}
+          <div className={`flex ${isCollapsed ? '' : 'gap-[8px]'} items-center relative shrink-0 pl-[4px]`}>
+            <AnimatePresence mode="wait">
+              {isCollapsed && isWeatherHovered ? (
+                <motion.button
+                  key="sidebar-icon"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{
+                    type: 'spring',
+                    stiffness: 200,
+                    damping: 25,
+                  }}
+                  onClick={() => {
+                    setIsCollapsed(false);
+                    setIsWeatherHovered(false);
+                  }}
+                  className="box-border flex items-center justify-center overflow-clip px-[10px] py-[4px] relative rounded-[8px] size-[36px] hover:bg-neutral-100"
+                  aria-label="Expand sidebar"
+                  title="Expand sidebar"
+                >
+                  <div className="relative shrink-0 size-[20px] flex items-center justify-center">
+                    <SidebarIcon className="w-5 h-5 text-neutral-600" />
+                  </div>
+                </motion.button>
+              ) : (
+                <motion.div
+                  key="weather-widget"
+                  initial={false}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{
+                    type: 'spring',
+                    stiffness: 200,
+                    damping: 25,
+                  }}
+                >
+                  <WeatherWidget 
+                    weather={weather} 
+                    collapsed={isCollapsed}
+                    onClick={() => {
+                      if (isCollapsed) {
+                        setIsCollapsed(false);
+                        setIsWeatherHovered(false);
+                      }
+                    }}
+                    onHover={setIsWeatherHovered}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
           
-          {/* Sidebar Toggle Button */}
-          <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="box-border flex gap-[10px] items-center justify-center p-[10px] relative rounded-[8px] shrink-0 size-[32px] hover:bg-neutral-100 transition-colors"
-            aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            <div className="overflow-clip relative rounded-[5px] shrink-0 size-[20px]">
-              <SidebarIcon className="w-5 h-5 text-neutral-600" />
-            </div>
-          </button>
+          {/* Sidebar Toggle Button - Only show when expanded */}
+          <AnimatePresence>
+            {!isCollapsed && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{
+                  type: 'spring',
+                  stiffness: 400,
+                  damping: 25,
+                }}
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className="box-border flex gap-[10px] items-center justify-center p-[10px] relative rounded-[8px] shrink-0 size-[32px] hover:bg-neutral-100"
+                aria-label="Collapse sidebar"
+              >
+                <div className="overflow-clip relative rounded-[5px] shrink-0 size-[20px]">
+                  <SidebarIcon className="w-5 h-5 text-neutral-600" />
+                </div>
+              </motion.button>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Search Bar */}
-        <div className="w-full">
-          <SearchBar placeholder="Search" />
+        <div className="w-full flex justify-center">
+          <SearchBar placeholder="Search" collapsed={isCollapsed} />
         </div>
       </div>
 
       {/* Menu Items Section - Flex grow to push Settings to bottom */}
       <div className="basis-0 flex flex-col grow items-start justify-between min-h-px min-w-px relative shrink-0 w-full">
         {/* Top Menu Items - No gap, just stacked */}
-        <div className="flex flex-col items-start relative shrink-0 w-full">
-          {menuItems.map((item) => {
+        <motion.div 
+          className="flex flex-col items-start relative shrink-0 w-full"
+          variants={{
+            expanded: {
+              transition: {
+                staggerChildren: 0.03,
+                delayChildren: 0.05,
+              },
+            },
+            collapsed: {
+              transition: {
+                staggerChildren: 0.02,
+                staggerDirection: -1,
+              },
+            },
+          }}
+          animate={isCollapsed ? 'collapsed' : 'expanded'}
+        >
+          {menuItems.map((item, index) => {
             const isActive = isRouteActive(item.href);
             return (
-              <SidebarMenuItem
+              <motion.div
                 key={item.href}
-                text={item.text}
-                icon={item.icon}
-                href={item.href}
-                isActive={isActive}
-              />
+                variants={{
+                  expanded: {
+                    opacity: 1,
+                    x: 0,
+                  },
+                  collapsed: {
+                    opacity: 1,
+                    x: 0,
+                  },
+                }}
+                transition={{
+                  type: 'spring',
+                  stiffness: 300,
+                  damping: 30,
+                }}
+              >
+                <SidebarMenuItem
+                  text={item.text}
+                  icon={item.icon}
+                  href={item.href}
+                  isActive={isActive}
+                  collapsed={isCollapsed}
+                />
+              </motion.div>
             );
           })}
-        </div>
+        </motion.div>
 
         {/* Settings and Logout at Bottom - Separated from other menu items */}
-        <div className="w-full mt-auto flex flex-col gap-[8px]">
+        <div className={`w-full mt-auto flex flex-col ${isCollapsed ? 'gap-0' : 'gap-[8px]'} items-start`}>
           <SidebarMenuItem
             text="Settings"
             icon={<SettingsIcon className="w-4 h-4" />}
             href="/hr/settings"
             isActive={pathname === '/hr/settings'}
+            collapsed={isCollapsed}
           />
-          {/* Figma-styled Logout button */}
-          <button
+          {/* Logout button - Animated transition like sidebar menu items */}
+          <motion.button
+            layout
             type="button"
-            className="bg-[rgba(64,64,64,0.05)] box-border flex h-[36px] w-[247px] items-center justify-center rounded-[8px] px-[20px] py-[6px] text-neutral-600 text-sm font-medium leading-[18px] hover:bg-[rgba(64,64,64,0.08)] transition-colors"
+            initial={false}
+            animate={{
+              width: isCollapsed ? 36 : 247,
+              justifyContent: isCollapsed ? 'center' : 'center',
+            }}
+            transition={{
+              type: 'spring',
+              stiffness: 300,
+              damping: 30,
+              mass: 0.8,
+            }}
+            className={`
+              box-border flex h-[36px] items-center overflow-hidden
+              px-[10px] py-[4px] relative rounded-[8px]
+              bg-[rgba(64,64,64,0.05)] hover:bg-[rgba(64,64,64,0.08)]
+              transition-colors duration-200
+              ${isCollapsed ? 'mt-[8px]' : ''}
+            `}
             onClick={async () => {
               try {
                 await signOut();
-                // Delay to ensure server-side cookies are fully cleared before redirect
                 await new Promise(resolve => setTimeout(resolve, 300));
                 window.location.replace('/login');
               } catch (error) {
                 console.error('Error during logout:', error);
-                // Delay even on error to ensure cookies are cleared
                 await new Promise(resolve => setTimeout(resolve, 300));
-                // Force redirect even on error
                 window.location.replace('/login');
               }
             }}
+            aria-label="Log out"
+            title={isCollapsed ? 'Log out' : undefined}
           >
-            <span className="flex items-center gap-[6px]">
-              <LogoutIcon className="w-4 h-4 text-neutral-600 -mt-[1px]" />
-              <span className="whitespace-pre">Log Out</span>
-            </span>
-          </button>
+            {/* Icon - Always visible */}
+            <motion.div
+              layout
+              className="relative shrink-0 size-[16px] flex items-center justify-center"
+              animate={{
+                marginTop: isCollapsed ? 0 : '-1px',
+              }}
+              transition={{
+                type: 'spring',
+                stiffness: 300,
+                damping: 30,
+              }}
+            >
+              <LogoutIcon className={`w-4 h-4 ${isCollapsed ? 'text-neutral-500' : 'text-neutral-600'}`} />
+            </motion.div>
+
+            {/* Text - Disappears when collapsed */}
+            <AnimatePresence mode="wait" initial={false}>
+              {!isCollapsed && (
+                <motion.span
+                  key="logout-text"
+                  initial={false}
+                  animate={{ opacity: 1, width: 'auto' }}
+                  exit={{ opacity: 0, width: 0 }}
+                  transition={{
+                    type: 'spring',
+                    stiffness: 300,
+                    damping: 30,
+                  }}
+                  className="flex items-center gap-[6px] overflow-hidden"
+                >
+                  <div className="px-[6px] h-[18px] flex items-center">
+                    <span className="whitespace-pre text-neutral-600 text-sm font-medium leading-[18px]">Log Out</span>
+                  </div>
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </motion.button>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

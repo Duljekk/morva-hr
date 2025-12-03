@@ -2,11 +2,24 @@
 
 import { memo } from 'react';
 
+export interface LeaveRequestSectionSkeletonProps {
+  /**
+   * Number of skeleton items to display.
+   * Matches the fetch limit (5) to provide accurate visual feedback.
+   * @default 5
+   */
+  count?: number;
+}
+
 /**
  * LeaveRequestSectionSkeleton Component
  *
  * Skeleton loading state for LeaveRequestSection component.
  * Matches the structure and layout of LeaveRequestSection with animated placeholders.
+ *
+ * Best practices:
+ * - Matches fetch limit (5) for accurate user expectation
+ * - Small count ensures no performance concerns
  *
  * Figma specs (matching node 428:2762 "Leave Request"):
  * - Container: white bg, rounded-12px, shadow, padding 24px
@@ -15,7 +28,9 @@ import { memo } from 'react';
  * - Each item container has border-bottom divider (except last)
  * - Item padding: 18px top/bottom for middle items, 0 top for first, 0 bottom for last
  */
-const LeaveRequestSectionSkeleton = memo(function LeaveRequestSectionSkeleton() {
+const LeaveRequestSectionSkeleton = memo(function LeaveRequestSectionSkeleton({
+  count = 5,
+}: LeaveRequestSectionSkeletonProps) {
   return (
     <div
       className="bg-white box-border content-stretch flex flex-col gap-[20px] items-start overflow-clip pb-[24px] pt-[20px] px-[24px] relative rounded-[12px] shadow-[0px_4px_4px_-2px_rgba(0,0,0,0.05),0px_0px_1px_1px_rgba(0,0,0,0.1)] size-full animate-pulse"
@@ -47,10 +62,10 @@ const LeaveRequestSectionSkeleton = memo(function LeaveRequestSectionSkeleton() 
         data-name="Leave Request Item Group"
         data-node-id="428:2768"
       >
-        {/* Skeleton Items - Show 3 items */}
-        {Array.from({ length: 3 }).map((_, index) => {
+        {/* Skeleton Items - Dynamic count matching fetch limit */}
+        {Array.from({ length: count }).map((_, index) => {
           const isFirst = index === 0;
-          const isLast = index === 2;
+          const isLast = index === count - 1;
 
           const getContainerStyles = () => {
             if (isFirst) {
@@ -97,5 +112,6 @@ const LeaveRequestSectionSkeleton = memo(function LeaveRequestSectionSkeleton() 
 LeaveRequestSectionSkeleton.displayName = 'LeaveRequestSectionSkeleton';
 
 export default LeaveRequestSectionSkeleton;
+
 
 

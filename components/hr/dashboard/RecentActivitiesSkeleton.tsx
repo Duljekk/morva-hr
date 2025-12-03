@@ -2,11 +2,24 @@
 
 import { memo } from 'react';
 
+export interface RecentActivitiesSkeletonProps {
+  /**
+   * Number of skeleton items to display.
+   * Matches the maxItems default (5) to provide accurate visual feedback.
+   * @default 5
+   */
+  count?: number;
+}
+
 /**
  * RecentActivitiesSkeleton Component
  *
  * Skeleton loading state for RecentActivitiesCard component.
  * Matches the structure and layout of RecentActivitiesCard with animated placeholders.
+ *
+ * Best practices:
+ * - Matches maxItems default (5) for accurate user expectation
+ * - Small count ensures no performance concerns
  *
  * Figma specs (matching node 428:2808 "Recent Activities"):
  * - Container: white bg, rounded-12px, shadow, padding 24px
@@ -14,7 +27,9 @@ import { memo } from 'react';
  * - Activities: flex-col, gap between items
  * - Activity items: border-bottom divider (except last)
  */
-const RecentActivitiesSkeleton = memo(function RecentActivitiesSkeleton() {
+const RecentActivitiesSkeleton = memo(function RecentActivitiesSkeleton({
+  count = 5,
+}: RecentActivitiesSkeletonProps) {
   return (
     <div
       className="bg-white box-border content-stretch flex flex-col gap-[20px] items-start overflow-clip pb-[24px] pt-[20px] px-[24px] relative rounded-[12px] shadow-[0px_4px_4px_-2px_rgba(0,0,0,0.05),0px_0px_1px_1px_rgba(0,0,0,0.1)] size-full animate-pulse"
@@ -39,9 +54,9 @@ const RecentActivitiesSkeleton = memo(function RecentActivitiesSkeleton() {
         data-name="Activities Group"
         data-node-id="428:2812"
       >
-        {/* Skeleton Items - Show 2 items */}
-        {Array.from({ length: 2 }).map((_, index) => {
-          const isLast = index === 1;
+        {/* Skeleton Items - Dynamic count matching maxItems */}
+        {Array.from({ length: count }).map((_, index) => {
+          const isLast = index === count - 1;
 
           return (
             <div
@@ -80,5 +95,6 @@ const RecentActivitiesSkeleton = memo(function RecentActivitiesSkeleton() {
 RecentActivitiesSkeleton.displayName = 'RecentActivitiesSkeleton';
 
 export default RecentActivitiesSkeleton;
+
 
 

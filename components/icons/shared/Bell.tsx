@@ -25,7 +25,7 @@ const BellIcon = memo(function BellIcon({
 }: BellIconProps) {
   return (
     <svg
-      viewBox="0 0 25 25"
+      viewBox="0 0 24 24"
       width={size}
       height={size}
       fill="none"
@@ -47,6 +47,7 @@ const BellIcon = memo(function BellIcon({
 BellIcon.displayName = 'BellIcon';
 
 export default BellIcon;
+
 
 
 

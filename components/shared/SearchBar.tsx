@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, type KeyboardEvent } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { SearchIcon, CommandIcon } from '@/components/icons';
 
 interface SearchBarProps {
@@ -45,6 +46,12 @@ interface SearchBarProps {
    * Disable the search bar
    */
   disabled?: boolean;
+  
+  /**
+   * Whether the search bar is collapsed (icon-only mode)
+   * @default false
+   */
+  collapsed?: boolean;
 }
 
 /**
@@ -75,6 +82,7 @@ export default function SearchBar({
   enableKeyboardShortcut = true,
   className = '',
   disabled = false,
+  collapsed = false,
 }: SearchBarProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
@@ -134,77 +142,122 @@ export default function SearchBar({
     return 'bg-[rgba(161,161,161,0.05)]';
   };
 
+  // Width values for animation
+  const width = collapsed ? 36 : 247;
+
   return (
-    <div
+    <motion.div
+      layout
+      initial={false}
+      animate={{
+        width,
+      }}
+      transition={{
+        type: 'spring',
+        stiffness: 300,
+        damping: 30,
+        mass: 0.8,
+      }}
       className={`
-        box-border flex h-[36px] items-center justify-between
+        box-border flex h-[36px] items-center
+        ${collapsed ? 'justify-center' : 'justify-between'}
         overflow-hidden px-[10px] py-[4px] relative rounded-[8px]
-        w-[247px] transition-colors duration-200
-        ${getBackgroundColor()}
-        ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-text'}
+        transition-colors duration-200
+        ${collapsed 
+          ? (isHovered && !disabled ? 'bg-[rgba(161,161,161,0.1)]' : '') 
+          : getBackgroundColor()
+        }
+        ${disabled ? 'opacity-50 cursor-not-allowed' : collapsed ? 'cursor-pointer' : 'cursor-text'}
         ${className}
       `}
       onMouseEnter={() => !disabled && setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={() => !disabled && inputRef.current?.focus()}
       role="search"
-      aria-label="Search"
+      aria-label={placeholder}
+      title={collapsed ? placeholder : undefined}
     >
-      {/* Search Icon and Input */}
-      <div className="flex items-center relative shrink-0 flex-1 min-w-0">
-        {/* Search Icon */}
-        <div className="relative shrink-0 size-[16px] flex items-center justify-center -mt-[1px]">
-          <SearchIcon 
-            className="w-4 h-4 text-neutral-500"
-            aria-hidden="true"
-          />
-        </div>
-        
-        {/* Search Input */}
-        <div className="box-border flex gap-[10px] items-center justify-center px-[6px] py-0 relative shrink-0 flex-1 min-w-0">
-          <input
-            ref={inputRef}
-            type="search"
-            value={value}
-            onChange={handleChange}
-            onKeyDown={handleKeyDown}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
-            placeholder={placeholder}
-            disabled={disabled}
-            className={`
-              flex-1 min-w-0 bg-transparent border-0 outline-none
-              font-medium leading-bold-sm text-sm text-neutral-500
-              placeholder:text-neutral-500 whitespace-pre
-              focus:text-neutral-900
-              disabled:cursor-not-allowed
-              [&::-webkit-search-cancel-button]:hidden
-              [&::-webkit-search-decoration]:hidden
-              [&::-moz-search-clear-button]:hidden
-            `}
-            aria-label={placeholder}
-            aria-describedby="search-shortcut"
-          />
-        </div>
-      </div>
+      {/* Search Icon - Always visible, centered when collapsed */}
+      <motion.div
+        layout
+        className="relative shrink-0 size-[16px] flex items-center justify-center"
+        animate={{
+          marginTop: collapsed ? 0 : '-1px',
+        }}
+        transition={{
+          type: 'spring',
+          stiffness: 300,
+          damping: 30,
+        }}
+      >
+        <SearchIcon 
+          className="w-4 h-4 text-neutral-500"
+          aria-hidden="true"
+        />
+      </motion.div>
 
-      {/* Command + K Shortcut Indicator */}
-      {enableKeyboardShortcut && !disabled && (
-        <div 
-          className="flex items-center relative shrink-0"
-          id="search-shortcut"
-          aria-label="Press Command K or Control K to focus search"
-        >
-          {/* Command Icon */}
-          <div className="overflow-clip relative shrink-0 w-[25px] h-[12.33px] flex items-center justify-center">
-            <CommandIcon 
-              className="w-[25px] h-[12.33px] text-neutral-500"
-              aria-hidden="true"
-            />
-          </div>
-        </div>
-      )}
-    </div>
+      {/* Search Input and Command Icon - Only visible when expanded */}
+      <AnimatePresence mode="wait">
+        {!collapsed && (
+          <motion.div
+            key="search-content"
+            initial={{ opacity: 0, width: 0 }}
+            animate={{ opacity: 1, width: 'auto' }}
+            exit={{ opacity: 0, width: 0 }}
+            transition={{
+              type: 'spring',
+              stiffness: 300,
+              damping: 30,
+            }}
+            className="flex items-center relative shrink-0 flex-1 min-w-0 overflow-hidden"
+          >
+            {/* Search Input */}
+            <div className="box-border flex gap-[10px] items-center justify-center px-[6px] py-0 relative shrink-0 flex-1 min-w-0">
+              <input
+                ref={inputRef}
+                type="search"
+                value={value}
+                onChange={handleChange}
+                onKeyDown={handleKeyDown}
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setIsFocused(false)}
+                placeholder={placeholder}
+                disabled={disabled}
+                className={`
+                  flex-1 min-w-0 bg-transparent border-0 outline-none
+                  font-medium leading-bold-sm text-sm text-neutral-500
+                  placeholder:text-neutral-500 whitespace-pre
+                  focus:text-neutral-900
+                  disabled:cursor-not-allowed
+                  [&::-webkit-search-cancel-button]:hidden
+                  [&::-webkit-search-decoration]:hidden
+                  [&::-moz-search-clear-button]:hidden
+                `}
+                aria-label={placeholder}
+                aria-describedby="search-shortcut"
+              />
+            </div>
+
+            {/* Command + K Shortcut Indicator */}
+            {enableKeyboardShortcut && !disabled && (
+              <div 
+                className="flex items-center relative shrink-0"
+                id="search-shortcut"
+                aria-label="Press Command K or Control K to focus search"
+              >
+                {/* Command Icon */}
+                <div className="overflow-clip relative shrink-0 w-[25px] h-[12.33px] flex items-center justify-center">
+                  <CommandIcon 
+                    className="w-[25px] h-[12.33px] text-neutral-500"
+                    aria-hidden="true"
+                  />
+                </div>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
 

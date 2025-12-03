@@ -9,6 +9,22 @@ interface WeatherWidgetProps {
    * When null/undefined, the widget renders a graceful fallback.
    */
   weather?: HRWeather | null;
+  
+  /**
+   * Whether the widget is collapsed (icon-only mode)
+   * @default false
+   */
+  collapsed?: boolean;
+  
+  /**
+   * Callback when widget is clicked (for expanding sidebar)
+   */
+  onClick?: () => void;
+  
+  /**
+   * Callback when widget is hovered (for showing expand icon)
+   */
+  onHover?: (isHovered: boolean) => void;
 }
 
 /**
@@ -22,7 +38,7 @@ interface WeatherWidgetProps {
  * - If `weather` is missing or incomplete, show a neutral placeholder
  *   instead of breaking the layout.
  */
-export default function WeatherWidget({ weather }: WeatherWidgetProps) {
+export default function WeatherWidget({ weather, collapsed = false, onClick, onHover }: WeatherWidgetProps) {
   const hasData =
     weather &&
     typeof weather.temperatureC === 'number' &&
@@ -77,6 +93,25 @@ export default function WeatherWidget({ weather }: WeatherWidgetProps) {
     console.log('[WeatherWidget] weather prop:', weather);
   }
 
+  // Collapsed variant: icon-only, 36x36px
+  if (collapsed) {
+    return (
+      <div
+        className="box-border flex items-center justify-center overflow-clip px-[10px] py-[4px] relative rounded-[8px] size-[36px] cursor-pointer hover:bg-neutral-100 transition-colors"
+        aria-label={`Weather: ${label}, ${temperature}`}
+        title={`${label} / ${temperature}`}
+        onClick={onClick}
+        onMouseEnter={() => onHover?.(true)}
+        onMouseLeave={() => onHover?.(false)}
+      >
+        <div className="relative shrink-0 size-[28px] flex items-center justify-center">
+          <WeatherIllustration size={28} variant={variant} />
+        </div>
+      </div>
+    );
+  }
+
+  // Expanded variant: icon + text
   return (
     <div
       className="content-stretch flex h-[32px] w-[115px] items-center"

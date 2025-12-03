@@ -249,6 +249,65 @@ export async function getAttendanceFeed(
 }
 
 /**
+ * GET ATTENDANCE FEED COUNT
+ * 
+ * Returns the total count of attendance feed entries for today.
+ * This is a lightweight query to get the count before fetching full data.
+ * 
+ * @param type - Filter by 'checkin' or 'checkout'. If not provided, counts both.
+ */
+export async function getAttendanceFeedCount(
+  type?: 'checkin' | 'checkout'
+): Promise<{ data?: number; error?: string }> {
+  try {
+    // Require HR admin role
+    const { supabase } = await requireHRAdmin();
+    
+    const today = new Date().toISOString().split('T')[0];
+    
+    console.log('[getAttendanceFeedCount] Counting attendance feed for date:', today, 'type:', type || 'all');
+
+    // Build query to count records
+    let query = supabase
+      .from('attendance_records')
+      .select('id, check_in_time, check_out_time', { count: 'exact', head: false })
+      .eq('date', today);
+
+    const { data: records, error, count } = await query;
+
+    if (error) {
+      console.error('[getAttendanceFeedCount] Query error:', error);
+      return { error: 'Failed to count attendance feed' };
+    }
+
+    if (!records || records.length === 0) {
+      return { data: 0 };
+    }
+
+    // Count entries based on type filter
+    let entryCount = 0;
+    for (const record of records) {
+      if (type === 'checkin' && record.check_in_time) {
+        entryCount++;
+      } else if (type === 'checkout' && record.check_out_time) {
+        entryCount++;
+      } else if (!type) {
+        // Count both check-in and check-out
+        if (record.check_in_time) entryCount++;
+        if (record.check_out_time) entryCount++;
+      }
+    }
+
+    console.log('[getAttendanceFeedCount] Total entries:', entryCount);
+    return { data: entryCount };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('[getAttendanceFeedCount] Error:', errorMessage);
+    return { error: errorMessage };
+  }
+}
+
+/**
  * GET PENDING LEAVE REQUESTS (Dashboard Format)
  * 
  * Returns pending leave requests formatted for the HR dashboard widget.
@@ -601,7 +660,7 @@ export interface RecentActivity {
   title: string;
   subtitle: string;
   timestamp: string;
-  type: 'announcement' | 'payslip';
+  type: 'announcement' | 'payslip' | 'leave' | 'attendance' | 'approval' | 'rejection';
   createdAt: string; // ISO timestamp for sorting
 }
 
