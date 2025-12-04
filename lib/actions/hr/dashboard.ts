@@ -665,15 +665,103 @@ export interface RecentActivity {
 }
 
 /**
+ * GET RECENT ACTIVITIES COUNT
+ * 
+ * Returns the total count of recent activities (announcements + payslips + leave requests + approved leave requests + rejected leave requests).
+ * This is a lightweight query to get the count before fetching full data.
+ */
+export async function getRecentActivitiesCount(): Promise<{ data?: number; error?: string }> {
+  try {
+    // Require HR admin role
+    const { supabase } = await requireHRAdmin();
+
+    console.log('[getRecentActivitiesCount] Counting recent activities');
+
+    // Fetch counts in parallel
+    const [announcementsResult, payslipsResult, leaveRequestsResult, approvedLeaveRequestsResult, rejectedLeaveRequestsResult] = await Promise.all([
+      // Count active announcements
+      supabase
+        .from('announcements')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_active', true),
+      
+      // Count payslips
+      supabase
+        .from('payslips')
+        .select('id', { count: 'exact', head: true }),
+      
+      // Count leave requests (excluding cancelled)
+      supabase
+        .from('leave_requests')
+        .select('id', { count: 'exact', head: true })
+        .neq('status', 'cancelled'),
+      
+      // Count approved leave requests (recent approvals)
+      supabase
+        .from('leave_requests')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'approved')
+        .not('approved_at', 'is', null),
+      
+      // Count rejected leave requests (recent rejections)
+      supabase
+        .from('leave_requests')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'rejected')
+        .not('approved_at', 'is', null),
+    ]);
+
+    if (announcementsResult.error) {
+      console.error('[getRecentActivitiesCount] Announcements error:', announcementsResult.error);
+      return { error: 'Failed to count announcements' };
+    }
+
+    if (payslipsResult.error) {
+      console.error('[getRecentActivitiesCount] Payslips error:', payslipsResult.error);
+      return { error: 'Failed to count payslips' };
+    }
+
+    if (leaveRequestsResult.error) {
+      console.error('[getRecentActivitiesCount] Leave requests error:', leaveRequestsResult.error);
+      return { error: 'Failed to count leave requests' };
+    }
+
+    if (approvedLeaveRequestsResult.error) {
+      console.error('[getRecentActivitiesCount] Approved leave requests error:', approvedLeaveRequestsResult.error);
+      return { error: 'Failed to count approved leave requests' };
+    }
+
+    if (rejectedLeaveRequestsResult.error) {
+      console.error('[getRecentActivitiesCount] Rejected leave requests error:', rejectedLeaveRequestsResult.error);
+      return { error: 'Failed to count rejected leave requests' };
+    }
+
+    const announcementsCount = announcementsResult.count || 0;
+    const payslipsCount = payslipsResult.count || 0;
+    const leaveRequestsCount = leaveRequestsResult.count || 0;
+    const approvedLeaveRequestsCount = approvedLeaveRequestsResult.count || 0;
+    const rejectedLeaveRequestsCount = rejectedLeaveRequestsResult.count || 0;
+    const totalCount = announcementsCount + payslipsCount + leaveRequestsCount + approvedLeaveRequestsCount + rejectedLeaveRequestsCount;
+
+    console.log('[getRecentActivitiesCount] Total activities:', totalCount, `(announcements: ${announcementsCount}, payslips: ${payslipsCount}, leave requests: ${leaveRequestsCount}, approved leave requests: ${approvedLeaveRequestsCount}, rejected leave requests: ${rejectedLeaveRequestsCount})`);
+    return { data: totalCount };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('[getRecentActivitiesCount] Error:', errorMessage);
+    return { error: errorMessage };
+  }
+}
+
+/**
  * GET RECENT ACTIVITIES FOR HR DASHBOARD
  * 
- * Fetches recent announcements and payslips for the Recent Activities card.
- * Returns formatted activities sorted by creation date (newest first).
+ * Fetches recent announcements, payslips, leave requests, approved leave requests, and rejected leave requests for the Recent Activities card.
+ * Returns formatted activities sorted by creation/approval date (newest first).
  * 
  * @param limit - Maximum number of activities to return (default: 5)
  */
 export async function getRecentActivitiesForDashboard(
-  limit: number = 5
+  limit: number = 3
 ): Promise<{ data?: RecentActivity[]; error?: string }> {
   try {
     // Require HR admin role
@@ -694,8 +782,8 @@ export async function getRecentActivitiesForDashboard(
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     };
 
-    // Fetch announcements and payslips in parallel
-    const [announcementsResult, payslipsResult] = await Promise.all([
+    // Fetch announcements, payslips, leave requests, approved leave requests, and rejected leave requests in parallel
+    const [announcementsResult, payslipsResult, leaveRequestsResult, approvedLeaveRequestsResult, rejectedLeaveRequestsResult] = await Promise.all([
       // Fetch recent active announcements
       supabase
         .from('announcements')
@@ -710,6 +798,58 @@ export async function getRecentActivitiesForDashboard(
         .select('id, month, year, created_at')
         .order('created_at', { ascending: false })
         .limit(limit),
+      
+      // Fetch recent leave requests (excluding cancelled)
+      supabase
+        .from('leave_requests')
+        .select(`
+          id,
+          created_at,
+          start_date,
+          end_date,
+          user:users!user_id (
+            id,
+            full_name
+          ),
+          leave_type:leave_types!leave_type_id (
+            name
+          )
+        `)
+        .neq('status', 'cancelled')
+        .order('created_at', { ascending: false })
+        .limit(limit),
+      
+      // Fetch recently approved leave requests (ordered by approved_at)
+      supabase
+        .from('leave_requests')
+        .select(`
+          id,
+          approved_at,
+          user:users!user_id (
+            id,
+            full_name
+          )
+        `)
+        .eq('status', 'approved')
+        .not('approved_at', 'is', null)
+        .order('approved_at', { ascending: false })
+        .limit(limit),
+      
+      // Fetch recently rejected leave requests (ordered by approved_at)
+      supabase
+        .from('leave_requests')
+        .select(`
+          id,
+          approved_at,
+          user:users!user_id (
+            id,
+            full_name
+          )
+        `)
+        .eq('status', 'rejected')
+        .not('approved_at', 'is', null)
+        .order('approved_at', { ascending: false })
+        .limit(limit),
     ]);
 
     if (announcementsResult.error) {
@@ -722,8 +862,26 @@ export async function getRecentActivitiesForDashboard(
       return { error: 'Failed to fetch payslips' };
     }
 
+    if (leaveRequestsResult.error) {
+      console.error('[getRecentActivitiesForDashboard] Leave requests error:', leaveRequestsResult.error);
+      return { error: 'Failed to fetch leave requests' };
+    }
+
+    if (approvedLeaveRequestsResult.error) {
+      console.error('[getRecentActivitiesForDashboard] Approved leave requests error:', approvedLeaveRequestsResult.error);
+      return { error: 'Failed to fetch approved leave requests' };
+    }
+
+    if (rejectedLeaveRequestsResult.error) {
+      console.error('[getRecentActivitiesForDashboard] Rejected leave requests error:', rejectedLeaveRequestsResult.error);
+      return { error: 'Failed to fetch rejected leave requests' };
+    }
+
     const announcements = announcementsResult.data || [];
     const payslips = payslipsResult.data || [];
+    const leaveRequests = leaveRequestsResult.data || [];
+    const approvedLeaveRequests = approvedLeaveRequestsResult.data || [];
+    const rejectedLeaveRequests = rejectedLeaveRequestsResult.data || [];
 
     // Format activities
     const activities: RecentActivity[] = [];
@@ -755,6 +913,79 @@ export async function getRecentActivitiesForDashboard(
         timestamp: formatTimestamp(new Date(payslip.created_at)),
         type: 'payslip',
         createdAt: payslip.created_at,
+      });
+    });
+
+    // Helper: Format date range for leave requests
+    const formatLeaveDateRange = (startDate: string, endDate: string): string => {
+      const start = new Date(startDate + 'T00:00:00');
+      const end = new Date(endDate + 'T00:00:00');
+      
+      const startDay = start.getDate();
+      const endDay = end.getDate();
+      const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
+      const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
+      const year = start.getFullYear();
+      
+      // If same date, show single date
+      if (startDate === endDate) {
+        return `${startDay} ${startMonth} ${year}`;
+      }
+      
+      // If same month, show "24–25 Nov 2025" (using en dash)
+      if (startMonth === endMonth) {
+        return `${startDay}–${endDay} ${startMonth} ${year}`;
+      }
+      
+      // Different months: "25 Nov – 2 Dec 2025"
+      return `${startDay} ${startMonth} – ${endDay} ${endMonth} ${year}`;
+    };
+
+    // Add leave requests
+    leaveRequests.forEach((leaveRequest) => {
+      const user = leaveRequest.user as any;
+      const leaveType = leaveRequest.leave_type as any;
+      const userName = user?.full_name || 'Unknown User';
+      const leaveTypeName = leaveType?.name || 'Leave';
+      const dateRange = formatLeaveDateRange(leaveRequest.start_date, leaveRequest.end_date);
+      
+      activities.push({
+        id: `leave-${leaveRequest.id}`,
+        title: `${leaveTypeName} (${dateRange})`,
+        subtitle: `Requested by ${userName}`,
+        timestamp: formatTimestamp(new Date(leaveRequest.created_at)),
+        type: 'leave',
+        createdAt: leaveRequest.created_at,
+      });
+    });
+
+    // Add approved leave requests
+    approvedLeaveRequests.forEach((approvedRequest) => {
+      const user = approvedRequest.user as any;
+      const userName = user?.full_name || 'Unknown User';
+      
+      activities.push({
+        id: `approval-${approvedRequest.id}`,
+        title: 'Leave Request Approved',
+        subtitle: `You approved ${userName}'s request`,
+        timestamp: formatTimestamp(new Date(approvedRequest.approved_at)),
+        type: 'approval',
+        createdAt: approvedRequest.approved_at,
+      });
+    });
+
+    // Add rejected leave requests
+    rejectedLeaveRequests.forEach((rejectedRequest) => {
+      const user = rejectedRequest.user as any;
+      const userName = user?.full_name || 'Unknown User';
+      
+      activities.push({
+        id: `rejection-${rejectedRequest.id}`,
+        title: 'Leave Request Rejected',
+        subtitle: `You rejected ${userName}'s request`,
+        timestamp: formatTimestamp(new Date(rejectedRequest.approved_at)),
+        type: 'rejection',
+        createdAt: rejectedRequest.approved_at,
       });
     });
 

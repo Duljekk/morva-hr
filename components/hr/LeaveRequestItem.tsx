@@ -2,6 +2,7 @@
 
 import { memo, useMemo } from 'react';
 import LeaveIllustration, { type LeaveVariant } from './LeaveIllustration';
+import type React from 'react';
 import ButtonIconOnly from './ButtonIconOnly';
 
 export interface LeaveRequestItemProps {
@@ -52,6 +53,12 @@ export interface LeaveRequestItemProps {
    * Custom background color class (overrides default sky-100)
    */
   backgroundColor?: string;
+
+  /**
+   * Optional click handler for opening details.
+   * The parent container is clickable; action buttons stop propagation.
+   */
+  onClick?: () => void;
 }
 
 /**
@@ -114,6 +121,7 @@ const LeaveRequestItem = memo(function LeaveRequestItem({
   className = '',
   icon,
   backgroundColor,
+  onClick,
 }: LeaveRequestItemProps) {
   // Map leave type to illustration variant
   const leaveVariant = useMemo(() => getLeaveVariant(leaveType), [leaveType]);
@@ -129,9 +137,10 @@ const LeaveRequestItem = memo(function LeaveRequestItem({
 
   return (
     <div
-      className={`content-stretch flex items-center relative size-full ${className}`}
+      className={`content-stretch flex items-center relative size-full ${className} ${onClick ? 'cursor-pointer' : ''}`}
       data-name="Leave Request Item"
       data-node-id="428:2770"
+      onClick={onClick}
     >
       {/* Content + Illustration */}
       <div
@@ -184,11 +193,15 @@ const LeaveRequestItem = memo(function LeaveRequestItem({
         className="content-stretch flex gap-[4px] items-center relative shrink-0"
         data-name="Button Group"
         data-node-id="428:2777"
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Approve Button */}
         <ButtonIconOnly
           variant="Approve"
-          onClick={onApprove}
+          onClick={() => {
+            // ButtonIconOnly receives a no-arg handler; stop propagation at this level
+            onApprove?.();
+          }}
           disabled={disabled}
           aria-label={`Approve leave request for ${name}`}
         />
@@ -196,7 +209,9 @@ const LeaveRequestItem = memo(function LeaveRequestItem({
         {/* Reject Button */}
         <ButtonIconOnly
           variant="Reject"
-          onClick={onReject}
+          onClick={() => {
+            onReject?.();
+          }}
           disabled={disabled}
           aria-label={`Reject leave request for ${name}`}
         />

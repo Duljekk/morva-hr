@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import PreloadDashboard from "./_components/PreloadDashboard";
 
 export const metadata: Metadata = {
   title: "Employee Dashboard | MorvaHR",
@@ -7,14 +8,23 @@ export const metadata: Metadata = {
 
 /**
  * Employee-specific layout
- * This layout wraps all employee routes and provides shared UI/navigation
- * Route group ensures clean URLs (no /employee prefix in URL)
+ * 
+ * PERFORMANCE OPTIMIZATION: Includes data preloader
+ * - PreloadDashboard warms the SWR cache when entering employee routes
+ * - Data is ready when dashboard component mounts
+ * - Uses requestIdleCallback to avoid blocking main thread
  */
 export default function EmployeeLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>;
+  return (
+    <>
+      {/* Preload dashboard data in the background */}
+      <PreloadDashboard />
+      {children}
+    </>
+  );
 }
 

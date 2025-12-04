@@ -1,4 +1,11 @@
 import type { NextConfig } from "next";
+import bundleAnalyzer from "@next/bundle-analyzer";
+
+// Bundle analyzer wrapper - enabled via ANALYZE=true environment variable
+// Usage: npm run build:analyze
+const withBundleAnalyzer = bundleAnalyzer({
+  enabled: process.env.ANALYZE === "true",
+});
 
 const nextConfig: NextConfig = {
   // Increase body size limit for Server Actions to support file uploads
@@ -8,6 +15,9 @@ const nextConfig: NextConfig = {
     },
     // Optimize package imports for better tree-shaking
     optimizePackageImports: ['lottie-react'],
+    // NOTE: cacheComponents/PPR disabled due to incompatibility with Supabase client
+    // Supabase's createBrowserClient uses Math.random() which breaks prerendering
+    // The Suspense-based streaming still works for loading states
   },
   // Use webpack for SVG handling via SVGR
   webpack(config, { isServer }) {
@@ -76,4 +86,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withBundleAnalyzer(nextConfig);

@@ -61,6 +61,8 @@ export default function HRSidebar({ weather }: HRSidebarProps) {
   const { signOut } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false); // Start expanded
   const [isWeatherHovered, setIsWeatherHovered] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [showWeatherWidget, setShowWeatherWidget] = useState(true); // Controls weather vs sidebar icon
 
   // Reset hover state when sidebar expands
   useEffect(() => {
@@ -68,6 +70,27 @@ export default function HRSidebar({ weather }: HRSidebarProps) {
       setIsWeatherHovered(false);
     }
   }, [isCollapsed]);
+
+  // Delay showing weather widget after transition completes (only when collapsed)
+  useEffect(() => {
+    if (!isTransitioning) {
+      if (isCollapsed) {
+        // Collapsed: wait 1s before showing weather widget
+        const timer = setTimeout(() => {
+          setShowWeatherWidget(true);
+        }, 1000);
+        return () => clearTimeout(timer);
+      } else {
+        // Expanded: show weather widget immediately
+        setShowWeatherWidget(true);
+      }
+    } else {
+      // Transition started, hide weather widget only when collapsing
+      if (isCollapsed) {
+        setShowWeatherWidget(false);
+      }
+    }
+  }, [isTransitioning, isCollapsed]);
 
   // Menu items configuration
   const menuItems = [
@@ -129,6 +152,8 @@ export default function HRSidebar({ weather }: HRSidebarProps) {
         damping: 30,
         mass: 0.8,
       }}
+      onAnimationStart={() => setIsTransitioning(true)}
+      onAnimationComplete={() => setIsTransitioning(false)}
     >
       {/* Top Section: Weather widget, Toggle, and Search */}
       <div className="flex flex-col gap-[8px] items-start relative shrink-0 w-full">
@@ -137,10 +162,11 @@ export default function HRSidebar({ weather }: HRSidebarProps) {
           className={`box-border flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} relative shrink-0 w-full ${!isCollapsed ? 'py-[2px]' : ''}`}
           onMouseLeave={() => setIsWeatherHovered(false)}
         >
-          {/* Weather widget - Shows sidebar icon on hover when collapsed */}
-          <div className={`flex ${isCollapsed ? '' : 'gap-[8px]'} items-center relative shrink-0 pl-[4px]`}>
+          {/* Weather widget - Shows sidebar icon during transition and 1s after */}
+          <div className={`flex items-center relative shrink-0 ${isCollapsed ? '' : 'gap-[8px] pl-[4px]'}`}>
             <AnimatePresence mode="wait">
-              {isCollapsed && isWeatherHovered ? (
+              {!showWeatherWidget || (isCollapsed && isWeatherHovered) ? (
+                // Show sidebar icon during transition, delay period, or when hovered in collapsed state
                 <motion.button
                   key="sidebar-icon"
                   initial={{ opacity: 0, scale: 0.8 }}
@@ -148,16 +174,16 @@ export default function HRSidebar({ weather }: HRSidebarProps) {
                   exit={{ opacity: 0, scale: 0.8 }}
                   transition={{
                     type: 'spring',
-                    stiffness: 200,
+                    stiffness: 400,
                     damping: 25,
                   }}
                   onClick={() => {
-                    setIsCollapsed(false);
+                    setIsCollapsed(!isCollapsed);
                     setIsWeatherHovered(false);
                   }}
                   className="box-border flex items-center justify-center overflow-clip px-[10px] py-[4px] relative rounded-[8px] size-[36px] hover:bg-neutral-100"
-                  aria-label="Expand sidebar"
-                  title="Expand sidebar"
+                  aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                  title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                 >
                   <div className="relative shrink-0 size-[20px] flex items-center justify-center">
                     <SidebarIcon className="w-5 h-5 text-neutral-600" />
@@ -166,12 +192,12 @@ export default function HRSidebar({ weather }: HRSidebarProps) {
               ) : (
                 <motion.div
                   key="weather-widget"
-                  initial={false}
+                  initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
                   transition={{
                     type: 'spring',
-                    stiffness: 200,
+                    stiffness: 400,
                     damping: 25,
                   }}
                 >
@@ -302,7 +328,10 @@ export default function HRSidebar({ weather }: HRSidebarProps) {
             className={`
               box-border flex h-[36px] items-center overflow-hidden
               px-[10px] py-[4px] relative rounded-[8px]
-              bg-[rgba(64,64,64,0.05)] hover:bg-[rgba(64,64,64,0.08)]
+              ${isCollapsed 
+                ? 'hover:bg-[rgba(64,64,64,0.04)]' 
+                : 'bg-[rgba(64,64,64,0.05)] hover:bg-[rgba(64,64,64,0.08)]'
+              }
               transition-colors duration-200
               ${isCollapsed ? 'mt-[8px]' : ''}
             `}

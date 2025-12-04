@@ -66,8 +66,17 @@ const LeaveRequestSectionSkeleton = memo(function LeaveRequestSectionSkeleton({
         {Array.from({ length: count }).map((_, index) => {
           const isFirst = index === 0;
           const isLast = index === count - 1;
+          const isSingle = count === 1;
 
+          // Determine container padding and border based on position
+          // - Single item: no padding and no border
+          // - Top item: bottom padding only + bottom border
+          // - Middle item: top and bottom padding + bottom border
+          // - Bottom item: top padding only, no border
           const getContainerStyles = () => {
+            if (isSingle) {
+              return 'pt-0 pb-0 px-0';
+            }
             if (isFirst) {
               return 'border-b border-neutral-100 pb-[18px] pt-0 px-0';
             }

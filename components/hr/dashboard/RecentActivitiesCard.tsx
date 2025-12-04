@@ -29,7 +29,7 @@ export interface RecentActivitiesCardProps {
   error?: string;
 }
 
-// Placeholder data matching Figma design with all 5 variants
+// Placeholder data matching Figma design
 const PLACEHOLDER_ACTIVITIES: RecentActivity[] = [
   {
     id: 'placeholder-1',
@@ -46,30 +46,6 @@ const PLACEHOLDER_ACTIVITIES: RecentActivity[] = [
     timestamp: '1h',
     type: 'payslip',
     createdAt: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
-  },
-  {
-    id: 'placeholder-3',
-    title: 'Annual Leave (24–25 Nov 2025)',
-    subtitle: 'Requested by Mariatul Qibtiah',
-    timestamp: 'Now',
-    type: 'leave',
-    createdAt: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
-  },
-  {
-    id: 'placeholder-4',
-    title: 'Leave Request Rejected',
-    subtitle: 'You rejected Mariatul Qibtiah\'s request',
-    timestamp: 'Now',
-    type: 'rejection',
-    createdAt: new Date(Date.now() - 10800000).toISOString(), // 3 hours ago
-  },
-  {
-    id: 'placeholder-5',
-    title: 'Leave Request Approved',
-    subtitle: 'You approved Mariatul Qibtiah\'s request',
-    timestamp: 'Now',
-    type: 'approval',
-    createdAt: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
   },
 ];
 
@@ -102,7 +78,7 @@ const PLACEHOLDER_ACTIVITIES: RecentActivity[] = [
  */
 const RecentActivitiesCard = memo(function RecentActivitiesCard({
   activities,
-  maxItems = 5,
+  maxItems = 3,
   loading = false,
   error,
 }: RecentActivitiesCardProps) {

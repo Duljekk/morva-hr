@@ -68,28 +68,53 @@ export default function LoginPage() {
         return;
       }
 
-      // Fetch user profile to check role for redirect
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
+      // Best Practice: Wait for AuthContext to load profile before redirecting
+      // This ensures server actions on the destination page can access the user's role
+      // The signIn function in AuthContext calls fetchProfile, but it's async
+      // We need to wait for the profile to be available
       
-      if (user) {
-        const { data: userProfile } = await supabase
-          .from('users')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-
-        // Redirect HR admins to /hr, others to home
-        if (userProfile?.role === 'hr_admin') {
-          router.push('/hr');
-        } else {
-          router.push('/');
-        }
-        router.refresh();
-      } else {
-        router.push('/');
-        router.refresh();
+      // Fetch user profile directly to get role for redirect
+      // This is more reliable than waiting for AuthContext state updates
+      const supabase = createClient();
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        console.error('[LoginPage] Error getting user after sign in:', userError);
+        setError('Failed to verify authentication. Please try again.');
+        setIsSubmitting(false);
+        return;
       }
+
+      // Fetch user profile to get role
+      const { data: userProfile, error: profileError } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .single<{ role: string }>();
+
+      if (profileError || !userProfile) {
+        console.error('[LoginPage] Error fetching user profile:', profileError);
+        setError('Failed to load user profile. Please try again.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Small delay to ensure cookies are fully propagated to the browser
+      // This is important for server-side authentication checks
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      // Redirect based on role
+      // Best Practice: Use window.location.href for hard redirect after login
+      // This ensures cookies are fully set and server-side auth checks work
+      // Hard redirect also ensures a fresh page load with proper authentication state
+      if (userProfile.role === 'hr_admin') {
+        window.location.href = '/hr';
+      } else {
+        window.location.href = '/';
+      }
+      
+      // Don't set isSubmitting to false here - we're redirecting
+      return;
     } catch (err) {
       const errorMessage = 'An unexpected error occurred';
       setError(errorMessage);

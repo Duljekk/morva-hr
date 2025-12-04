@@ -5,8 +5,8 @@ import { memo } from 'react';
 export interface RecentActivitiesSkeletonProps {
   /**
    * Number of skeleton items to display.
-   * Matches the maxItems default (5) to provide accurate visual feedback.
-   * @default 5
+   * Matches the maxItems default (3) to provide accurate visual feedback.
+   * @default 3
    */
   count?: number;
 }
@@ -18,7 +18,7 @@ export interface RecentActivitiesSkeletonProps {
  * Matches the structure and layout of RecentActivitiesCard with animated placeholders.
  *
  * Best practices:
- * - Matches maxItems default (5) for accurate user expectation
+ * - Matches maxItems default (3) for accurate user expectation
  * - Small count ensures no performance concerns
  *
  * Figma specs (matching node 428:2808 "Recent Activities"):
@@ -28,8 +28,11 @@ export interface RecentActivitiesSkeletonProps {
  * - Activity items: border-bottom divider (except last)
  */
 const RecentActivitiesSkeleton = memo(function RecentActivitiesSkeleton({
-  count = 5,
+  count = 3,
 }: RecentActivitiesSkeletonProps) {
+  // Ensure count is capped at 3
+  const displayCount = Math.min(count, 3);
+  
   return (
     <div
       className="bg-white box-border content-stretch flex flex-col gap-[20px] items-start overflow-clip pb-[24px] pt-[20px] px-[24px] relative rounded-[12px] shadow-[0px_4px_4px_-2px_rgba(0,0,0,0.05),0px_0px_1px_1px_rgba(0,0,0,0.1)] size-full animate-pulse"
@@ -54,18 +57,35 @@ const RecentActivitiesSkeleton = memo(function RecentActivitiesSkeleton({
         data-name="Activities Group"
         data-node-id="428:2812"
       >
-        {/* Skeleton Items - Dynamic count matching maxItems */}
-        {Array.from({ length: count }).map((_, index) => {
-          const isLast = index === count - 1;
+        {/* Skeleton Items - Dynamic count matching maxItems, capped at 3 */}
+        {Array.from({ length: displayCount }).map((_, index) => {
+          const isFirst = index === 0;
+          const isLast = index === displayCount - 1;
+          const isSingle = displayCount === 1;
+
+          // Determine container padding and border based on position
+          // - Top item: 18px bottom padding + 1px bottom border
+          // - Middle item: 18px top and bottom padding + 1px bottom border
+          // - Bottom item: 18px top padding, no border
+          // - Single item: no padding at all
+          const getContainerStyles = () => {
+            if (isSingle) {
+              return 'pt-0 pb-0 px-0';
+            }
+            if (isFirst) {
+              return 'border-b border-neutral-100 pb-[18px] pt-0 px-0';
+            }
+            if (isLast) {
+              return 'pt-[18px] pb-0 px-0';
+            }
+            // Middle item
+            return 'border-b border-neutral-100 py-[18px] px-0';
+          };
 
           return (
             <div
               key={index}
-              className={`${
-                !isLast
-                  ? 'border-b border-neutral-100 pb-[18px]'
-                  : 'pt-[18px]'
-              } box-border content-stretch flex gap-[8px] items-center relative shrink-0 w-full`}
+              className={`${getContainerStyles()} box-border content-stretch flex gap-[8px] items-center relative shrink-0 w-full`}
               data-name="Activity Item Container Skeleton"
             >
               {/* Illustration Skeleton */}

@@ -23,6 +23,26 @@ export interface LeaveRequest {
    * Leave type (e.g., "Annual Leave", "Unpaid Leave", "Sick Leave")
    */
   leaveType: string;
+
+  /**
+   * Raw start date (ISO) for details dialog
+   */
+  startDate?: string;
+
+  /**
+   * Raw end date (ISO) for details dialog
+   */
+  endDate?: string;
+
+  /**
+   * Detailed reason for the leave
+   */
+  reason?: string;
+
+  /**
+   * When the request was created (ISO timestamp)
+   */
+  createdAt?: string;
 }
 
 // Placeholder data matching Figma design
@@ -83,6 +103,12 @@ export interface LeaveRequestSectionProps {
    * Whether the buttons are disabled
    */
   disabled?: boolean;
+
+  /**
+   * Callback when a leave request item container is clicked
+   * (used to open the details dialog in HR dashboard)
+   */
+  onOpenDetails?: (id: string) => void;
 }
 
 /**
@@ -129,6 +155,7 @@ const LeaveRequestSection = memo(function LeaveRequestSection({
   onApprove,
   onReject,
   disabled = false,
+  onOpenDetails,
 }: LeaveRequestSectionProps) {
   // Use placeholder data if no requests provided
   const requestsToDisplay = requests ?? PLACEHOLDER_LEAVE_REQUESTS;
@@ -226,9 +253,10 @@ const LeaveRequestSection = memo(function LeaveRequestSection({
             return (
               <div
                 key={request.id}
-                className={`${containerStyles.container} box-border content-stretch flex gap-[8px] items-center relative shrink-0 w-full`}
+                className={`${containerStyles.container} box-border content-stretch flex gap-[8px] items-center relative shrink-0 w-full cursor-pointer`}
                 data-name="Leave Request Item Container"
                 data-node-id={isFirst ? '428:2769' : index === 1 ? '428:2782' : '428:2795'}
+                onClick={() => onOpenDetails?.(request.id)}
               >
                 <div className={`basis-0 content-stretch flex grow items-center min-h-px min-w-px relative shrink-0 ${containerStyles.itemOffset}`}>
                   <LeaveRequestItem
@@ -238,6 +266,7 @@ const LeaveRequestSection = memo(function LeaveRequestSection({
                     onApprove={() => onApprove?.(request.id)}
                     onReject={() => onReject?.(request.id)}
                     disabled={disabled}
+                    onClick={() => onOpenDetails?.(request.id)}
                   />
                 </div>
               </div>

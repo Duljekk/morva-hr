@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import HRSidebar from '@/components/hr/HRSidebar';
 import { getHRWeather } from '@/lib/weather/hrWeather';
 import HRDashboardHeader from '@/components/hr/dashboard/HRDashboardHeader';
-import { getAttendanceFeedCount } from '@/lib/actions/hr/dashboard';
+import { getAttendanceFeedCount, getRecentActivitiesCount } from '@/lib/actions/hr/dashboard';
 import { getPendingLeaveRequestsCount } from '@/lib/actions/hr/leaves';
 
 // Import skeleton components directly (they're client components but can be imported in server components)
@@ -32,11 +32,11 @@ const LeaveRequestSectionClient = dynamic(
   }
 );
 
-const RecentActivitiesCard = dynamic(
-  () => import('@/components/hr/dashboard/RecentActivitiesCard'),
+const RecentActivitiesClient = dynamic(
+  () => import('@/components/hr/dashboard/RecentActivitiesClient'),
   {
-    // Match maxItems default (5) for accurate visual feedback
-    loading: () => <RecentActivitiesSkeleton count={5} />,
+    // Match maxItems default (3) for accurate visual feedback
+    loading: () => <RecentActivitiesSkeleton count={3} />,
   }
 );
 
@@ -54,21 +54,73 @@ const RecentActivitiesCard = dynamic(
  * provides organization and shared layout without affecting the URL.
  */
 export default async function HRDashboard() {
-  const weather = await getHRWeather();
+  // Best Practice: Wrap server actions in try-catch to handle authentication errors gracefully
+  // Server actions that call requireHRAdmin() will throw if user is not authenticated
+  // The middleware should handle redirects, but we catch errors here to prevent page crashes
+  let weather = null;
+  let attendanceCount = 10; // Default fallback
+  let leaveRequestsCount = 5; // Default fallback
+  let recentActivitiesCount = 3; // Default fallback
 
-  // Fetch counts server-side to pass to skeleton components
-  // This ensures skeletons match the exact number of items that will be loaded
-  const [attendanceCountResult, leaveRequestsCountResult] = await Promise.all([
-    getAttendanceFeedCount(),
-    getPendingLeaveRequestsCount(),
-  ]);
+  try {
+    // Fetch weather data (might not require auth, but handle errors)
+    try {
+      weather = await getHRWeather();
+    } catch (error) {
+      console.error('[HRDashboard] Error fetching weather:', error);
+      // Continue without weather data
+    }
 
-  const attendanceCount = attendanceCountResult.data ?? 10; // Fallback to 10 if error
-  const leaveRequestsCount = leaveRequestsCountResult.data ?? 5; // Fallback to 5 if error
+    // Fetch counts server-side to pass to skeleton components
+    // This ensures skeletons match the exact number of items that will be loaded
+    // Best Practice: Use Promise.allSettled to handle partial failures gracefully
+    // This prevents one failing request from blocking the entire page
+    const [attendanceCountResult, leaveRequestsCountResult, recentActivitiesCountResult] = await Promise.allSettled([
+      getAttendanceFeedCount(),
+      getPendingLeaveRequestsCount(),
+      getRecentActivitiesCount(),
+    ]);
+
+    // Extract data from settled promises, handling both success and failure
+    if (attendanceCountResult.status === 'fulfilled') {
+      attendanceCount = attendanceCountResult.value.data ?? 10;
+      if (attendanceCountResult.value.error) {
+        console.error('[HRDashboard] Attendance count error:', attendanceCountResult.value.error);
+      }
+    } else {
+      console.error('[HRDashboard] Error fetching attendance count:', attendanceCountResult.reason);
+    }
+
+    if (leaveRequestsCountResult.status === 'fulfilled') {
+      leaveRequestsCount = leaveRequestsCountResult.value.data ?? 5;
+      if (leaveRequestsCountResult.value.error) {
+        console.error('[HRDashboard] Leave requests count error:', leaveRequestsCountResult.value.error);
+      }
+    } else {
+      console.error('[HRDashboard] Error fetching leave requests count:', leaveRequestsCountResult.reason);
+    }
+
+    if (recentActivitiesCountResult.status === 'fulfilled') {
+      recentActivitiesCount = recentActivitiesCountResult.value.data ?? 3;
+      if (recentActivitiesCountResult.value.error) {
+        console.error('[HRDashboard] Recent activities count error:', recentActivitiesCountResult.value.error);
+      }
+    } else {
+      console.error('[HRDashboard] Error fetching recent activities count:', recentActivitiesCountResult.reason);
+    }
+  } catch (error) {
+    // If there's a critical error (e.g., authentication failure), log it
+    // The middleware should handle redirects, but we log for debugging
+    console.error('[HRDashboard] Critical error:', error);
+    // Re-throw to let Next.js error boundary handle it if needed
+    // In most cases, the middleware will redirect to login
+    throw error;
+  }
 
   console.log('[HRDashboard] Weather for sidebar:', weather);
   console.log('[HRDashboard] Attendance feed count:', attendanceCount);
   console.log('[HRDashboard] Leave requests count:', leaveRequestsCount);
+  console.log('[HRDashboard] Recent activities count:', recentActivitiesCount);
 
   return (
     <div className="bg-neutral-50 flex items-start relative h-screen w-full">
@@ -101,7 +153,7 @@ export default async function HRDashboard() {
 
                 {/* Recent Activities Card */}
                 <div className="shrink-0 w-full" data-name="Recent Activities" data-node-id="428:2808">
-                  <RecentActivitiesCard />
+                  <RecentActivitiesClient initialCount={recentActivitiesCount} />
                 </div>
               </div>
             </div>

@@ -19,7 +19,7 @@ export default function AttendanceCard({ type, time, status, duration }: Attenda
   return (
     <div className="w-[173px] flex flex-col rounded-[10px] bg-[rgba(255,255,255,0.25)] shadow-[0px_1px_2px_0px_rgba(164,172,185,0.24),0px_0px_0.5px_0.5px_rgba(229,229,229,1)] overflow-hidden">
       {/* Top Section */}
-      <div className="flex items-start gap-2 bg-white px-2.5 py-2.5 pb-3 rounded-[10px] shadow-[0px_0px_0.5px_0.5px_rgba(229,229,229,1)]">
+      <div className="flex items-start gap-2 bg-white px-2.5 py-2.5 pb-[10px] rounded-[10px] shadow-[0px_0px_0.5px_0.5px_rgba(229,229,229,1)]">
         {/* Icon */}
         {isCheckIn ? (
           <CheckInColoredIcon className="h-9 w-9 shrink-0" />

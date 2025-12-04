@@ -6,6 +6,8 @@ import LeaveRequestSectionSkeleton from './LeaveRequestSectionSkeleton';
 import { getPendingLeaveRequestsForDashboard } from '@/lib/actions/hr/dashboard';
 import { approveLeaveRequest, rejectLeaveRequest } from '@/lib/actions/hr/leaves';
 import { useToast } from '@/app/contexts/ToastContext';
+import RejectLeaveRequestDialog from './RejectLeaveRequestDialog';
+import HRLeaveRequestDetailsDialog from './HRLeaveRequestDetailsDialog';
 
 export interface LeaveRequestSectionClientProps {
   /**
@@ -36,6 +38,11 @@ export default function LeaveRequestSectionClient({ initialCount = 5 }: LeaveReq
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
   const [isPending, startTransition] = useTransition();
   const { showToast } = useToast();
+  const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const [activeRejectId, setActiveRejectId] = useState<string | null>(null);
+  const [activeRejectName, setActiveRejectName] = useState<string | undefined>();
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [activeDetailsRequest, setActiveDetailsRequest] = useState<LeaveRequest | null>(null);
   
   // Cache the last successful fetch timestamp to prevent unnecessary refetches
   const lastFetchRef = useRef<number>(0);
@@ -80,6 +87,10 @@ export default function LeaveRequestSectionClient({ initialCount = 5 }: LeaveReq
           name: req.user.full_name,
           dateRange: req.formattedDateRange,
           leaveType: req.leaveType,
+          startDate: req.startDate,
+          endDate: req.endDate,
+          reason: req.reason,
+          createdAt: req.createdAt,
         }));
         setRequests(formatted);
         lastFetchRef.current = Date.now(); // Update cache timestamp
@@ -135,16 +146,28 @@ export default function LeaveRequestSectionClient({ initialCount = 5 }: LeaveReq
     });
   }, [processingIds, showToast, loadRequests]);
 
-  const handleReject = useCallback(async (id: string) => {
+  /**
+   * Open reject dialog for the selected request.
+   * The actual server call is handled in handleConfirmReject.
+   */
+  const handleReject = useCallback((id: string) => {
     if (processingIds.has(id)) return;
 
-    const reason = prompt('Please provide a reason for rejection:');
-    if (!reason || reason.trim().length === 0) {
-      showToast('warning', 'Rejection Cancelled', 'Rejection reason is required.');
-      return;
-    }
+    const request = requests.find((req) => req.id === id);
+    setActiveRejectId(id);
+    setActiveRejectName(request?.name);
+    setIsRejectDialogOpen(true);
+  }, [processingIds, requests]);
 
+  /**
+   * Confirm rejection with a provided reason from the dialog.
+   */
+  const handleConfirmReject = useCallback(async (reason: string) => {
+    if (!activeRejectId || processingIds.has(activeRejectId)) return;
+
+    const id = activeRejectId;
     setProcessingIds((prev) => new Set(prev).add(id));
+    setIsRejectDialogOpen(false);
 
     startTransition(async () => {
       try {
@@ -167,11 +190,23 @@ export default function LeaveRequestSectionClient({ initialCount = 5 }: LeaveReq
           next.delete(id);
           return next;
         });
+        setActiveRejectId(null);
+        setActiveRejectName(undefined);
       }
     });
-  }, [processingIds, showToast, loadRequests]);
+  }, [activeRejectId, processingIds, showToast, loadRequests, startTransition]);
 
   const isDisabled = isPending || processingIds.size > 0;
+
+  /**
+   * Open details dialog when clicking a leave request item.
+   */
+  const handleOpenDetails = useCallback((id: string) => {
+    const req = requests.find((r) => r.id === id);
+    if (!req) return;
+    setActiveDetailsRequest(req);
+    setIsDetailsOpen(true);
+  }, [requests]);
 
   // Show skeleton during initial loading (when loading === true and no cached requests)
   // Use initialCount from server to match exact number of items that will be loaded
@@ -180,15 +215,48 @@ export default function LeaveRequestSectionClient({ initialCount = 5 }: LeaveReq
   }
 
   return (
-    <LeaveRequestSection
-      requests={requests}
-      loading={loading}
-      error={error}
-      onApprove={handleApprove}
-      onReject={handleReject}
-      disabled={isDisabled}
-      maxItems={5}
-    />
+    <>
+      <LeaveRequestSection
+        requests={requests}
+        loading={loading}
+        error={error}
+        onApprove={handleApprove}
+        onReject={handleReject}
+        disabled={isDisabled}
+        maxItems={5}
+        onOpenDetails={handleOpenDetails}
+      />
+      <RejectLeaveRequestDialog
+        isOpen={isRejectDialogOpen}
+        onClose={() => setIsRejectDialogOpen(false)}
+        onConfirm={handleConfirmReject}
+        employeeName={activeRejectName}
+      />
+      <HRLeaveRequestDetailsDialog
+        isOpen={!!activeDetailsRequest && isDetailsOpen}
+        onClose={() => setIsDetailsOpen(false)}
+        startDate={activeDetailsRequest?.startDate ?? ''}
+        endDate={activeDetailsRequest?.endDate ?? ''}
+        status="pending"
+        requestedOn={activeDetailsRequest?.createdAt?.split('T')[0] ?? (activeDetailsRequest ? activeDetailsRequest.createdAt ?? '' : '')}
+        requestedAt={activeDetailsRequest?.createdAt}
+        approvedAt={undefined}
+        rejectionReason={undefined}
+        leaveType={activeDetailsRequest?.leaveType ?? ''}
+        reason={activeDetailsRequest?.reason ?? ''}
+        onApprove={() => {
+          if (!activeDetailsRequest) return;
+          handleApprove(activeDetailsRequest.id);
+          setIsDetailsOpen(false);
+        }}
+        onReject={() => {
+          if (!activeDetailsRequest) return;
+          handleReject(activeDetailsRequest.id);
+          setIsDetailsOpen(false);
+        }}
+        disabled={isDisabled}
+      />
+    </>
   );
 }
 
