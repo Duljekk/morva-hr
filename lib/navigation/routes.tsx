@@ -48,25 +48,25 @@ export const employeeRoutes: RouteConfig[] = [
 ];
 
 /**
- * HR routes configuration
+ * Admin routes configuration
  * Routes accessible to HR admins
  */
 export const hrRoutes: RouteConfig[] = [
   {
-    path: '/hr',
+    path: '/admin',
     label: 'Dashboard',
     icon: <CheckInIcon className="w-5 h-5" />,
     exact: true,
     permissions: ['hr_admin'],
   },
   {
-    path: '/hr/leaves',
+    path: '/admin/leaves',
     label: 'Leave Requests',
     icon: <CalendarIcon className="w-5 h-5" />,
     permissions: ['hr_admin'],
   },
   {
-    path: '/hr/payslips',
+    path: '/admin/payslips',
     label: 'Payslips',
     icon: <DocumentIcon className="w-5 h-5" />,
     permissions: ['hr_admin'],

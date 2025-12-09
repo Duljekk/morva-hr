@@ -24,10 +24,10 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Redirect HR admins to /hr if already authenticated
+  // Redirect HR admins to /admin if already authenticated
   useEffect(() => {
     if (!authLoading && profile && isHRAdmin(profile)) {
-      router.replace('/hr');
+      router.replace('/admin');
     }
   }, [authLoading, profile, router]);
 
@@ -108,7 +108,7 @@ export default function LoginPage() {
       // This ensures cookies are fully set and server-side auth checks work
       // Hard redirect also ensures a fresh page load with proper authentication state
       if (userProfile.role === 'hr_admin') {
-        window.location.href = '/hr';
+        window.location.href = '/admin';
       } else {
         window.location.href = '/';
       }

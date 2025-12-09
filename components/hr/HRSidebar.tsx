@@ -96,40 +96,40 @@ export default function HRSidebar({ weather }: HRSidebarProps) {
   const menuItems = [
     {
       text: 'Dashboard',
-      href: '/hr',
+      href: '/admin',
       icon: <DashboardIcon className="w-4 h-4" />,
     },
     {
       text: 'Attendance',
-      href: '/hr/attendance',
+      href: '/admin/attendance',
       icon: <AttendanceIcon className="w-4 h-4" />,
     },
     {
       text: 'Employees',
-      href: '/hr/employees',
+      href: '/admin/employees',
       icon: <EmployeesIcon className="w-4 h-4" />,
     },
     {
       text: 'Announcements',
-      href: '/hr/announcements',
+      href: '/admin/announcements',
       icon: <AnnouncementsIcon className="w-4 h-4" />,
     },
     {
       text: 'Leave Requests',
-      href: '/hr/leaves',
+      href: '/admin/leaves',
       icon: <LeaveRequestsIcon className="w-4 h-4" />,
     },
     {
       text: 'Payroll',
-      href: '/hr/payslips',
+      href: '/admin/payslips',
       icon: <PayrollIcon className="w-4 h-4" />,
     },
   ];
 
   // Check if a route is active
   const isRouteActive = (href: string) => {
-    if (href === '/hr') {
-      return pathname === '/hr' || pathname === '/hr/';
+    if (href === '/admin') {
+      return pathname === '/admin' || pathname === '/admin/';
     }
     return pathname.startsWith(href);
   };
@@ -306,8 +306,8 @@ export default function HRSidebar({ weather }: HRSidebarProps) {
           <SidebarMenuItem
             text="Settings"
             icon={<SettingsIcon className="w-4 h-4" />}
-            href="/hr/settings"
-            isActive={pathname === '/hr/settings'}
+            href="/admin/settings"
+            isActive={pathname === '/admin/settings'}
             collapsed={isCollapsed}
           />
           {/* Logout button - Animated transition like sidebar menu items */}

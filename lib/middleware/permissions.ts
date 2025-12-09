@@ -30,10 +30,10 @@ export const ROUTE_GROUPS = {
     ],
     requiredRoles: ['employee', 'hr_admin'], // HR admins can also access employee routes
   },
-  /** HR routes - accessible at /hr, /hr/leaves, /hr/payslips */
-  HR: {
+  /** Admin routes - accessible at /admin, /admin/leaves, /admin/payslips */
+  ADMIN: {
     patterns: [
-      /^\/hr(\/.*)?$/, // All /hr routes
+      /^\/admin(\/.*)?$/, // All /admin routes
     ],
     requiredRoles: ['hr_admin'], // Only HR admins
   },
@@ -41,6 +41,13 @@ export const ROUTE_GROUPS = {
   AUTH: {
     patterns: [
       /^\/login(\/.*)?$/, // Login page
+    ],
+    isPublic: true, // Public route
+  },
+  /** Test routes - accessible for component testing */
+  TEST: {
+    patterns: [
+      /^\/.*-test(\/.*)?$/, // All routes ending with -test (e.g., /table-header-test, /dropdown-test)
     ],
     isPublic: true, // Public route
   },
@@ -57,6 +64,10 @@ export function getRouteGroup(pathname: string): keyof typeof ROUTE_GROUPS | nul
       }
     }
   }
+  // Check for legacy /hr routes and map to ADMIN
+  if (/^\/hr(\/.*)?$/.test(pathname)) {
+    return 'ADMIN';
+  }
   return null;
 }
 
@@ -67,9 +78,14 @@ export function hasRoutePermission(
   userRole: UserRole | null,
   routeGroup: keyof typeof ROUTE_GROUPS | null
 ): boolean {
-  // Public routes (auth routes) are accessible to everyone
-  if (routeGroup === 'AUTH') {
+  // Public routes (auth and test routes) are accessible to everyone
+  if (routeGroup === 'AUTH' || routeGroup === 'TEST') {
     return true;
+  }
+  
+  // Map old HR route group name to ADMIN for backward compatibility
+  if (routeGroup === 'HR') {
+    routeGroup = 'ADMIN';
   }
 
   // No route group means it's not a protected route
@@ -85,6 +101,11 @@ export function hasRoutePermission(
   const routeConfig = ROUTE_GROUPS[routeGroup];
   
   // Check if user role is in required roles
+  // Only check if requiredRoles exists (public routes don't have this property)
+  if (!routeConfig.requiredRoles) {
+    return true;
+  }
+  
   return routeConfig.requiredRoles.includes(userRole);
 }
 
@@ -93,7 +114,7 @@ export function hasRoutePermission(
  */
 export function getDefaultRedirectPath(userRole: UserRole | null): string {
   if (userRole === 'hr_admin') {
-    return '/hr';
+    return '/admin';
   }
   return '/';
 }
@@ -103,7 +124,7 @@ export function getDefaultRedirectPath(userRole: UserRole | null): string {
  */
 export function isPublicRoute(pathname: string): boolean {
   const routeGroup = getRouteGroup(pathname);
-  if (routeGroup === 'AUTH') {
+  if (routeGroup === 'AUTH' || routeGroup === 'TEST') {
     return true;
   }
   return false;

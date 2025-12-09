@@ -22,14 +22,14 @@ export default function HRTaskMenu() {
       title: 'Review Leave Requests',
       subtitle: 'Approve or reject pending requests',
       icon: <CalendarIcon className="h-6 w-6" />,
-      action: () => router.push('/hr/leaves'),
+      action: () => router.push('/admin/leaves'),
       color: 'bg-blue-50 text-blue-700',
     },
     {
       title: 'Process Payslips',
       subtitle: 'Fill and send monthly payslips',
       icon: <DocumentIcon className="h-6 w-6" />,
-      action: () => router.push('/hr/payslips'),
+      action: () => router.push('/admin/payslips'),
       color: 'bg-green-50 text-green-700',
     },
   ];

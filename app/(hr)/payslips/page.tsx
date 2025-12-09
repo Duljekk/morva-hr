@@ -9,7 +9,7 @@ import { getAllEmployees } from '@/lib/actions/hr/dashboard';
  * 
  * Allows HR admins to generate payslips for employees.
  * 
- * Route: /hr/payslips (via route group (hr))
+ * Route: /admin/payslips (via route group (admin))
  */
 export default function PayslipsPage() {
   const router = useRouter();
@@ -31,7 +31,7 @@ export default function PayslipsPage() {
     e.preventDefault();
     // In a real app, this would call a server action to generate/save the payslip
     alert(`Payslip generated for ${employees.find(e => e.id === selectedEmployee)?.full_name} for ${month}`);
-    router.push('/hr');
+    router.push('/admin');
   };
 
   return (

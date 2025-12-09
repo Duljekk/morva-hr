@@ -9,7 +9,7 @@ import { getPendingLeaveRequests, type PendingLeaveRequest, approveLeaveRequest,
  * 
  * Displays pending leave requests for HR admins to approve or reject.
  * 
- * Route: /hr/leaves (via route group (hr))
+ * Route: /admin/leaves (via route group (admin))
  */
 export default function LeaveRequestsPage() {
   const router = useRouter();
@@ -178,6 +178,11 @@ export default function LeaveRequestsPage() {
     </div>
   );
 }
+
+
+
+
+
 
 
 

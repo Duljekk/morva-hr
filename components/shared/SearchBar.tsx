@@ -52,6 +52,12 @@ interface SearchBarProps {
    * @default false
    */
   collapsed?: boolean;
+  
+  /**
+   * Whether to show the Command + K icon indicator
+   * @default true
+   */
+  showCommandIcon?: boolean;
 }
 
 /**
@@ -83,6 +89,7 @@ export default function SearchBar({
   className = '',
   disabled = false,
   collapsed = false,
+  showCommandIcon = true,
 }: SearchBarProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
@@ -160,7 +167,7 @@ export default function SearchBar({
       }}
       className={`
         box-border flex h-[36px] items-center
-        ${collapsed ? 'justify-center' : 'justify-between'}
+        ${collapsed ? 'justify-center' : (showCommandIcon ? 'justify-between' : 'justify-start')}
         overflow-hidden px-[10px] py-[4px] relative rounded-[8px]
         transition-colors duration-200
         ${collapsed 
@@ -234,12 +241,12 @@ export default function SearchBar({
                   [&::-moz-search-clear-button]:hidden
                 `}
                 aria-label={placeholder}
-                aria-describedby="search-shortcut"
+                aria-describedby={showCommandIcon && enableKeyboardShortcut ? "search-shortcut" : undefined}
               />
             </div>
 
             {/* Command + K Shortcut Indicator */}
-            {enableKeyboardShortcut && !disabled && (
+            {showCommandIcon && enableKeyboardShortcut && !disabled && (
               <div 
                 className="flex items-center relative shrink-0"
                 id="search-shortcut"

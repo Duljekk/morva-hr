@@ -8,6 +8,15 @@ const withBundleAnalyzer = bundleAnalyzer({
 });
 
 const nextConfig: NextConfig = {
+  // Configure allowed image hostnames for next/image
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'i.pravatar.cc',
+      },
+    ],
+  },
   // Increase body size limit for Server Actions to support file uploads
   experimental: {
     serverActions: {

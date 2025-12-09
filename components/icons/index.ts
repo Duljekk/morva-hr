@@ -50,11 +50,29 @@ export type { ClockIconProps } from './shared/Clock';
 export { default as CheckIcon } from './shared/Check';
 export type { CheckIconProps } from './shared/Check';
 
+export { default as MinusIcon } from './shared/Minus';
+export type { MinusIconProps } from './shared/Minus';
+
 export { default as CrossIcon } from './shared/Cross';
 export type { CrossIconProps } from './shared/Cross';
 
 export { default as CalendarIcon } from './shared/Calendar';
 export type { CalendarIconProps } from './shared/Calendar';
+
+export { default as ChevronDownIcon } from './shared/ChevronDown';
+export type { ChevronDownIconProps } from './shared/ChevronDown';
+
+export { default as ArrowUpDownIcon } from './shared/ArrowUpDown';
+export type { ArrowUpDownIconProps } from './shared/ArrowUpDown';
+
+export { default as CirclePlusIcon } from './shared/CirclePlus';
+export type { CirclePlusIconProps } from './shared/CirclePlus';
+
+export { default as FilterIcon } from './shared/Filter';
+export type { FilterIconProps } from './shared/Filter';
+
+// Icons from shared/Icons.tsx (direct exports)
+export { GrabberIcon, DotGrid1x3HorizontalIcon } from '../shared/Icons';
 
 // ============================================================================
 // HR Icons - HR-specific icons
@@ -106,8 +124,15 @@ export type IconName =
   | 'TriangleWarningIcon'
   | 'ClockIcon'
   | 'CheckIcon'
+  | 'MinusIcon'
   | 'CrossIcon'
   | 'CalendarIcon'
+  | 'ChevronDownIcon'
+  | 'ArrowUpDownIcon'
+  | 'CirclePlusIcon'
+  | 'FilterIcon'
+  | 'GrabberIcon'
+  | 'DotGrid1x3HorizontalIcon'
   // HR icons
   | 'DashboardIcon'
   | 'AttendanceIcon'
