@@ -445,37 +445,37 @@ export async function getAllRecentActivities(limit: number = 20): Promise<{ data
     // Require HR admin role
     const { supabase } = await requireHRAdmin();
 
-    // Helper functions
-    const formatTime = (timestamp: string): string => {
-      const date = new Date(timestamp);
-      const hours = date.getHours().toString().padStart(2, '0');
-      const minutes = date.getMinutes().toString().padStart(2, '0');
-      return `${hours}:${minutes}`;
-    };
+  // Helper functions
+  const formatTime = (timestamp: string): string => {
+    const date = new Date(timestamp);
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+  };
 
-    const formatDateRange = (startDate: string, endDate: string): string => {
-      const start = new Date(startDate + 'T00:00:00');
-      const end = new Date(endDate + 'T00:00:00');
-      
-      const startDay = start.getDate();
-      const endDay = end.getDate();
-      const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
-      const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
-      
-      if (startMonth === endMonth) {
-        return `${startDay}-${endDay} ${startMonth}`;
-      } else {
-        return `${startDay} ${startMonth} - ${endDay} ${endMonth}`;
-      }
-    };
+  const formatDateRange = (startDate: string, endDate: string): string => {
+    const start = new Date(startDate + 'T00:00:00');
+    const end = new Date(endDate + 'T00:00:00');
+    
+    const startDay = start.getDate();
+    const endDay = end.getDate();
+    const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
+    const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
+    
+    if (startMonth === endMonth) {
+      return `${startDay}-${endDay} ${startMonth}`;
+    } else {
+      return `${startDay} ${startMonth} - ${endDay} ${endMonth}`;
+    }
+  };
 
     // Format date as YYYY-MM-DD in local timezone
-    const formatLocalDate = (date: Date): string => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
+  const formatLocalDate = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
     // Calculate today's date in local timezone
     const todayDate = new Date();
@@ -492,16 +492,16 @@ export async function getAllRecentActivities(limit: number = 20): Promise<{ data
     // Fetch today's attendance records and leave requests in parallel
     const [recordsResult, leaveRequestsResult] = await Promise.all([
       supabase
-        .from('attendance_records')
-        .select(`
-          *,
+      .from('attendance_records')
+      .select(`
+        *,
           user:users!user_id (
-            id,
-            full_name
-          )
-        `)
+          id,
+          full_name
+        )
+      `)
         .eq('date', today)
-        .order('created_at', { ascending: false })
+      .order('created_at', { ascending: false })
         .limit(limit),
       
       supabase
@@ -600,21 +600,21 @@ export async function getAllRecentActivities(limit: number = 20): Promise<{ data
     // Sort and Format
     const dayActivities: DayEmployeeActivity[] = Array.from(activitiesByDate.entries())
       .map(([date, activities]) => {
-        const isToday = date === today;
-        const formattedDate = isToday 
-          ? 'Today' 
+         const isToday = date === today;
+         const formattedDate = isToday 
+           ? 'Today' 
           : new Date(date).toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
          
-        return {
-          date: formattedDate,
-          activities: activities.sort((a, b) => {
-            if (a.type === 'leave' && b.type !== 'leave') return -1;
-            if (a.type !== 'leave' && b.type === 'leave') return 1;
-            if (a.type === 'checkin' && b.type === 'checkout') return -1;
-            if (a.type === 'checkout' && b.type === 'checkin') return 1;
+         return {
+           date: formattedDate,
+           activities: activities.sort((a, b) => {
+             if (a.type === 'leave' && b.type !== 'leave') return -1;
+             if (a.type !== 'leave' && b.type === 'leave') return 1;
+             if (a.type === 'checkin' && b.type === 'checkout') return -1;
+             if (a.type === 'checkout' && b.type === 'checkin') return 1;
             return b.time.localeCompare(a.time);
-          })
-        };
+           })
+         };
       })
       .sort((a, b) => 0); // Since we're only showing today, no need to sort by date
 
@@ -801,20 +801,20 @@ export async function getRecentActivitiesForDashboard(
       
       // Fetch recent leave requests (excluding cancelled)
       supabase
-        .from('leave_requests')
-        .select(`
+      .from('leave_requests')
+      .select(`
           id,
           created_at,
           start_date,
           end_date,
-          user:users!user_id (
-            id,
-            full_name
-          ),
-          leave_type:leave_types!leave_type_id (
-            name
-          )
-        `)
+        user:users!user_id (
+          id,
+          full_name
+        ),
+        leave_type:leave_types!leave_type_id (
+          name
+        )
+      `)
         .neq('status', 'cancelled')
         .order('created_at', { ascending: false })
         .limit(limit),

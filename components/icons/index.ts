@@ -47,6 +47,9 @@ export type { TriangleWarningIconProps } from './shared/TriangleWarning';
 export { default as ClockIcon } from './shared/Clock';
 export type { ClockIconProps } from './shared/Clock';
 
+export { default as Clock18Icon } from './shared/Clock18';
+export type { Clock18IconProps } from './shared/Clock18';
+
 export { default as CheckIcon } from './shared/Check';
 export type { CheckIconProps } from './shared/Check';
 
@@ -65,11 +68,17 @@ export type { ChevronDownIconProps } from './shared/ChevronDown';
 export { default as ArrowUpDownIcon } from './shared/ArrowUpDown';
 export type { ArrowUpDownIconProps } from './shared/ArrowUpDown';
 
+export { default as ArrowUpRightIcon } from './shared/ArrowUpRight';
+export type { ArrowUpRightIconProps } from './shared/ArrowUpRight';
+
 export { default as CirclePlusIcon } from './shared/CirclePlus';
 export type { CirclePlusIconProps } from './shared/CirclePlus';
 
 export { default as FilterIcon } from './shared/Filter';
 export type { FilterIconProps } from './shared/Filter';
+
+export { default as HourglassIcon } from './shared/HourglassIcon';
+export type { HourglassIconProps } from './shared/HourglassIcon';
 
 // Icons from shared/Icons.tsx (direct exports)
 export { GrabberIcon, DotGrid1x3HorizontalIcon } from '../shared/Icons';
@@ -123,14 +132,17 @@ export type IconName =
   | 'CircleCrossIcon'
   | 'TriangleWarningIcon'
   | 'ClockIcon'
+  | 'Clock18Icon'
   | 'CheckIcon'
   | 'MinusIcon'
   | 'CrossIcon'
   | 'CalendarIcon'
   | 'ChevronDownIcon'
   | 'ArrowUpDownIcon'
+  | 'ArrowUpRightIcon'
   | 'CirclePlusIcon'
   | 'FilterIcon'
+  | 'HourglassIcon'
   | 'GrabberIcon'
   | 'DotGrid1x3HorizontalIcon'
   // HR icons

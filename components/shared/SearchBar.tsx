@@ -58,6 +58,18 @@ interface SearchBarProps {
    * @default true
    */
   showCommandIcon?: boolean;
+  
+  /**
+   * Custom width for the search bar (when not collapsed)
+   * @default 247
+   */
+  width?: number;
+  
+  /**
+   * Custom border radius
+   * @default 8
+   */
+  borderRadius?: number;
 }
 
 /**
@@ -90,6 +102,8 @@ export default function SearchBar({
   disabled = false,
   collapsed = false,
   showCommandIcon = true,
+  width: customWidth = 247,
+  borderRadius = 8,
 }: SearchBarProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
@@ -150,7 +164,7 @@ export default function SearchBar({
   };
 
   // Width values for animation
-  const width = collapsed ? 36 : 247;
+  const width = collapsed ? 36 : customWidth;
 
   return (
     <motion.div
@@ -168,7 +182,7 @@ export default function SearchBar({
       className={`
         box-border flex h-[36px] items-center
         ${collapsed ? 'justify-center' : (showCommandIcon ? 'justify-between' : 'justify-start')}
-        overflow-hidden px-[10px] py-[4px] relative rounded-[8px]
+        overflow-hidden px-[10px] py-[4px] relative
         transition-colors duration-200
         ${collapsed 
           ? (isHovered && !disabled ? 'bg-[rgba(161,161,161,0.1)]' : '') 
@@ -183,6 +197,7 @@ export default function SearchBar({
       role="search"
       aria-label={placeholder}
       title={collapsed ? placeholder : undefined}
+      style={{ borderRadius: `${borderRadius}px` }}
     >
       {/* Search Icon - Always visible, centered when collapsed */}
       <motion.div

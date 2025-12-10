@@ -35,8 +35,11 @@ const iconComponents: Record<IconName, () => Promise<{ default: ComponentType<SV
   CircleCheckIcon: () => import('./shared/CircleCheck'),
   TriangleWarningIcon: () => import('./shared/TriangleWarning'),
   ClockIcon: () => import('./shared/Clock'),
+  Clock18Icon: () => import('./shared/Clock18'),
   CheckIcon: () => import('./shared/Check'),
   CrossIcon: () => import('./shared/Cross'),
+  ArrowUpRightIcon: () => import('./shared/ArrowUpRight'),
+  HourglassIcon: () => import('./shared/HourglassIcon'),
   
   // HR icons
   DashboardIcon: () => import('./hr/Dashboard'),
