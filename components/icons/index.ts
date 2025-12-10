@@ -50,6 +50,12 @@ export type { ClockIconProps } from './shared/Clock';
 export { default as Clock18Icon } from './shared/Clock18';
 export type { Clock18IconProps } from './shared/Clock18';
 
+export { default as CheckInIcon } from './shared/CheckInIcon';
+export type { CheckInIconProps } from './shared/CheckInIcon';
+
+export { default as CheckoutIcon } from './shared/CheckoutIcon';
+export type { CheckoutIconProps } from './shared/CheckoutIcon';
+
 export { default as CheckIcon } from './shared/Check';
 export type { CheckIconProps } from './shared/Check';
 
@@ -61,6 +67,15 @@ export type { CrossIconProps } from './shared/Cross';
 
 export { default as CalendarIcon } from './shared/Calendar';
 export type { CalendarIconProps } from './shared/Calendar';
+
+export { default as CalendarOutlineIcon } from './shared/CalendarOutline';
+export type { CalendarOutlineIconProps } from './shared/CalendarOutline';
+
+export { default as InfoCircleIcon } from './shared/InfoCircle';
+export type { InfoCircleIconProps } from './shared/InfoCircle';
+
+export { default as CopyIcon } from './shared/Copy';
+export type { CopyIconProps } from './shared/Copy';
 
 export { default as ChevronDownIcon } from './shared/ChevronDown';
 export type { ChevronDownIconProps } from './shared/ChevronDown';
@@ -133,10 +148,15 @@ export type IconName =
   | 'TriangleWarningIcon'
   | 'ClockIcon'
   | 'Clock18Icon'
+  | 'CheckInIcon'
+  | 'CheckoutIcon'
   | 'CheckIcon'
   | 'MinusIcon'
   | 'CrossIcon'
   | 'CalendarIcon'
+  | 'CalendarOutlineIcon'
+  | 'InfoCircleIcon'
+  | 'CopyIcon'
   | 'ChevronDownIcon'
   | 'ArrowUpDownIcon'
   | 'ArrowUpRightIcon'

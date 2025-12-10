@@ -183,4 +183,3 @@ const AttendanceFeedTab = memo(function AttendanceFeedTab({
 AttendanceFeedTab.displayName = 'AttendanceFeedTab';
 
 export default AttendanceFeedTab;
-

@@ -43,3 +43,6 @@ next-env.d.ts
 # markdown files (ignore all except README.md)
 *.md
 !README.md
+
+# MCP configuration (contains secrets)
+.factory/mcp.json
