@@ -67,11 +67,16 @@ const EmployeesPageHeader = memo(function EmployeesPageHeader({
   return (
     <div
       className={`
-        border-b border-neutral-200 border-dashed
         content-stretch flex items-center justify-between
         pl-[28px] pr-[24px] py-[24px] relative size-full
         ${className}
       `.trim()}
+      style={{
+        backgroundImage: 'linear-gradient(to right, #e5e5e5 50%, transparent 50%)',
+        backgroundPosition: 'bottom',
+        backgroundSize: '8px 1px',
+        backgroundRepeat: 'repeat-x',
+      }}
       data-name="Header"
       data-node-id="541:3243"
     >
@@ -147,6 +152,8 @@ const EmployeesPageHeader = memo(function EmployeesPageHeader({
 EmployeesPageHeader.displayName = 'EmployeesPageHeader';
 
 export default EmployeesPageHeader;
+
+
 
 
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useState } from 'react';
-import { InfoCircleIcon, CopyIcon } from '@/components/icons';
+import { BubbleInfoIcon, CopyIcon } from '@/components/icons';
 
 export interface BankDetailsCardProps {
   /**
@@ -90,7 +90,7 @@ const BankDetailsCard = memo(function BankDetailsCard({
         data-node-id="608:1982"
       >
         <div className="relative shrink-0 size-[16px]" data-name="Icon Container" data-node-id="608:2001">
-          <InfoCircleIcon size={16} className="text-[#737373]" />
+          <BubbleInfoIcon size={16} className="text-[#737373]" />
         </div>
         <p
           className="font-sans font-medium leading-[18px] text-[#525252] text-[14px] text-nowrap whitespace-pre"
@@ -197,4 +197,6 @@ const BankDetailsCard = memo(function BankDetailsCard({
 BankDetailsCard.displayName = 'BankDetailsCard';
 
 export default BankDetailsCard;
+
+
 

@@ -74,11 +74,17 @@ export type { CalendarOutlineIconProps } from './shared/CalendarOutline';
 export { default as InfoCircleIcon } from './shared/InfoCircle';
 export type { InfoCircleIconProps } from './shared/InfoCircle';
 
+export { default as BubbleInfoIcon } from './shared/BubbleInfo';
+export type { BubbleInfoIconProps } from './shared/BubbleInfo';
+
 export { default as CopyIcon } from './shared/Copy';
 export type { CopyIconProps } from './shared/Copy';
 
 export { default as ChevronDownIcon } from './shared/ChevronDown';
 export type { ChevronDownIconProps } from './shared/ChevronDown';
+
+export { default as ChevronRightIcon } from './shared/ChevronRight';
+export type { ChevronRightIconProps } from './shared/ChevronRight';
 
 export { default as ArrowUpDownIcon } from './shared/ArrowUpDown';
 export type { ArrowUpDownIconProps } from './shared/ArrowUpDown';
@@ -156,8 +162,10 @@ export type IconName =
   | 'CalendarIcon'
   | 'CalendarOutlineIcon'
   | 'InfoCircleIcon'
+  | 'BubbleInfoIcon'
   | 'CopyIcon'
   | 'ChevronDownIcon'
+  | 'ChevronRightIcon'
   | 'ArrowUpDownIcon'
   | 'ArrowUpRightIcon'
   | 'CirclePlusIcon'

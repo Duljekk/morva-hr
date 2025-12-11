@@ -34,21 +34,9 @@ const CopyIcon = memo(function CopyIcon({
       xmlns="http://www.w3.org/2000/svg"
       {...props}
     >
-      <rect
-        x="5.25"
-        y="5.25"
-        width="6.5"
-        height="6.5"
-        rx="1"
-        stroke="currentColor"
-        strokeWidth="1.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
       <path
-        d="M8.75 5.25V3.5C8.75 2.94772 8.30228 2.5 7.75 2.5H3.5C2.94772 2.5 2.5 2.94772 2.5 3.5V7.75C2.5 8.30228 2.94772 8.75 3.5 8.75H5.25"
+        d="M4.52083 4.52083V3.35417C4.52083 2.70983 5.04317 2.1875 5.6875 2.1875H10.6458C11.2902 2.1875 11.8125 2.70983 11.8125 3.35417V8.31833C11.8125 8.96267 11.2902 9.485 10.6458 9.485H9.47917M2.1875 5.6875V10.6458C2.1875 11.2902 2.70983 11.8125 3.35417 11.8125H8.3125C8.95683 11.8125 9.47917 11.2902 9.47917 10.6458V5.6875C9.47917 5.04317 8.95683 4.52083 8.3125 4.52083H3.35417C2.70983 4.52083 2.1875 5.04317 2.1875 5.6875Z"
         stroke="currentColor"
-        strokeWidth="1.2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -59,4 +47,6 @@ const CopyIcon = memo(function CopyIcon({
 CopyIcon.displayName = 'CopyIcon';
 
 export default CopyIcon;
+
+
 
