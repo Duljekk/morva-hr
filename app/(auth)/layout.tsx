@@ -5,6 +5,9 @@ export const metadata: Metadata = {
   description: "Sign in to MorvaHR",
 };
 
+// Force dynamic rendering for auth pages
+export const dynamic = 'force-dynamic';
+
 /**
  * Auth-specific layout
  * Minimal layout for authentication pages (login, register, etc.)

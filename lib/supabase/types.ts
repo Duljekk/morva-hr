@@ -26,7 +26,7 @@ export interface Database {
           email: string;
           username: string;
           full_name: string;
-          role: UserRole;
+          role: 'employee' | 'hr_admin';
           employee_id: string | null;
           shift_start_hour: number;
           shift_end_hour: number;
@@ -39,7 +39,7 @@ export interface Database {
           email: string;
           username: string;
           full_name: string;
-          role?: UserRole;
+          role?: 'employee' | 'hr_admin';
           employee_id?: string | null;
           shift_start_hour?: number;
           shift_end_hour?: number;
@@ -52,7 +52,7 @@ export interface Database {
           email?: string;
           username?: string;
           full_name?: string;
-          role?: UserRole;
+          role?: 'employee' | 'hr_admin';
           employee_id?: string | null;
           shift_start_hour?: number;
           shift_end_hour?: number;
@@ -437,7 +437,7 @@ export interface Database {
       };
     };
     Enums: {
-      user_role: UserRole;
+      user_role: 'employee' | 'hr_admin';
       check_in_status: CheckInStatus;
       check_out_status: CheckOutStatus;
       day_type: DayType;

@@ -46,3 +46,4 @@ next-env.d.ts
 
 # MCP configuration (contains secrets)
 .factory/mcp.json
+.vercel

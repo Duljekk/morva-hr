@@ -7,6 +7,9 @@ export const metadata: Metadata = {
   description: "HR dashboard for MorvaHR",
 };
 
+// Force dynamic rendering for HR pages
+export const dynamic = 'force-dynamic';
+
 /**
  * HR Layout Component
  * 

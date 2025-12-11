@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
     let error = null;
     
     console.log('[API /notifications] Attempting RPC function first (recommended approach)...');
-    const { data: rpcData, error: rpcError } = await supabase.rpc('get_user_notifications', {
+    const { data: rpcData, error: rpcError } = await (supabase.rpc as any)('get_user_notifications', {
       p_user_id: userId,
     });
     

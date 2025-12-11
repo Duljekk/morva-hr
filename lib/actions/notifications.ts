@@ -57,7 +57,7 @@ async function _getNotificationsUncached(
   // 1. Try RPC function first (often in cache even when table isn't)
   console.log('[getNotifications] Trying RPC function first for user:', userId);
   try {
-    const { data: rpcNotifications, error: rpcError } = await supabase.rpc('get_user_notifications', {
+    const { data: rpcNotifications, error: rpcError } = await (supabase as any).rpc('get_user_notifications', {
       p_user_id: userId,
     });
     
@@ -293,7 +293,7 @@ export async function markNotificationAsRead(
     
     // Best Practice: RLS policy handles security, so we can directly update
     // The RLS policy will prevent updating notifications that don't belong to the user
-    const { error: updateError } = await supabase
+    const { error: updateError } = await (supabase as any)
       .from('notifications')
       .update({
         is_read: true,
@@ -345,7 +345,7 @@ export async function markAllNotificationsAsRead(): Promise<{
     // Bulk update all unread notifications
     // Best Practice: RLS policy handles security, so we can filter by is_read only
     // The RLS policy will automatically filter to user's own notifications
-    const { error: updateError } = await supabase
+    const { error: updateError } = await (supabase as any)
       .from('notifications')
       .update({
         is_read: true,
@@ -397,7 +397,7 @@ export async function deleteNotification(
       return { success: false, error: 'Notification not found' };
     }
     
-    if (notification.user_id !== user.id) {
+    if ((notification as any).user_id !== user.id) {
       return { success: false, error: 'Unauthorized' };
     }
     
@@ -448,7 +448,7 @@ export async function createNotification(
       console.error('[createNotification] Service role client not available. SUPABASE_SERVICE_ROLE_KEY may not be set.');
       // Fallback to regular client (may fail due to RLS, but better than nothing)
       const fallbackSupabase = await createClient();
-      const { data: insertedNotification, error } = await fallbackSupabase
+      const { data: insertedNotification, error } = await (fallbackSupabase as any)
         .from('notifications')
         .insert({
           user_id: data.user_id,
@@ -502,7 +502,7 @@ export async function createNotification(
       return { success: true };
     }
     
-    const { data: insertedNotification, error } = await supabase
+    const { data: insertedNotification, error } = await (supabase as any)
       .from('notifications')
       .insert({
         user_id: data.user_id,
@@ -542,7 +542,7 @@ export async function createNotification(
         // Use service role client for RPC as well
         const rpcSupabase = createServiceRoleClient() || supabase;
         try {
-          const { data: functionResult, error: rpcError } = await rpcSupabase.rpc('insert_notification', {
+          const { data: functionResult, error: rpcError } = await (rpcSupabase as any).rpc('insert_notification', {
             p_user_id: data.user_id,
             p_type: data.type,
             p_title: data.title,

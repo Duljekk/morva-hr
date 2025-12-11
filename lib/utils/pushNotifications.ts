@@ -101,7 +101,7 @@ export async function subscribeToPush(
     const registration = await navigator.serviceWorker.ready;
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+      applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as any,
     });
 
     console.log('[PushNotifications] Subscribed to push:', subscription);

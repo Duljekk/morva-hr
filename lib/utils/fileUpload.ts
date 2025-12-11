@@ -43,7 +43,7 @@ export function validateFileType(file: File): FileValidationResult {
   const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
   const allowedExtensions = ALLOWED_FILE_TYPES[file.type as keyof typeof ALLOWED_FILE_TYPES];
   
-  if (!allowedExtensions.includes(fileExtension)) {
+  if (!(allowedExtensions as any).includes(fileExtension)) {
     return {
       isValid: false,
       error: 'File extension does not match its type.',

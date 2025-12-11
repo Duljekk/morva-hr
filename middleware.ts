@@ -7,8 +7,8 @@ import {
   isPublicRoute,
   requiresAuthentication,
   ROUTE_GROUPS,
-  type UserRole,
 } from '@/lib/middleware/permissions';
+import type { UserRole } from '@/lib/types/roles';
 import {
   getCachedProfile,
   setCachedProfile,
@@ -179,7 +179,7 @@ export async function middleware(request: NextRequest) {
     if (!hasPermission) {
       console.warn(
         `🚫 [Middleware] Unauthorized access attempt: User ${user.id} (role: ${userRole}) ` +
-        `attempted to access ${pathname} (requires: ${ROUTE_GROUPS[routeGroup].requiredRoles.join(', ')})`
+        `attempted to access ${pathname} (requires: ${(ROUTE_GROUPS[routeGroup] as any).requiredRoles?.join(', ') || 'unknown'})`
       );
       
       // Redirect to default path for user role

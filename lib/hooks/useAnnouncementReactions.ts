@@ -201,7 +201,7 @@ export function useAnnouncementReactions(
 
       // Prevent multiple subscriptions
       // Best Practice: Check channel state instead of ref flag to avoid race conditions
-      if (channelRef.current?.state === 'subscribed') {
+      if ((channelRef.current as any)?.state === 'subscribed') {
         console.log('[useAnnouncementReactions] Already subscribed, skipping');
         return;
       }

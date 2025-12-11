@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, SVGProps } from 'react';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
 import ButtonLarge from '@/components/shared/ButtonLarge';
@@ -8,7 +8,7 @@ import useLockBodyScroll from '@/app/hooks/useLockBodyScroll';
 import { backdropVariants, modalVariants } from '@/app/lib/animations/modalVariants';
 
 // Lazy load SVG icon - only load when modal is open
-const WarningModalIcon = dynamic(() => import('@/app/assets/icons/warning-modal.svg'), {
+const WarningModalIcon = dynamic<SVGProps<SVGSVGElement>>(() => import('@/app/assets/icons/warning-modal.svg'), {
   ssr: false,
 });
 

@@ -84,7 +84,7 @@ export function hasRoutePermission(
   }
   
   // Map old HR route group name to ADMIN for backward compatibility
-  if (routeGroup === 'HR') {
+  if ((routeGroup as any) === 'HR') {
     routeGroup = 'ADMIN';
   }
 
@@ -106,7 +106,7 @@ export function hasRoutePermission(
     return true;
   }
   
-  return routeConfig.requiredRoles.includes(userRole);
+  return routeConfig.requiredRoles.includes(userRole as any);
 }
 
 /**

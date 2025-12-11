@@ -69,3 +69,5 @@ WHERE EXISTS (SELECT 1 FROM users LIMIT 1); -- Only insert if users exist
 
 
 
+
+

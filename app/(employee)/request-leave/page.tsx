@@ -5,19 +5,21 @@ import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 
 // Lazy load route-specific SVG icons - only load when on this page
-const ArrowLeftIcon = dynamic(() => import('@/app/assets/icons/arrow-left.svg'), {
+import type { SVGProps } from 'react';
+
+const ArrowLeftIcon = dynamic<SVGProps<SVGSVGElement>>(() => import('@/app/assets/icons/arrow-left.svg'), {
   ssr: false,
 });
 
-const ArrowCalendarIcon = dynamic(() => import('@/app/assets/icons/arrow-calendar.svg'), {
+const ArrowCalendarIcon = dynamic<SVGProps<SVGSVGElement>>(() => import('@/app/assets/icons/arrow-calendar.svg'), {
   ssr: false,
 });
 
-const LeaveFullDayIcon = dynamic(() => import('@/app/assets/icons/leave-fullday.svg'), {
+const LeaveFullDayIcon = dynamic<SVGProps<SVGSVGElement>>(() => import('@/app/assets/icons/leave-fullday.svg'), {
   ssr: false,
 });
 
-const LeaveHalfDayIcon = dynamic(() => import('@/app/assets/icons/leave-halfday.svg'), {
+const LeaveHalfDayIcon = dynamic<SVGProps<SVGSVGElement>>(() => import('@/app/assets/icons/leave-halfday.svg'), {
   ssr: false,
 });
 import { leaveTypes, LeaveType } from '@/components/employee/LeaveTypeBottomSheet';

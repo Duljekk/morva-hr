@@ -43,7 +43,7 @@ async function approveLeaveRequest(requestId: string, hrAdminId?: string) {
       .from('leave_requests')
       .select('id, status, user_id, approved_by, approved_at')
       .eq('id', requestId)
-      .single();
+      .single() as any;
 
     if (fetchError || !request) {
       console.error('❌ Error fetching leave request:', fetchError?.message || 'Request not found');
@@ -73,7 +73,7 @@ async function approveLeaveRequest(requestId: string, hrAdminId?: string) {
         .from('users')
         .select('id, email')
         .eq('role', 'hr_admin')
-        .limit(1);
+        .limit(1) as any;
 
       if (adminError || !hrAdmins || hrAdmins.length === 0) {
         console.error('❌ Error finding HR admin:', adminError?.message || 'No HR admin found');
@@ -86,7 +86,7 @@ async function approveLeaveRequest(requestId: string, hrAdminId?: string) {
 
     // Approve the request
     console.log(`\n🔄 Approving leave request...`);
-    const { data: updated, error: updateError } = await supabase
+    const { data: updated, error: updateError } = await (supabase as any)
       .from('leave_requests')
       .update({
         status: 'approved',

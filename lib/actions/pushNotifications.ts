@@ -39,7 +39,7 @@ export async function savePushSubscription(
     const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : null;
 
     // Upsert subscription (update if exists, insert if new)
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('push_subscriptions')
       .upsert(
         {

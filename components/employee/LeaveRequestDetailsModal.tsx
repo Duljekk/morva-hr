@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, SVGProps } from 'react';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
 import useLockBodyScroll from '@/app/hooks/useLockBodyScroll';
@@ -8,7 +8,7 @@ import LeaveRequestStatusTimeline, { StatusItem } from '@/components/employee/Le
 import { backdropVariants, modalVariants } from '@/app/lib/animations/modalVariants';
 
 // Lazy load SVG icon - only load when modal is open
-const ArrowCalendarIcon = dynamic(() => import('@/app/assets/icons/arrow-calendar.svg'), {
+const ArrowCalendarIcon = dynamic<SVGProps<SVGSVGElement>>(() => import('@/app/assets/icons/arrow-calendar.svg'), {
   ssr: false,
 });
 

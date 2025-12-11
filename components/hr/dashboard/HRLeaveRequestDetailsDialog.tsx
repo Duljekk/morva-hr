@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, SVGProps } from 'react';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
 import useLockBodyScroll from '@/app/hooks/useLockBodyScroll';
@@ -28,7 +28,7 @@ interface HRLeaveRequestDetailsDialogProps {
 }
 
 // Lazy load the same arrow icon used in the employee LeaveRequestDetailsModal
-const ArrowCalendarIcon = dynamic(
+const ArrowCalendarIcon = dynamic<SVGProps<SVGSVGElement>>(
   () => import('@/app/assets/icons/arrow-calendar.svg'),
   { ssr: false }
 );

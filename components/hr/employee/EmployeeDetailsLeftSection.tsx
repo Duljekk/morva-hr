@@ -211,7 +211,7 @@ const EmployeeDetailsLeftSection = memo(function EmployeeDetailsLeftSection({
           data-node-id="587:1454"
           aria-label="Employee options menu"
         >
-          <DotGrid1x3HorizontalIcon size={16} className="text-[#525252]" />
+          <DotGrid1x3HorizontalIcon className="text-[#525252]" />
         </button>
       </div>
 

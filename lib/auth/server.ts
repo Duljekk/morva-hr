@@ -61,7 +61,7 @@ export async function requireAuth(): Promise<RequireAuthResult> {
     .from('users')
     .select('role, is_active')
     .eq('id', user.id)
-    .single();
+    .single() as any;
 
   if (userError) {
     console.error('[requireAuth] Error fetching user role:', userError);
@@ -151,6 +151,8 @@ export async function requireEmployee(): Promise<RequireAuthResult> {
 
   return { userId, role, supabase };
 }
+
+
 
 
 

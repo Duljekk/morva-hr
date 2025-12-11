@@ -67,9 +67,16 @@ const nextConfig: NextConfig = {
 
     return config
   },
-  // Empty turbopack config to silence the warning
-  // We use webpack for SVG support via SVGR
-  turbopack: {},
+  // Turbopack config for SVG support
+  // Turbopack requires explicit SVG handling configuration
+  turbopack: {
+    rules: {
+      '*.svg': {
+        loaders: ['@svgr/webpack'],
+        as: '*.js',
+      },
+    },
+  },
   
   // Headers for service worker
   async headers() {

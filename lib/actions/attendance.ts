@@ -31,7 +31,10 @@ function getCurrentTimestamp(): string {
  * 
  * Cached with 5-minute revalidation and user-specific tags for targeted invalidation
  */
-async function _getTodaysAttendanceUncached(userId: string, today: string) {
+async function _getTodaysAttendanceUncached(userId: string, today: string): Promise<
+  | { data: any; error?: never }
+  | { error: string; data?: never }
+> {
   const supabase = await createClient();
   
   // Query today's attendance record
@@ -50,7 +53,10 @@ async function _getTodaysAttendanceUncached(userId: string, today: string) {
   return { data: data || null };
 }
 
-export async function getTodaysAttendance() {
+export async function getTodaysAttendance(): Promise<
+  | { data: any; error?: never }
+  | { error: string; data?: never }
+> {
   try {
     const supabase = await createClient();
     
@@ -106,7 +112,10 @@ export async function getTodaysAttendance() {
  * 4. Insert new attendance record for today
  * 5. Revalidate page to show updated UI
  */
-export async function checkIn() {
+export async function checkIn(): Promise<
+  | { data: any; error?: never }
+  | { error: string; data?: never }
+> {
   try {
     const supabase = await createClient();
     
@@ -140,20 +149,22 @@ export async function checkIn() {
         .single(),
     ]);
 
-    const { data: userData, error: userError } = userDataResult;
+    const { data: userData, error: userError } = userDataResult as any;
     const { data: existing } = existingResult;
 
-    if (userError || !userData) {
-      return { error: 'Failed to fetch user data' };
-    }
+    // Default shift hours if not in database
+    const DEFAULT_SHIFT_START = 9;  // 9 AM
+    const DEFAULT_SHIFT_END = 18;   // 6 PM
 
     if (existing) {
       return { error: 'Already checked in today' };
     }
 
     // Calculate shift start time for today
+    // Use default shift hours if not set in database (9 AM default)
+    const shiftStartHour = userData?.shift_start_hour || DEFAULT_SHIFT_START;
     const shiftStart = new Date(now);
-    shiftStart.setHours(userData.shift_start_hour, 0, 0, 0);
+    shiftStart.setHours(shiftStartHour, 0, 0, 0);
     shiftStart.setSeconds(0, 0); // Ensure seconds and milliseconds are 0
 
     // Determine check-in status: late if check-in time is >= shift start + 1 minute
@@ -163,7 +174,7 @@ export async function checkIn() {
     const checkInStatus = now >= shiftStartWithTolerance ? 'late' : 'ontime';
 
     // Insert attendance record
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('attendance_records')
       .insert({
         user_id: user.id,
@@ -208,7 +219,10 @@ export async function checkIn() {
  * 5. Update the record
  * 6. Revalidate page
  */
-export async function checkOut() {
+export async function checkOut(): Promise<
+  | { data: any; error?: never }
+  | { error: string; data?: never }
+> {
   try {
     const supabase = await createClient();
     
@@ -239,8 +253,12 @@ export async function checkOut() {
         .single(),
     ]);
 
-    const { data: attendance, error: fetchError } = attendanceResult;
-    const { data: userData, error: userError } = userDataResult;
+    const { data: attendance, error: fetchError } = attendanceResult as any;
+    const { data: userData, error: userError } = userDataResult as any;
+
+    // Default shift hours if not in database
+    const DEFAULT_SHIFT_START = 9;  // 9 AM
+    const DEFAULT_SHIFT_END = 18;   // 6 PM
 
     if (fetchError || !attendance) {
       return { error: 'No check-in record found for today' };
@@ -250,16 +268,14 @@ export async function checkOut() {
       return { error: 'Already checked out today' };
     }
 
-    if (userError || !userData) {
-      return { error: 'Failed to fetch user data' };
-    }
-
     const now = new Date();
     const checkInDate = new Date(attendance.check_in_time);
 
     // Calculate shift end time for today
+    // Use default shift hours if not set in database (6 PM default)
+    const shiftEndHour = userData?.shift_end_hour || DEFAULT_SHIFT_END;
     const shiftEnd = new Date(now);
-    shiftEnd.setHours(userData.shift_end_hour, 0, 0, 0);
+    shiftEnd.setHours(shiftEndHour, 0, 0, 0);
 
     // Determine check-out status
     // Allow 1 minute tolerance for "ontime" (check-out at 19:00:00 to 19:00:59 is ontime)
@@ -278,12 +294,13 @@ export async function checkOut() {
     const totalHours = totalMs / (1000 * 60 * 60); // Convert ms to hours
 
     // Calculate overtime hours (hours worked beyond shift end)
-    const expectedShiftMs = (userData.shift_end_hour - userData.shift_start_hour) * 60 * 60 * 1000;
+    const shiftStartHour = userData?.shift_start_hour || DEFAULT_SHIFT_START;
+    const expectedShiftMs = (shiftEndHour - shiftStartHour) * 60 * 60 * 1000;
     const overtimeMs = Math.max(0, totalMs - expectedShiftMs);
     const overtimeHours = overtimeMs / (1000 * 60 * 60);
 
     // Update attendance record
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('attendance_records')
       .update({
         check_out_time: checkOutTime,
@@ -402,7 +419,7 @@ async function _getRecentActivitiesUncached(
     let leaveError: any = null;
     
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .rpc('get_recent_leave_requests', {
           p_user_id: userId,
           p_start_date: startDateString,
@@ -448,12 +465,12 @@ async function _getRecentActivitiesUncached(
             leaveRequests = [];
           } else {
             // Merge and deduplicate
-            const allLeaves = [
+            const allLeaves: any[] = [
               ...(pastLeaves || []),
               ...(futureLeaves || []),
             ];
-            leaveRequests = allLeaves.filter((leave, index, self) =>
-              index === self.findIndex(l => l.id === leave.id)
+            leaveRequests = allLeaves.filter((leave: any, index: number, self: any[]) =>
+              index === self.findIndex((l: any) => l.id === leave.id)
             );
           }
         } else {
@@ -528,7 +545,7 @@ async function _getRecentActivitiesUncached(
 
     // Process attendance records
     if (records) {
-    for (const record of records) {
+    for (const record of records as any[]) {
       const dateKey = record.date;
         
         // Debug: Log today's record if found

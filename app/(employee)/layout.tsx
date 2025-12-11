@@ -6,6 +6,9 @@ export const metadata: Metadata = {
   description: "Employee dashboard for MorvaHR",
 };
 
+// Force dynamic rendering for employee pages
+export const dynamic = 'force-dynamic';
+
 /**
  * Employee-specific layout
  * 
