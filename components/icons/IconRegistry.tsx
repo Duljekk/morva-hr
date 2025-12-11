@@ -56,6 +56,12 @@ const iconComponents: Record<IconName, () => Promise<{ default: ComponentType<SV
   GrabberIcon: () => import('../shared/Icons').then(m => ({ default: m.GrabberIcon })),
   DotGrid1x3HorizontalIcon: () => import('../shared/Icons').then(m => ({ default: m.DotGrid1x3HorizontalIcon })),
   HourglassIcon: () => import('./shared/HourglassIcon'),
+  MailIcon: () => import('./shared/Mail'),
+  AtIcon: () => import('./shared/At'),
+  LockIcon: () => import('./shared/Lock'),
+  EyeOpenIcon: () => import('./shared/EyeOpen'),
+  EyeClosedIcon: () => import('./shared/EyeClosed'),
+  PeopleIcon: () => import('./shared/People'),
   
   // HR icons
   DashboardIcon: () => import('./hr/Dashboard'),

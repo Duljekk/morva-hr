@@ -190,10 +190,10 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Handle authenticated users accessing login page
-  if (pathname === '/login' && user && userRole) {
+  // Handle authenticated users accessing login or signup pages
+  if ((pathname === '/login' || pathname === '/signup') && user && userRole) {
     const redirectPath = getDefaultRedirectPath(userRole);
-    console.log(`🔄 [Middleware] Authenticated user accessing /login, redirecting to ${redirectPath}`);
+    console.log(`🔄 [Middleware] Authenticated user accessing ${pathname}, redirecting to ${redirectPath}`);
     const url = request.nextUrl.clone();
     url.pathname = redirectPath;
     return NextResponse.redirect(url);

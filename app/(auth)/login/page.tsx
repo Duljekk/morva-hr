@@ -9,10 +9,7 @@ import { createClient } from '@/lib/supabase/client';
 import FormInput from '@/components/shared/FormInput';
 import ButtonLarge from '@/components/shared/ButtonLarge';
 import LogoMorvahrIcon from '@/app/assets/icons/logo-morvahr.svg';
-import UserIcon from '@/app/assets/icons/user.svg';
-import LockIcon from '@/app/assets/icons/lock.svg';
-import EyeOpenIcon from '@/app/assets/icons/eye-open.svg';
-import EyeClosedIcon from '@/app/assets/icons/eye-closed.svg';
+import { PeopleIcon, LockIcon, EyeOpenIcon, EyeClosedIcon } from '@/components/icons';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -191,7 +188,7 @@ export default function LoginPage() {
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Username"
                   hasLeadIcon={true}
-                  LeadIcon={<UserIcon />}
+                  LeadIcon={<PeopleIcon className="text-neutral-500" />}
                   type="text"
                   bgColor="white"
                   required
@@ -205,8 +202,8 @@ export default function LoginPage() {
                   placeholder="Password"
                   hasLeadIcon={true}
                   hasTrailIcon={true}
-                  LeadIcon={<LockIcon />}
-                  TrailIcon={showPassword ? <EyeOpenIcon /> : <EyeClosedIcon />}
+                  LeadIcon={<LockIcon className="text-neutral-500" />}
+                  TrailIcon={showPassword ? <EyeOpenIcon className="text-neutral-500" /> : <EyeClosedIcon className="text-neutral-500" />}
                   onTrailIconClick={togglePasswordVisibility}
                   type={showPassword ? 'text' : 'password'}
                   bgColor="white"

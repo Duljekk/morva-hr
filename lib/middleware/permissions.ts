@@ -37,10 +37,11 @@ export const ROUTE_GROUPS = {
     ],
     requiredRoles: ['hr_admin'], // Only HR admins
   },
-  /** Auth routes - accessible at /login */
+  /** Auth routes - accessible at /login and /signup */
   AUTH: {
     patterns: [
       /^\/login(\/.*)?$/, // Login page
+      /^\/signup(\/.*)?$/, // Signup page
     ],
     isPublic: true, // Public route
   },

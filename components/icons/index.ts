@@ -101,6 +101,24 @@ export type { FilterIconProps } from './shared/Filter';
 export { default as HourglassIcon } from './shared/HourglassIcon';
 export type { HourglassIconProps } from './shared/HourglassIcon';
 
+export { default as MailIcon } from './shared/Mail';
+export type { MailIconProps } from './shared/Mail';
+
+export { default as AtIcon } from './shared/At';
+export type { AtIconProps } from './shared/At';
+
+export { default as LockIcon } from './shared/Lock';
+export type { LockIconProps } from './shared/Lock';
+
+export { default as EyeOpenIcon } from './shared/EyeOpen';
+export type { EyeOpenIconProps } from './shared/EyeOpen';
+
+export { default as EyeClosedIcon } from './shared/EyeClosed';
+export type { EyeClosedIconProps } from './shared/EyeClosed';
+
+export { default as PeopleIcon } from './shared/People';
+export type { PeopleIconProps } from './shared/People';
+
 // Icons from shared/Icons.tsx (direct exports)
 export { GrabberIcon, DotGrid1x3HorizontalIcon } from '../shared/Icons';
 
@@ -171,6 +189,12 @@ export type IconName =
   | 'CirclePlusIcon'
   | 'FilterIcon'
   | 'HourglassIcon'
+  | 'MailIcon'
+  | 'AtIcon'
+  | 'LockIcon'
+  | 'EyeOpenIcon'
+  | 'EyeClosedIcon'
+  | 'PeopleIcon'
   | 'GrabberIcon'
   | 'DotGrid1x3HorizontalIcon'
   // HR icons
