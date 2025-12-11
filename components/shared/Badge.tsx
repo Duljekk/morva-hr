@@ -37,8 +37,8 @@ const variantStyles = {
     iconOpacity: 'opacity-100',
   },
   warning: {
-    bg: 'bg-[#fefce8]',
-    text: 'text-[#d08700]',
+    bg: 'bg-[#FFFBEB]', // amber-50 as per Figma
+    text: 'text-[#E17100]', // amber-600 as per Figma
     iconOpacity: 'opacity-100',
   },
   danger: {
@@ -55,8 +55,8 @@ const variantStyles = {
 
 const sizeStyles = {
   sm: {
-    container: 'pl-[6px] pr-2 py-[4px] rounded-[24px] h-6', // 6px left, 8px right, 4px vertical, 24px radius, 24px height
-    text: 'text-sm font-medium leading-bold-sm h-4', // 14px text, medium weight, 18px line height (14+4), 16px height
+    container: 'px-1 py-[2px] rounded-[12px]', // 4px horizontal, 2px vertical, 12px radius as per Figma
+    text: 'text-xs font-semibold leading-normal tracking-[-0.24px]', // 12px text, semibold (600), normal line height, -0.24px letter-spacing as per Figma
     iconSize: 'h-3.5 w-3.5', // 14px
     gap: 'gap-1', // 4px gap between icon and text
   },
