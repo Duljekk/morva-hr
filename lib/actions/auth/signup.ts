@@ -53,12 +53,12 @@ export async function signup(
       const fieldErrors = validatedFields.error.flatten().fieldErrors;
       const serializedErrors: SignupFormState['errors'] = {};
       
-      // Convert all error arrays to plain string arrays
-      for (const [key, value] of Object.entries(fieldErrors)) {
-        if (value && Array.isArray(value)) {
-          serializedErrors[key as keyof SignupFormState['errors']] = value.map(String);
-        }
-      }
+      // Convert all error arrays to plain string arrays - handle each field type explicitly
+      if (fieldErrors.email) serializedErrors.email = fieldErrors.email.map(String);
+      if (fieldErrors.username) serializedErrors.username = fieldErrors.username.map(String);
+      if (fieldErrors.full_name) serializedErrors.full_name = fieldErrors.full_name.map(String);
+      if (fieldErrors.password) serializedErrors.password = fieldErrors.password.map(String);
+      if (fieldErrors.confirm_password) serializedErrors.confirm_password = fieldErrors.confirm_password.map(String);
       
       const errorResponse: SignupFormState = {
         errors: serializedErrors,
