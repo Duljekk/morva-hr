@@ -16,6 +16,12 @@ export interface UserProfile {
   employee_id: string | null;
   shift_start_hour: number;
   shift_end_hour: number;
+  profile_picture_url?: string | null;
+  birthdate?: string | null;
+  employment_type?: 'intern' | 'full_time' | 'part_time' | 'contractor' | null;
+  salary?: number | null;
+  contract_start_date?: string | null;
+  contract_end_date?: string | null;
 }
 
 interface AuthContextType {
@@ -51,7 +57,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('id', userId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        // Check if this is a "no rows" error (PGRST116) - this is expected for new invitations
+        if (error.code === 'PGRST116') {
+          // This is normal for invited users who haven't completed signup yet
+          console.log('[AuthContext] No profile found for user - likely a new invitation');
+          setProfile(null);
+          return;
+        }
+        // For other errors, throw them
+        throw error;
+      }
 
       setProfile(data as UserProfile);
     } catch (error) {
@@ -70,12 +86,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Sign in function
   const signIn = async (email: string, password: string) => {
     try {
+      console.log('[AuthContext] Attempting signInWithPassword for email:', email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) return { error };
+      if (error) {
+        console.error('[AuthContext] Sign in error:', error);
+        return { error };
+      }
+
+      console.log('[AuthContext] Sign in successful, user:', data.user?.id);
 
       if (data.user) {
         await fetchProfile(data.user.id);
@@ -83,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       return { error: null };
     } catch (error) {
-      console.error('Sign in error:', error);
+      console.error('[AuthContext] Sign in exception:', error);
       return { error: error as AuthError };
     }
   };
