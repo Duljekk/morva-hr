@@ -2,7 +2,6 @@
 
 import { SignupFormSchema, type SignupFormData } from '@/lib/validations/signup';
 import { createClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
 
 /**
  * Signup form state returned to the client
@@ -17,6 +16,53 @@ export interface SignupFormState {
     _form?: string[];
   };
   message?: string;
+}
+
+/**
+ * Get invitation email from token
+ * 
+ * This verifies the invitation token and returns the email address
+ * without requiring a password. This creates a temporary session
+ * that will be used when the user completes signup.
+ * 
+ * @param tokenHash - The invitation token hash from URL
+ * @returns Email address or error message
+ */
+export async function getInvitationEmail(
+  tokenHash: string
+): Promise<{ success: boolean; email?: string; error?: string }> {
+  if (!tokenHash) {
+    return { success: false, error: 'Invalid invitation token' };
+  }
+
+  try {
+    const supabase = await createClient();
+
+    // Verify invitation token to get session and user email
+    const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
+      token_hash: tokenHash,
+      type: 'invite',
+    });
+
+    if (verifyError || !verifyData.session || !verifyData.user) {
+      console.error('[getInvitationEmail] Token verification error:', verifyError);
+      return { 
+        success: false, 
+        error: 'Invalid or expired invitation token. Please request a new invitation.' 
+      };
+    }
+
+    return { 
+      success: true, 
+      email: verifyData.user.email || undefined 
+    };
+  } catch (error) {
+    console.error('[getInvitationEmail] Unexpected error:', error);
+    return { 
+      success: false, 
+      error: 'An unexpected error occurred. Please try again.' 
+    };
+  }
 }
 
 /**
@@ -67,19 +113,35 @@ export async function signup(
   try {
     const supabase = await createClient();
 
-    // Verify invitation token to get session
-    const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
-      token_hash: tokenHash,
-      type: 'invite',
-    });
+    // Check if user is already authenticated (from getInvitationEmail)
+    const { data: { user: existingUser }, error: existingUserError } = await supabase.auth.getUser();
+    
+    let user;
+    let session;
+    
+    // If user is already authenticated, use existing session
+    if (existingUser && !existingUserError) {
+      user = existingUser;
+      const { data: { session: existingSession } } = await supabase.auth.getSession();
+      session = existingSession;
+    } else {
+      // Otherwise, verify invitation token to get session
+      const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
+        token_hash: tokenHash,
+        type: 'invite',
+      });
 
-    if (verifyError || !verifyData.session) {
-      console.error('[signup] Token verification error:', verifyError);
-      return {
-        errors: {
-          _form: ['Invalid or expired invitation token. Please request a new invitation.'],
-        },
-      };
+      if (verifyError || !verifyData.session || !verifyData.user) {
+        console.error('[signup] Token verification error:', verifyError);
+        return {
+          errors: {
+            _form: ['Invalid or expired invitation token. Please request a new invitation.'],
+          },
+        };
+      }
+      
+      user = verifyData.user;
+      session = verifyData.session;
     }
 
     // Update user password
@@ -96,13 +158,22 @@ export async function signup(
       };
     }
 
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      console.error('[signup] Get user error:', userError);
+    // Ensure we have user (should already be set above)
+    if (!user) {
+      console.error('[signup] No user available');
       return {
         errors: {
           _form: ['Failed to get user information'],
+        },
+      };
+    }
+
+    // Verify that the email in the form matches the invitation email
+    if (user.email?.toLowerCase() !== email.toLowerCase()) {
+      console.error('[signup] Email mismatch:', { formEmail: email, invitationEmail: user.email });
+      return {
+        errors: {
+          _form: ['Email address does not match the invitation. Please use the email from your invitation.'],
         },
       };
     }
@@ -123,7 +194,9 @@ export async function signup(
       };
     }
 
-    // Create or update user profile
+    // Update user profile (profile was already created by inviteUserByEmail or trigger)
+    // We upsert it with the user-provided username and full_name
+    // Using upsert to handle edge cases where profile might not exist
     const { error: profileError } = await supabase
       .from('users')
       .upsert({
@@ -136,6 +209,7 @@ export async function signup(
         shift_start_hour: user.user_metadata?.shift_start_hour || 11,
         shift_end_hour: user.user_metadata?.shift_end_hour || 19,
         updated_at: new Date().toISOString(),
+        is_active: true,
       }, {
         onConflict: 'id',
       });
@@ -155,14 +229,11 @@ export async function signup(
       username: username,
     });
 
-    // Success - redirect to login
-    redirect('/login?message=Account created successfully. Please sign in.');
+    // Success - return success message (client will handle redirect)
+    return {
+      message: 'Account created successfully. Please sign in.',
+    };
   } catch (error) {
-    // Handle redirect (expected behavior)
-    if (error && typeof error === 'object' && 'digest' in error) {
-      throw error;
-    }
-    
     console.error('[signup] Unexpected error:', error);
     return {
       errors: {
