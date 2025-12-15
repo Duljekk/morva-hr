@@ -10,7 +10,13 @@ interface RouteGroupConfig {
 
 export const ROUTE_GROUPS: Record<RouteGroup, RouteGroupConfig> = {
   EMPLOYEE: {
-    patterns: [/^\/employee/],
+    // Employee routes are at root level: /, /notifications, /request-leave
+    // Patterns match exact routes or routes starting with these paths
+    patterns: [
+      /^\/$/,  // Root dashboard
+      /^\/notifications(\/|$)/,  // Notifications page
+      /^\/request-leave(\/|$)/,  // Request leave page
+    ],
     requiredRoles: ['employee', 'hr_admin'],
     isPublic: false,
   },
@@ -30,7 +36,14 @@ export const ROUTE_GROUPS: Record<RouteGroup, RouteGroupConfig> = {
 const PUBLIC_ROUTES = ['/login', '/signup'];
 
 // Routes that require authentication
-const PROTECTED_ROUTE_PATTERNS = [/^\/employee/, /^\/admin/];
+// Employee routes: /, /notifications, /request-leave
+// Admin routes: /admin/*
+const PROTECTED_ROUTE_PATTERNS = [
+  /^\/$/,  // Root (employee dashboard)
+  /^\/notifications/,  // Employee notifications
+  /^\/request-leave/,  // Employee leave requests
+  /^\/admin/,  // Admin routes
+];
 
 export function getRouteGroup(pathname: string): RouteGroup | null {
   for (const [group, config] of Object.entries(ROUTE_GROUPS)) {
@@ -77,7 +90,8 @@ export function getDefaultRedirectPath(userRole: UserRole | null): string {
     case 'hr_admin':
       return '/admin';
     case 'employee':
-      return '/employee';
+      // Employee dashboard is at root (/), not /employee
+      return '/';
     default:
       return '/login';
   }

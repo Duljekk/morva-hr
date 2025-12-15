@@ -20,17 +20,32 @@ ALTER TABLE payslips ENABLE ROW LEVEL SECURITY;
 -- ============================================================================
 
 -- Function to check if current user is HR admin
+-- SECURITY DEFINER allows this function to bypass RLS when querying users table
+-- Function is owned by postgres role which has BYPASSRLS privilege
 CREATE OR REPLACE FUNCTION is_hr_admin()
-RETURNS BOOLEAN AS $$
+RETURNS BOOLEAN 
+LANGUAGE plpgsql 
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_role user_role;
 BEGIN
-    RETURN EXISTS (
-        SELECT 1 FROM users
-        WHERE id = auth.uid()
-        AND role = 'hr_admin'
-        AND is_active = true
-    );
+    -- This query bypasses RLS because function is SECURITY DEFINER
+    -- and owned by postgres (which has BYPASSRLS privilege)
+    SELECT role INTO v_role
+    FROM public.users
+    WHERE id = auth.uid()
+    AND is_active = true
+    LIMIT 1;
+    
+    RETURN COALESCE(v_role = 'hr_admin'::user_role, false);
+EXCEPTION
+    WHEN OTHERS THEN
+        -- If anything goes wrong, return false
+        RETURN false;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 -- Function to get current user's role
 CREATE OR REPLACE FUNCTION get_user_role()
