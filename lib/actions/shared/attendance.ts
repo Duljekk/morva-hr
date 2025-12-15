@@ -2,23 +2,30 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
+import {
+  getTodayDateString as getTodayGMT7,
+  createTimestamp,
+  getNowInGMT7,
+  formatDateISO,
+  formatTimeShort,
+  APP_TIMEZONE
+} from '@/lib/utils/timezone';
 
 /**
  * ATTENDANCE ACTIONS
  * 
  * These server actions handle check-in/check-out operations.
  * All time calculations happen server-side for security and accuracy.
+ * Uses GMT+7 (Asia/Bangkok) timezone for all date operations.
  */
 
-// Helper: Get today's date string in YYYY-MM-DD format (server timezone)
+// Re-export helper functions using GMT+7 timezone
 function getTodayDateString(): string {
-  const now = new Date();
-  return now.toISOString().split('T')[0];
+  return getTodayGMT7();
 }
 
-// Helper: Get current date-time in database format
 function getCurrentTimestamp(): string {
-  return new Date().toISOString();
+  return createTimestamp();
 }
 
 /**
@@ -36,7 +43,7 @@ async function _getTodaysAttendanceUncached(userId: string, today: string): Prom
   | { error: string; data?: never }
 > {
   const supabase = await createClient();
-  
+
   // Query today's attendance record
   const { data, error } = await supabase
     .from('attendance_records')
@@ -59,7 +66,7 @@ export async function getTodaysAttendance(): Promise<
 > {
   try {
     const supabase = await createClient();
-    
+
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
@@ -118,14 +125,14 @@ export async function checkIn(): Promise<
 > {
   try {
     const supabase = await createClient();
-    
+
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return { error: 'Not authenticated' };
     }
 
-    const now = new Date();
+    const now = getNowInGMT7();
     const today = getTodayDateString();
     const checkInTime = getCurrentTimestamp();
 
@@ -197,7 +204,7 @@ export async function checkIn(): Promise<
     revalidateTag('attendance', 'max');
     revalidateTag(`user-${user.id}`, 'max');
     revalidateTag('activities', 'max');
-    
+
     return { data };
   } catch (error) {
     console.error('Unexpected error in checkIn:', error);
@@ -225,7 +232,7 @@ export async function checkOut(): Promise<
 > {
   try {
     const supabase = await createClient();
-    
+
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
@@ -268,7 +275,7 @@ export async function checkOut(): Promise<
       return { error: 'Failed to fetch user data' };
     }
 
-    const now = new Date();
+    const now = getNowInGMT7();
     const checkInDate = new Date(attendance.check_in_time);
 
     // Calculate shift end time for today
@@ -324,7 +331,7 @@ export async function checkOut(): Promise<
     revalidateTag('attendance', 'max');
     revalidateTag(`user-${user.id}`, 'max');
     revalidateTag('activities', 'max');
-    
+
     return { data };
   } catch (error) {
     console.error('Unexpected error in checkOut:', error);
@@ -363,202 +370,192 @@ async function _getRecentActivitiesUncached(
 ): Promise<{ data?: DayActivity[]; error?: string }> {
   const supabase = await createClient();
 
-    // Calculate date range (last N days, including today)
-    // Use local timezone for date calculations to match user's local date
-    const today = new Date();
-    const localYear = today.getFullYear();
-    const localMonth = today.getMonth();
-    const localDay = today.getDate();
-    const todayLocal = new Date(localYear, localMonth, localDay);
-    
-    const startDate = new Date(todayLocal);
-    startDate.setDate(startDate.getDate() - (days - 1)); // Include today, so subtract (days - 1)
+  // Calculate date range (last N days, including today)
+  // Use GMT+7 timezone for consistency across all operations
+  const today = getNowInGMT7();
+  const todayLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
-    // Format dates as YYYY-MM-DD in local timezone
-    const formatLocalDate = (date: Date): string => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
-    
-    const todayDateString = formatLocalDate(todayLocal);
-    const startDateString = formatLocalDate(startDate);
+  const startDate = new Date(todayLocal);
+  startDate.setDate(startDate.getDate() - (days - 1)); // Include today, so subtract (days - 1)
 
-    console.log('[getRecentActivities] Fetching activities for user:', userId);
-    console.log('[getRecentActivities] Date range:', { startDateString, todayDateString, days });
+  // Use timezone utility for date formatting
+  const todayDateString = formatDateISO(todayLocal);
+  const startDateString = formatDateISO(startDate);
 
-    // Query attendance records for the date range (including today)
-    const { data: records, error: fetchError } = await supabase
-      .from('attendance_records')
-      .select('date, check_in_time, check_out_time, check_in_status, check_out_status')
-      .eq('user_id', userId)
-      .gte('date', startDateString)
-      .lte('date', todayDateString) // Include today
-      .order('date', { ascending: false });
+  console.log('[getRecentActivities] Fetching activities for user:', userId);
+  console.log('[getRecentActivities] Date range (GMT+7):', { startDateString, todayDateString, days });
 
-    if (fetchError) {
-      console.error('[getRecentActivities] Error fetching records:', fetchError);
-      return { error: 'Failed to fetch recent activities' };
-    }
+  // Query attendance records for the date range (including today)
+  const { data: records, error: fetchError } = await supabase
+    .from('attendance_records')
+    .select('date, check_in_time, check_out_time, check_in_status, check_out_status')
+    .eq('user_id', userId)
+    .gte('date', startDateString)
+    .lte('date', todayDateString) // Include today
+    .order('date', { ascending: false });
 
-    // Query leave requests that overlap with the date range
-    // Optimized: Single query using PostgreSQL function to combine two conditions
-    // Condition 1: Leaves that overlap with past/current range (start_date <= today AND end_date >= startDate)
-    // Condition 2: Future leaves that start within extended range (start_date > today AND start_date <= extendedEndDate)
-    // Calculate extended end date to show future leaves (extend by same number of days)
-    const extendedEndDate = new Date(today);
-    extendedEndDate.setDate(extendedEndDate.getDate() + days);
-    const extendedEndDateString = extendedEndDate.toISOString().split('T')[0];
-    
-    // Use optimized PostgreSQL function for single query with complex OR conditions
-    // This reduces database round trips from 2 to 1 (50% reduction)
-    // The composite indexes optimize this query execution
-    // Fallback to original query logic if function doesn't exist (migration not run yet)
-    let leaveRequests: any[] | null = null;
-    let leaveError: any = null;
-    
-    try {
-      const { data, error } = await (supabase as any)
-        .rpc('get_recent_leave_requests', {
-          p_user_id: userId,
-          p_start_date: startDateString,
-          p_today_date: todayDateString,
-          p_extended_end_date: extendedEndDateString,
-        });
-      
-      leaveRequests = data;
-      leaveError = error;
-      
-      if (leaveError) {
-        // If function doesn't exist, fallback to original query logic
-        if (leaveError.message?.includes('function') || leaveError.code === '42883') {
-          console.warn('[getRecentActivities] PostgreSQL function not found, using fallback query:', leaveError.message);
-          
-          // Fallback: Use original two-query approach
-          const extendedEndDate = new Date(today);
-          extendedEndDate.setDate(extendedEndDate.getDate() + days);
-          const extendedEndDateStringFallback = extendedEndDate.toISOString().split('T')[0];
-          
-          // Query 1: Leaves that overlap with past/current range
-          const { data: pastLeaves, error: pastLeaveError } = await supabase
-            .from('leave_requests')
-            .select('id, leave_type_id, start_date, end_date, status, created_at')
-            .eq('user_id', userId)
-            .lte('start_date', todayDateString)
-            .gte('end_date', startDateString)
-            .in('status', ['pending', 'approved', 'rejected'])
-            .order('created_at', { ascending: false });
-          
-          // Query 2: Future leaves that start within extended range
-          const { data: futureLeaves, error: futureLeaveError } = await supabase
-            .from('leave_requests')
-            .select('id, leave_type_id, start_date, end_date, status, created_at')
-            .eq('user_id', userId)
-            .gt('start_date', todayDateString)
-            .lte('start_date', extendedEndDateStringFallback)
-            .in('status', ['pending', 'approved', 'rejected'])
-            .order('created_at', { ascending: false });
-          
-          if (pastLeaveError || futureLeaveError) {
-            console.error('[getRecentActivities] Error in fallback queries:', pastLeaveError || futureLeaveError);
-            leaveRequests = [];
-          } else {
-            // Merge and deduplicate
-            const allLeaves = [
-              ...(pastLeaves || []),
-              ...(futureLeaves || []),
-            ];
-            leaveRequests = allLeaves.filter((leave: any, index: number, self: any[]) =>
-              index === self.findIndex((l: any) => l.id === leave.id)
-            );
-          }
-        } else {
-          console.error('[getRecentActivities] Error fetching leave requests:', leaveError);
+  if (fetchError) {
+    console.error('[getRecentActivities] Error fetching records:', fetchError);
+    return { error: 'Failed to fetch recent activities' };
+  }
+
+  // Query leave requests that overlap with the date range
+  // Optimized: Single query using PostgreSQL function to combine two conditions
+  // Condition 1: Leaves that overlap with past/current range (start_date <= today AND end_date >= startDate)
+  // Condition 2: Future leaves that start within extended range (start_date > today AND start_date <= extendedEndDate)
+  // Calculate extended end date to show future leaves (extend by same number of days)
+  const extendedEndDate = new Date(today);
+  extendedEndDate.setDate(extendedEndDate.getDate() + days);
+  const extendedEndDateString = extendedEndDate.toISOString().split('T')[0];
+
+  // Use optimized PostgreSQL function for single query with complex OR conditions
+  // This reduces database round trips from 2 to 1 (50% reduction)
+  // The composite indexes optimize this query execution
+  // Fallback to original query logic if function doesn't exist (migration not run yet)
+  let leaveRequests: any[] | null = null;
+  let leaveError: any = null;
+
+  try {
+    const { data, error } = await (supabase as any)
+      .rpc('get_recent_leave_requests', {
+        p_user_id: userId,
+        p_start_date: startDateString,
+        p_today_date: todayDateString,
+        p_extended_end_date: extendedEndDateString,
+      });
+
+    leaveRequests = data;
+    leaveError = error;
+
+    if (leaveError) {
+      // If function doesn't exist, fallback to original query logic
+      if (leaveError.message?.includes('function') || leaveError.code === '42883') {
+        console.warn('[getRecentActivities] PostgreSQL function not found, using fallback query:', leaveError.message);
+
+        // Fallback: Use original two-query approach
+        const extendedEndDate = new Date(today);
+        extendedEndDate.setDate(extendedEndDate.getDate() + days);
+        const extendedEndDateStringFallback = extendedEndDate.toISOString().split('T')[0];
+
+        // Query 1: Leaves that overlap with past/current range
+        const { data: pastLeaves, error: pastLeaveError } = await supabase
+          .from('leave_requests')
+          .select('id, leave_type_id, start_date, end_date, status, created_at')
+          .eq('user_id', userId)
+          .lte('start_date', todayDateString)
+          .gte('end_date', startDateString)
+          .in('status', ['pending', 'approved', 'rejected'])
+          .order('created_at', { ascending: false });
+
+        // Query 2: Future leaves that start within extended range
+        const { data: futureLeaves, error: futureLeaveError } = await supabase
+          .from('leave_requests')
+          .select('id, leave_type_id, start_date, end_date, status, created_at')
+          .eq('user_id', userId)
+          .gt('start_date', todayDateString)
+          .lte('start_date', extendedEndDateStringFallback)
+          .in('status', ['pending', 'approved', 'rejected'])
+          .order('created_at', { ascending: false });
+
+        if (pastLeaveError || futureLeaveError) {
+          console.error('[getRecentActivities] Error in fallback queries:', pastLeaveError || futureLeaveError);
           leaveRequests = [];
+        } else {
+          // Merge and deduplicate
+          const allLeaves = [
+            ...(pastLeaves || []),
+            ...(futureLeaves || []),
+          ];
+          leaveRequests = allLeaves.filter((leave: any, index: number, self: any[]) =>
+            index === self.findIndex((l: any) => l.id === leave.id)
+          );
         }
-      }
-    } catch (rpcError) {
-      console.error('[getRecentActivities] RPC call failed:', rpcError);
-      leaveRequests = [];
-    }
-
-    console.log('[getRecentActivities] Found records:', records?.length || 0);
-    console.log('[getRecentActivities] Found leave requests:', leaveRequests?.length || 0);
-
-    if ((!records || records.length === 0) && (!leaveRequests || leaveRequests.length === 0)) {
-      console.log('[getRecentActivities] No records found, returning empty array');
-      return { data: [] };
-    }
-
-    // Helper function to format date (e.g., "October 30")
-    const formatDate = (dateString: string): string => {
-      const date = new Date(dateString + 'T00:00:00');
-      const month = date.toLocaleDateString('en-US', { month: 'long' });
-      const day = date.getDate();
-      return `${month} ${day}`;
-    };
-
-    // Helper function to format time (e.g., "11:12")
-    const formatTime = (timestamp: string): string => {
-      const date = new Date(timestamp);
-      const hours = date.getHours().toString().padStart(2, '0');
-      const minutes = date.getMinutes().toString().padStart(2, '0');
-      return `${hours}:${minutes}`;
-    };
-
-    // Helper function to format date range (e.g., "14-15 Nov")
-    const formatDateRange = (startDate: string, endDate: string): string => {
-      const start = new Date(startDate + 'T00:00:00');
-      const end = new Date(endDate + 'T00:00:00');
-      
-      const startDay = start.getDate();
-      const endDay = end.getDate();
-      const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
-      const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
-      
-      // If same month, show "14-15 Nov", otherwise "30 Nov - 2 Dec"
-      if (startMonth === endMonth) {
-        return `${startDay}-${endDay} ${startMonth}`;
       } else {
-        return `${startDay} ${startMonth} - ${endDay} ${endMonth}`;
+        console.error('[getRecentActivities] Error fetching leave requests:', leaveError);
+        leaveRequests = [];
       }
-    };
+    }
+  } catch (rpcError) {
+    console.error('[getRecentActivities] RPC call failed:', rpcError);
+    leaveRequests = [];
+  }
 
-    // Helper function to get all dates in a range
-    const getDatesInRange = (startDate: string, endDate: string): string[] => {
-      const dates: string[] = [];
-      const start = new Date(startDate + 'T00:00:00');
-      const end = new Date(endDate + 'T00:00:00');
-      
-      const current = new Date(start);
-      while (current <= end) {
-        dates.push(current.toISOString().split('T')[0]);
-        current.setDate(current.getDate() + 1);
-      }
-      
-      return dates;
-    };
+  console.log('[getRecentActivities] Found records:', records?.length || 0);
+  console.log('[getRecentActivities] Found leave requests:', leaveRequests?.length || 0);
 
-    // Group records by date and format activities
-    const activitiesByDate = new Map<string, Activity[]>();
+  if ((!records || records.length === 0) && (!leaveRequests || leaveRequests.length === 0)) {
+    console.log('[getRecentActivities] No records found, returning empty array');
+    return { data: [] };
+  }
 
-    // Process attendance records
-    if (records) {
+  // Helper function to format date (e.g., "October 30")
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString + 'T00:00:00');
+    const month = date.toLocaleDateString('en-US', { month: 'long' });
+    const day = date.getDate();
+    return `${month} ${day}`;
+  };
+
+  // Helper function to format time (e.g., "11:12")
+  const formatTime = (timestamp: string): string => {
+    const date = new Date(timestamp);
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+  };
+
+  // Helper function to format date range (e.g., "14-15 Nov")
+  const formatDateRange = (startDate: string, endDate: string): string => {
+    const start = new Date(startDate + 'T00:00:00');
+    const end = new Date(endDate + 'T00:00:00');
+
+    const startDay = start.getDate();
+    const endDay = end.getDate();
+    const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
+    const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
+
+    // If same month, show "14-15 Nov", otherwise "30 Nov - 2 Dec"
+    if (startMonth === endMonth) {
+      return `${startDay}-${endDay} ${startMonth}`;
+    } else {
+      return `${startDay} ${startMonth} - ${endDay} ${endMonth}`;
+    }
+  };
+
+  // Helper function to get all dates in a range
+  const getDatesInRange = (startDate: string, endDate: string): string[] => {
+    const dates: string[] = [];
+    const start = new Date(startDate + 'T00:00:00');
+    const end = new Date(endDate + 'T00:00:00');
+
+    const current = new Date(start);
+    while (current <= end) {
+      dates.push(current.toISOString().split('T')[0]);
+      current.setDate(current.getDate() + 1);
+    }
+
+    return dates;
+  };
+
+  // Group records by date and format activities
+  const activitiesByDate = new Map<string, Activity[]>();
+
+  // Process attendance records
+  if (records) {
     for (const record of records as any[]) {
       const dateKey = record.date;
-        
-        // Debug: Log today's record if found
-        if (dateKey === todayDateString) {
-          console.log('[getRecentActivities] Found today\'s record:', {
-            date: dateKey,
-            check_in_time: record.check_in_time,
-            check_out_time: record.check_out_time,
-            check_in_status: record.check_in_status,
-            check_out_status: record.check_out_status,
-          });
-        }
-      
+
+      // Debug: Log today's record if found
+      if (dateKey === todayDateString) {
+        console.log('[getRecentActivities] Found today\'s record:', {
+          date: dateKey,
+          check_in_time: record.check_in_time,
+          check_out_time: record.check_out_time,
+          check_in_status: record.check_in_status,
+          check_out_status: record.check_out_status,
+        });
+      }
+
       if (!activitiesByDate.has(dateKey)) {
         activitiesByDate.set(dateKey, []);
       }
@@ -580,94 +577,94 @@ async function _getRecentActivitiesUncached(
           type: 'checkout',
           time: formatTime(record.check_out_time),
           status: record.check_out_status || undefined,
-          });
-        }
-      }
-    }
-
-    // Process leave requests
-    // Leave requests should appear on the date they were REQUESTED (created_at), not on the leave dates
-    if (leaveRequests && leaveRequests.length > 0) {
-      for (const leave of leaveRequests) {
-        // Get the date when the leave was requested (created_at)
-        // Convert to local timezone to get the correct local date
-        const requestDate = new Date(leave.created_at);
-        // Get local date components (not UTC)
-        const localYear = requestDate.getFullYear();
-        const localMonth = requestDate.getMonth();
-        const localDay = requestDate.getDate();
-        // Create a new date at midnight in local timezone
-        const localRequestDate = new Date(localYear, localMonth, localDay);
-        // Format as YYYY-MM-DD in local timezone
-        const year = localRequestDate.getFullYear();
-        const month = String(localRequestDate.getMonth() + 1).padStart(2, '0');
-        const day = String(localRequestDate.getDate()).padStart(2, '0');
-        const requestDateString = `${year}-${month}-${day}`;
-        
-        // Only include if the request date is within our display range
-        const isInPastRange = requestDateString >= startDateString && requestDateString <= todayDateString;
-        const isInFutureRange = requestDateString > todayDateString && requestDateString <= extendedEndDateString;
-        
-        if (!isInPastRange && !isInFutureRange) {
-          continue; // Skip if request date is outside our range
-        }
-        
-        const dateRange = formatDateRange(leave.start_date, leave.end_date);
-        const leaveTime = formatTime(leave.created_at);
-        
-        // Map leave_type_id to leave type
-        const leaveType = leave.leave_type_id as 'annual' | 'sick' | 'unpaid';
-        
-        // Map status (exclude 'cancelled')
-        const status = leave.status === 'cancelled' ? undefined : leave.status as 'pending' | 'approved' | 'rejected';
-        
-        if (!status) continue; // Skip cancelled leaves
-        
-        // Add leave activity on the date it was requested
-        if (!activitiesByDate.has(requestDateString)) {
-          activitiesByDate.set(requestDateString, []);
-        }
-        
-        const activities = activitiesByDate.get(requestDateString)!;
-        
-        // Add leave activity
-        activities.push({
-          type: 'leave',
-          time: leaveTime,
-          status: status,
-          leaveType: leaveType,
-          dateRange: dateRange,
         });
       }
     }
+  }
 
-    // Convert map to array and format
-    // Sort by date first (newest first), then format
-    // Filter out dates with no activities (shouldn't happen, but just in case)
-    const dayActivities: DayActivity[] = Array.from(activitiesByDate.entries())
-      .filter(([date, activities]) => activities.length > 0) // Only include dates with activities
-      .sort(([dateA], [dateB]) => {
-        // Sort by date string (YYYY-MM-DD format) - newest first
-        return dateB.localeCompare(dateA);
-      })
-      .map(([date, activities]) => ({
-        date: formatDate(date),
-        activities: activities.sort((a, b) => {
-          // Sort activities: leave requests first, then check-in, then check-out
-          // Within same type, sort by time
-          if (a.type === 'leave' && b.type !== 'leave') return -1;
-          if (a.type !== 'leave' && b.type === 'leave') return 1;
-          if (a.type === 'checkin' && b.type === 'checkout') return -1;
-          if (a.type === 'checkout' && b.type === 'checkin') return 1;
-          return a.time.localeCompare(b.time);
-        }),
-      }));
+  // Process leave requests
+  // Leave requests should appear on the date they were REQUESTED (created_at), not on the leave dates
+  if (leaveRequests && leaveRequests.length > 0) {
+    for (const leave of leaveRequests) {
+      // Get the date when the leave was requested (created_at)
+      // Convert to local timezone to get the correct local date
+      const requestDate = new Date(leave.created_at);
+      // Get local date components (not UTC)
+      const localYear = requestDate.getFullYear();
+      const localMonth = requestDate.getMonth();
+      const localDay = requestDate.getDate();
+      // Create a new date at midnight in local timezone
+      const localRequestDate = new Date(localYear, localMonth, localDay);
+      // Format as YYYY-MM-DD in local timezone
+      const year = localRequestDate.getFullYear();
+      const month = String(localRequestDate.getMonth() + 1).padStart(2, '0');
+      const day = String(localRequestDate.getDate()).padStart(2, '0');
+      const requestDateString = `${year}-${month}-${day}`;
 
-    console.log('[getRecentActivities] Formatted activities:', dayActivities.length, 'days');
-    console.log('[getRecentActivities] Today date string:', todayDateString);
-    console.log('[getRecentActivities] Sample records:', records?.slice(0, 3));
+      // Only include if the request date is within our display range
+      const isInPastRange = requestDateString >= startDateString && requestDateString <= todayDateString;
+      const isInFutureRange = requestDateString > todayDateString && requestDateString <= extendedEndDateString;
 
-    return { data: dayActivities };
+      if (!isInPastRange && !isInFutureRange) {
+        continue; // Skip if request date is outside our range
+      }
+
+      const dateRange = formatDateRange(leave.start_date, leave.end_date);
+      const leaveTime = formatTime(leave.created_at);
+
+      // Map leave_type_id to leave type
+      const leaveType = leave.leave_type_id as 'annual' | 'sick' | 'unpaid';
+
+      // Map status (exclude 'cancelled')
+      const status = leave.status === 'cancelled' ? undefined : leave.status as 'pending' | 'approved' | 'rejected';
+
+      if (!status) continue; // Skip cancelled leaves
+
+      // Add leave activity on the date it was requested
+      if (!activitiesByDate.has(requestDateString)) {
+        activitiesByDate.set(requestDateString, []);
+      }
+
+      const activities = activitiesByDate.get(requestDateString)!;
+
+      // Add leave activity
+      activities.push({
+        type: 'leave',
+        time: leaveTime,
+        status: status,
+        leaveType: leaveType,
+        dateRange: dateRange,
+      });
+    }
+  }
+
+  // Convert map to array and format
+  // Sort by date first (newest first), then format
+  // Filter out dates with no activities (shouldn't happen, but just in case)
+  const dayActivities: DayActivity[] = Array.from(activitiesByDate.entries())
+    .filter(([date, activities]) => activities.length > 0) // Only include dates with activities
+    .sort(([dateA], [dateB]) => {
+      // Sort by date string (YYYY-MM-DD format) - newest first
+      return dateB.localeCompare(dateA);
+    })
+    .map(([date, activities]) => ({
+      date: formatDate(date),
+      activities: activities.sort((a, b) => {
+        // Sort activities: leave requests first, then check-in, then check-out
+        // Within same type, sort by time
+        if (a.type === 'leave' && b.type !== 'leave') return -1;
+        if (a.type !== 'leave' && b.type === 'leave') return 1;
+        if (a.type === 'checkin' && b.type === 'checkout') return -1;
+        if (a.type === 'checkout' && b.type === 'checkin') return 1;
+        return a.time.localeCompare(b.time);
+      }),
+    }));
+
+  console.log('[getRecentActivities] Formatted activities:', dayActivities.length, 'days');
+  console.log('[getRecentActivities] Today date string:', todayDateString);
+  console.log('[getRecentActivities] Sample records:', records?.slice(0, 3));
+
+  return { data: dayActivities };
 }
 
 /**
@@ -678,7 +675,7 @@ async function _getRecentActivitiesUncached(
 export async function getRecentActivities(days: number = 14): Promise<{ data?: DayActivity[]; error?: string }> {
   try {
     const supabase = await createClient();
-    
+
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {

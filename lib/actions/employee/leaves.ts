@@ -5,6 +5,7 @@
  * Handles file uploads, leave requests submission, and balance checks
  * 
  * Location: lib/actions/employee/ - Employee-only actions
+ * Uses GMT+7 (Asia/Bangkok) timezone for all date operations
  */
 
 import { createClient } from '@/lib/supabase/server';
@@ -12,6 +13,11 @@ import { validateFile, generateFilePath, formatFileSize } from '@/lib/utils/file
 import { Database } from '@/lib/supabase/types';
 import { revalidateTag, unstable_cache } from 'next/cache';
 import { createNotification } from '../shared/notifications';
+import {
+  getCurrentYear,
+  getTodayDateString,
+  getNowInGMT7
+} from '@/lib/utils/timezone';
 
 type LeaveRequest = Database['public']['Tables']['leave_requests']['Row'];
 type LeaveRequestInsert = Database['public']['Tables']['leave_requests']['Insert'];
@@ -61,12 +67,12 @@ async function _getLeaveTypesUncached() {
     .select('id, name, max_days_per_year')
     .eq('is_active', true)
     .order('name');
-  
+
   if (error) {
     console.error('[getLeaveTypes] Error fetching leave types:', error);
     return { error: 'Failed to fetch leave types' };
   }
-  
+
   return { data: leaveTypes || [] };
 }
 
@@ -216,7 +222,7 @@ export async function getLeaveBalance(leaveTypeId: string): Promise<{ data?: Lea
     console.log('[getLeaveBalance] Fetching leave balance for type:', leaveTypeId, 'user:', user.id);
 
     // Calculate date range once
-    const currentYear = new Date().getFullYear();
+    const currentYear = getCurrentYear();
     const yearStart = `${currentYear}-01-01`;
     const yearEnd = `${currentYear}-12-31`;
 
@@ -327,7 +333,7 @@ export async function getAllLeaveBalances(): Promise<{ data?: LeaveBalance[]; er
     const leaveTypes = leaveTypesResult.data;
 
     // OPTIMIZED: Calculate date range once
-    const currentYear = new Date().getFullYear();
+    const currentYear = getCurrentYear();
     const yearStart = `${currentYear}-01-01`;
     const yearEnd = `${currentYear}-12-31`;
 
@@ -392,9 +398,9 @@ export async function getAllLeaveBalances(): Promise<{ data?: LeaveBalance[]; er
 /**
  * HAS ACTIVE LEAVE REQUEST (Uncached implementation)
  */
-async function _hasActiveLeaveRequestUncached(userId: string, today: string): Promise<{ 
-  data?: { hasActive: boolean; request?: LeaveRequest }; 
-  error?: string 
+async function _hasActiveLeaveRequestUncached(userId: string, today: string): Promise<{
+  data?: { hasActive: boolean; request?: LeaveRequest };
+  error?: string
 }> {
   const supabase = await createClient();
 
@@ -436,9 +442,9 @@ async function _hasActiveLeaveRequestUncached(userId: string, today: string): Pr
  * 
  * Cached with 10-minute revalidation and user-specific tags for targeted invalidation
  */
-export async function hasActiveLeaveRequest(): Promise<{ 
-  data?: { hasActive: boolean; request?: LeaveRequest }; 
-  error?: string 
+export async function hasActiveLeaveRequest(): Promise<{
+  data?: { hasActive: boolean; request?: LeaveRequest };
+  error?: string
 }> {
   try {
     const supabase = await createClient();
@@ -454,7 +460,7 @@ export async function hasActiveLeaveRequest(): Promise<{
       return { error: 'You must be logged in' };
     }
 
-    const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
+    const today = getTodayDateString(); // Get today's date in YYYY-MM-DD format (GMT+7)
 
     // Cache with 10-minute revalidation and user-specific tags
     // Tags: 'leave-requests' (general) and 'user-{userId}' (user-specific)
@@ -521,8 +527,8 @@ export async function submitLeaveRequest(
       const activeRequest = activeLeaveCheck.data.request;
       const status = activeRequest?.status || 'active';
       console.log('[submitLeaveRequest] User already has active leave request:', activeRequest?.id);
-      return { 
-        error: `You already have an active leave request (${status}). Please wait for it to be processed or cancel it before submitting a new one.` 
+      return {
+        error: `You already have an active leave request (${status}). Please wait for it to be processed or cancel it before submitting a new one.`
       };
     }
 
@@ -534,7 +540,7 @@ export async function submitLeaveRequest(
       const [year, month, day] = dateString.split('-').map(Number);
       return new Date(year, month - 1, day);
     };
-    
+
     const startDate = parseLocalDate(requestData.startDate);
     const endDate = parseLocalDate(requestData.endDate);
     if (startDate > endDate) {
@@ -571,7 +577,7 @@ export async function submitLeaveRequest(
     // Insert attachments if any
     if (requestData.fileAttachments && requestData.fileAttachments.length > 0) {
       console.log('[submitLeaveRequest] Inserting attachments:', requestData.fileAttachments);
-      
+
       const attachments = requestData.fileAttachments.map((attachment) => {
         return {
           leave_request_id: leaveRequest.id,
@@ -596,26 +602,26 @@ export async function submitLeaveRequest(
           error: 'Leave request submitted, but some attachments failed to link.',
         };
       }
-      
+
       console.log('[submitLeaveRequest] Attachments linked successfully');
     }
 
     // Create notification for the employee
     console.log('[submitLeaveRequest] Creating notification for leave request:', leaveRequest.id);
-    const formattedStartDate = new Date(requestData.startDate).toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric' 
+    const formattedStartDate = new Date(requestData.startDate).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric'
     });
-    const formattedEndDate = new Date(requestData.endDate).toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric' 
+    const formattedEndDate = new Date(requestData.endDate).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric'
     });
-    
+
     // Format date range for notification
-    const dateRange = formattedStartDate === formattedEndDate 
-      ? formattedStartDate 
+    const dateRange = formattedStartDate === formattedEndDate
+      ? formattedStartDate
       : `${formattedStartDate} to ${formattedEndDate}`;
-    
+
     const notificationResult = await createNotification({
       user_id: user.id,
       type: 'leave_sent',
@@ -624,7 +630,7 @@ export async function submitLeaveRequest(
       related_entity_type: 'leave_request',
       related_entity_id: leaveRequest.id,
     });
-    
+
     if (!notificationResult.success) {
       console.error('[submitLeaveRequest] âš ï¸ Failed to create notification:', {
         error: notificationResult.error,

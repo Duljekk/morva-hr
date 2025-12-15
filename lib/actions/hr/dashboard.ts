@@ -6,6 +6,7 @@
  * 
  * Location: lib/actions/hr/ - HR-only actions
  * All functions require HR admin role
+ * Uses GMT+7 (Asia/Bangkok) timezone for all date operations
  * 
  * Best Practices:
  * - Parallel queries using Promise.all for performance
@@ -17,6 +18,13 @@
 import { revalidateTag } from 'next/cache';
 import { requireHRAdmin } from '@/lib/auth/server';
 import { DayActivity, Activity } from '../shared/attendance';
+import {
+  getTodayDateString,
+  getNowInGMT7,
+  formatDateISO,
+  formatTimeShort,
+  APP_TIMEZONE
+} from '@/lib/utils/timezone';
 
 export interface HRStats {
   totalEmployees: number;
@@ -66,7 +74,7 @@ export async function getHRDashboardStats(): Promise<{ data?: HRStats; error?: s
   try {
     // Require HR admin role
     const { supabase } = await requireHRAdmin();
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayDateString();
 
     // Parallel queries for efficiency
     const [
@@ -76,7 +84,7 @@ export async function getHRDashboardStats(): Promise<{ data?: HRStats; error?: s
     ] = await Promise.all([
       // 1. Total Employees
       supabase.from('users').select('*', { count: 'exact', head: true }).eq('is_active', true),
-      
+
       // 2. Today's Attendance (for Present, Late)
       supabase.from('attendance_records')
         .select('check_in_status')
@@ -138,9 +146,9 @@ export async function getAttendanceFeed(
   try {
     // Require HR admin role
     const { supabase } = await requireHRAdmin();
-    
-    const today = new Date().toISOString().split('T')[0];
-    
+
+    const today = getTodayDateString();
+
     console.log('[getAttendanceFeed] Fetching attendance feed for date:', today, 'type:', type || 'all');
 
     // Build query based on type filter
@@ -262,9 +270,9 @@ export async function getAttendanceFeedCount(
   try {
     // Require HR admin role
     const { supabase } = await requireHRAdmin();
-    
-    const today = new Date().toISOString().split('T')[0];
-    
+
+    const today = getTodayDateString();
+
     console.log('[getAttendanceFeedCount] Counting attendance feed for date:', today, 'type:', type || 'all');
 
     // Build query to count records
@@ -318,22 +326,24 @@ export async function getAttendanceFeedCount(
  */
 export async function getPendingLeaveRequestsForDashboard(
   limit: number = 10
-): Promise<{ data?: Array<{
-  id: string;
-  user: {
+): Promise<{
+  data?: Array<{
     id: string;
-    full_name: string;
-    initials: string;
-  };
-  leaveType: string;
-  startDate: string;
-  endDate: string;
-  days: number;
-  dayType: 'full' | 'half';
-  formattedDateRange: string; // e.g., "25-26 Nov 2025" or "27 Nov 2025 (Full Day)"
-  reason: string;
-  createdAt: string;
-}>; error?: string }> {
+    user: {
+      id: string;
+      full_name: string;
+      initials: string;
+    };
+    leaveType: string;
+    startDate: string;
+    endDate: string;
+    days: number;
+    dayType: 'full' | 'half';
+    formattedDateRange: string; // e.g., "25-26 Nov 2025" or "27 Nov 2025 (Full Day)"
+    reason: string;
+    createdAt: string;
+  }>; error?: string
+}> {
   try {
     // Require HR admin role
     const { supabase } = await requireHRAdmin();
@@ -363,24 +373,24 @@ export async function getPendingLeaveRequestsForDashboard(
     const formatDateRange = (startDate: string, endDate: string, dayType: 'full' | 'half'): string => {
       const start = new Date(startDate + 'T00:00:00');
       const end = new Date(endDate + 'T00:00:00');
-      
+
       const startDay = start.getDate();
       const endDay = end.getDate();
       const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
       const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
       const year = start.getFullYear();
-      
+
       // If same date, show single date
       if (startDate === endDate) {
         const dayTypeText = dayType === 'half' ? ' (Half Day)' : ' (Full Day)';
         return `${startDay} ${startMonth} ${year}${dayTypeText}`;
       }
-      
+
       // If same month, show "25-26 Nov 2025"
       if (startMonth === endMonth) {
         return `${startDay}-${endDay} ${startMonth} ${year}`;
       }
-      
+
       // Different months: "25 Nov - 2 Dec 2025"
       return `${startDay} ${startMonth} - ${endDay} ${endMonth} ${year}`;
     };
@@ -445,37 +455,37 @@ export async function getAllRecentActivities(limit: number = 20): Promise<{ data
     // Require HR admin role
     const { supabase } = await requireHRAdmin();
 
-  // Helper functions
-  const formatTime = (timestamp: string): string => {
-    const date = new Date(timestamp);
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    return `${hours}:${minutes}`;
-  };
+    // Helper functions
+    const formatTime = (timestamp: string): string => {
+      const date = new Date(timestamp);
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      return `${hours}:${minutes}`;
+    };
 
-  const formatDateRange = (startDate: string, endDate: string): string => {
-    const start = new Date(startDate + 'T00:00:00');
-    const end = new Date(endDate + 'T00:00:00');
-    
-    const startDay = start.getDate();
-    const endDay = end.getDate();
-    const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
-    const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
-    
-    if (startMonth === endMonth) {
-      return `${startDay}-${endDay} ${startMonth}`;
-    } else {
-      return `${startDay} ${startMonth} - ${endDay} ${endMonth}`;
-    }
-  };
+    const formatDateRange = (startDate: string, endDate: string): string => {
+      const start = new Date(startDate + 'T00:00:00');
+      const end = new Date(endDate + 'T00:00:00');
+
+      const startDay = start.getDate();
+      const endDay = end.getDate();
+      const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
+      const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
+
+      if (startMonth === endMonth) {
+        return `${startDay}-${endDay} ${startMonth}`;
+      } else {
+        return `${startDay} ${startMonth} - ${endDay} ${endMonth}`;
+      }
+    };
 
     // Format date as YYYY-MM-DD in local timezone
-  const formatLocalDate = (date: Date): string => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
+    const formatLocalDate = (date: Date): string => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
 
     // Calculate today's date in local timezone
     const todayDate = new Date();
@@ -492,8 +502,8 @@ export async function getAllRecentActivities(limit: number = 20): Promise<{ data
     // Fetch today's attendance records and leave requests in parallel
     const [recordsResult, leaveRequestsResult] = await Promise.all([
       supabase
-      .from('attendance_records')
-      .select(`
+        .from('attendance_records')
+        .select(`
         *,
           user:users!user_id (
           id,
@@ -501,9 +511,9 @@ export async function getAllRecentActivities(limit: number = 20): Promise<{ data
         )
       `)
         .eq('date', today)
-      .order('created_at', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(limit),
-      
+
       supabase
         .from('leave_requests')
         .select(`
@@ -538,7 +548,7 @@ export async function getAllRecentActivities(limit: number = 20): Promise<{ data
       if (!activitiesByDate.has(dateKey)) {
         activitiesByDate.set(dateKey, []);
       }
-      
+
       const activities = activitiesByDate.get(dateKey)!;
       const user = record.user as any;
 
@@ -600,21 +610,21 @@ export async function getAllRecentActivities(limit: number = 20): Promise<{ data
     // Sort and Format
     const dayActivities: DayEmployeeActivity[] = Array.from(activitiesByDate.entries())
       .map(([date, activities]) => {
-         const isToday = date === today;
-         const formattedDate = isToday 
-           ? 'Today' 
+        const isToday = date === today;
+        const formattedDate = isToday
+          ? 'Today'
           : new Date(date).toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
-         
-         return {
-           date: formattedDate,
-           activities: activities.sort((a, b) => {
-             if (a.type === 'leave' && b.type !== 'leave') return -1;
-             if (a.type !== 'leave' && b.type === 'leave') return 1;
-             if (a.type === 'checkin' && b.type === 'checkout') return -1;
-             if (a.type === 'checkout' && b.type === 'checkin') return 1;
+
+        return {
+          date: formattedDate,
+          activities: activities.sort((a, b) => {
+            if (a.type === 'leave' && b.type !== 'leave') return -1;
+            if (a.type !== 'leave' && b.type === 'leave') return 1;
+            if (a.type === 'checkin' && b.type === 'checkout') return -1;
+            if (a.type === 'checkout' && b.type === 'checkin') return 1;
             return b.time.localeCompare(a.time);
-           })
-         };
+          })
+        };
       })
       .sort((a, b) => 0); // Since we're only showing today, no need to sort by date
 
@@ -632,18 +642,18 @@ export async function getAllRecentActivities(limit: number = 20): Promise<{ data
 export async function getAllEmployees(): Promise<{ data?: { id: string; full_name: string }[]; error?: string }> {
   try {
     const { supabase } = await requireHRAdmin();
-    
+
     const { data, error } = await supabase
       .from('users')
       .select('id, full_name')
       .eq('is_active', true)
       .order('full_name');
-    
+
     if (error) {
       console.error('[getAllEmployees] Error:', error);
       return { error: 'Failed to fetch employees' };
     }
-    
+
     return { data };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -684,25 +694,25 @@ export async function getRecentActivitiesCount(): Promise<{ data?: number; error
         .from('announcements')
         .select('id', { count: 'exact', head: true })
         .eq('is_active', true),
-      
+
       // Count payslips
       supabase
         .from('payslips')
         .select('id', { count: 'exact', head: true }),
-      
+
       // Count leave requests (excluding cancelled)
       supabase
         .from('leave_requests')
         .select('id', { count: 'exact', head: true })
         .neq('status', 'cancelled'),
-      
+
       // Count approved leave requests (recent approvals)
       supabase
         .from('leave_requests')
         .select('id', { count: 'exact', head: true })
         .eq('status', 'approved')
         .not('approved_at', 'is', null),
-      
+
       // Count rejected leave requests (recent rejections)
       supabase
         .from('leave_requests')
@@ -772,7 +782,7 @@ export async function getRecentActivitiesForDashboard(
       const now = new Date();
       const diffMs = now.getTime() - date.getTime();
       const diffMins = Math.floor(diffMs / 60000);
-      
+
       if (diffMins < 1) return 'Now';
       if (diffMins < 60) return `${diffMins}m`;
       const diffHours = Math.floor(diffMins / 60);
@@ -791,18 +801,18 @@ export async function getRecentActivitiesForDashboard(
         .eq('is_active', true)
         .order('created_at', { ascending: false })
         .limit(limit),
-      
+
       // Fetch recent payslips
       supabase
         .from('payslips')
         .select('id, month, year, created_at')
         .order('created_at', { ascending: false })
         .limit(limit),
-      
+
       // Fetch recent leave requests (excluding cancelled)
       supabase
-      .from('leave_requests')
-      .select(`
+        .from('leave_requests')
+        .select(`
           id,
           created_at,
           start_date,
@@ -818,7 +828,7 @@ export async function getRecentActivitiesForDashboard(
         .neq('status', 'cancelled')
         .order('created_at', { ascending: false })
         .limit(limit),
-      
+
       // Fetch recently approved leave requests (ordered by approved_at)
       supabase
         .from('leave_requests')
@@ -834,7 +844,7 @@ export async function getRecentActivitiesForDashboard(
         .not('approved_at', 'is', null)
         .order('approved_at', { ascending: false })
         .limit(limit),
-      
+
       // Fetch recently rejected leave requests (ordered by approved_at)
       supabase
         .from('leave_requests')
@@ -903,7 +913,7 @@ export async function getRecentActivitiesForDashboard(
       'January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December'
     ];
-    
+
     payslips.forEach((payslip) => {
       const monthName = monthNames[payslip.month - 1];
       activities.push({
@@ -920,23 +930,23 @@ export async function getRecentActivitiesForDashboard(
     const formatLeaveDateRange = (startDate: string, endDate: string): string => {
       const start = new Date(startDate + 'T00:00:00');
       const end = new Date(endDate + 'T00:00:00');
-      
+
       const startDay = start.getDate();
       const endDay = end.getDate();
       const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
       const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
       const year = start.getFullYear();
-      
+
       // If same date, show single date
       if (startDate === endDate) {
         return `${startDay} ${startMonth} ${year}`;
       }
-      
+
       // If same month, show "24–25 Nov 2025" (using en dash)
       if (startMonth === endMonth) {
         return `${startDay}–${endDay} ${startMonth} ${year}`;
       }
-      
+
       // Different months: "25 Nov – 2 Dec 2025"
       return `${startDay} ${startMonth} – ${endDay} ${endMonth} ${year}`;
     };
@@ -948,7 +958,7 @@ export async function getRecentActivitiesForDashboard(
       const userName = user?.full_name || 'Unknown User';
       const leaveTypeName = leaveType?.name || 'Leave';
       const dateRange = formatLeaveDateRange(leaveRequest.start_date, leaveRequest.end_date);
-      
+
       activities.push({
         id: `leave-${leaveRequest.id}`,
         title: `${leaveTypeName} (${dateRange})`,
@@ -963,7 +973,7 @@ export async function getRecentActivitiesForDashboard(
     approvedLeaveRequests.forEach((approvedRequest) => {
       const user = approvedRequest.user as any;
       const userName = user?.full_name || 'Unknown User';
-      
+
       activities.push({
         id: `approval-${approvedRequest.id}`,
         title: 'Leave Request Approved',
@@ -978,7 +988,7 @@ export async function getRecentActivitiesForDashboard(
     rejectedLeaveRequests.forEach((rejectedRequest) => {
       const user = rejectedRequest.user as any;
       const userName = user?.full_name || 'Unknown User';
-      
+
       activities.push({
         id: `rejection-${rejectedRequest.id}`,
         title: 'Leave Request Rejected',
