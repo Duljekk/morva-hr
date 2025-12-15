@@ -6,11 +6,13 @@
  * 
  * Location: lib/actions/hr/ - HR-only actions
  * All functions require HR admin role (enforced via requireHRAdmin)
+ * Uses GMT+7 (Asia/Bangkok) timezone for all date operations
  */
 
 import { revalidateTag } from 'next/cache';
 import { requireHRAdmin } from '@/lib/auth/requireHRAdmin';
 import { createNotification } from '../shared/notifications';
+import { createTimestamp, formatDateDisplay, APP_TIMEZONE } from '@/lib/utils/timezone';
 
 export interface PendingLeaveRequest {
   id: string;
@@ -153,7 +155,7 @@ export async function approveLeaveRequest(
       .update({
         status: 'approved',
         approved_by: userId,
-        approved_at: new Date().toISOString(),
+        approved_at: createTimestamp(), // Store in UTC (best practice)
       })
       .eq('id', requestId)
       .eq('status', 'pending'); // Can only approve pending requests
@@ -165,20 +167,21 @@ export async function approveLeaveRequest(
 
     // Create notification for the employee
     try {
-      const startDate = new Date(leaveRequest.start_date).toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric' 
+      // Format dates in GMT+7 timezone for display
+      const startDate = formatDateDisplay(new Date(leaveRequest.start_date + 'T00:00:00Z'), {
+        month: 'short',
+        day: 'numeric'
       });
-      const endDate = new Date(leaveRequest.end_date).toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric' 
+      const endDate = formatDateDisplay(new Date(leaveRequest.end_date + 'T00:00:00Z'), {
+        month: 'short',
+        day: 'numeric'
       });
-      
+
       // Format date range for notification
-      const dateRange = startDate === endDate 
-        ? startDate 
+      const dateRange = startDate === endDate
+        ? startDate
         : `${startDate} to ${endDate}`;
-      
+
       const notificationResult = await createNotification({
         user_id: leaveRequest.user_id,
         type: 'leave_approved',
@@ -242,7 +245,7 @@ export async function rejectLeaveRequest(
       .update({
         status: 'rejected',
         approved_by: userId,
-        approved_at: new Date().toISOString(),
+        approved_at: createTimestamp(), // Store in UTC (best practice)
         rejection_reason: rejectionReason.trim(),
       })
       .eq('id', requestId)
@@ -255,16 +258,17 @@ export async function rejectLeaveRequest(
 
     // Create notification for the employee
     try {
-      const startDate = new Date(leaveRequest.start_date).toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric' 
+      // Format dates in GMT+7 timezone for display
+      const startDate = formatDateDisplay(new Date(leaveRequest.start_date + 'T00:00:00Z'), {
+        month: 'short',
+        day: 'numeric'
       });
-      const endDate = new Date(leaveRequest.end_date).toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric' 
+      const endDate = formatDateDisplay(new Date(leaveRequest.end_date + 'T00:00:00Z'), {
+        month: 'short',
+        day: 'numeric'
       });
       const reasonText = rejectionReason.trim() ? ` Reason: ${rejectionReason.trim()}` : '';
-      
+
       const notificationResult = await createNotification({
         user_id: leaveRequest.user_id,
         type: 'leave_rejected',

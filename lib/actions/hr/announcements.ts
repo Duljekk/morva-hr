@@ -3,12 +3,14 @@
 /**
  * Server actions for announcement management
  * Handles announcement creation, publishing, and retrieval
+ * Uses GMT+7 (Asia/Bangkok) timezone for all date operations
  */
 
 import { createClient } from '@/lib/supabase/server';
 import { Database } from '@/lib/supabase/types';
 import { revalidateTag } from 'next/cache';
 import { createNotification } from '@/lib/actions/shared/notifications';
+import { createTimestamp } from '@/lib/utils/timezone';
 
 type Announcement = Database['public']['Tables']['announcements']['Row'];
 type AnnouncementInsert = Database['public']['Tables']['announcements']['Insert'];
@@ -73,7 +75,7 @@ export async function createAnnouncement(
     // Note: Using schema column names (is_active, scheduled_time)
     const isActive = (announcement as any).is_active ?? false;
     const scheduledTime = (announcement as any).scheduled_time;
-    if (isActive && (!scheduledTime || new Date(scheduledTime) <= new Date())) {
+    if (isActive && (!scheduledTime || new Date(scheduledTime) <= new Date(createTimestamp()))) {
       try {
         await createAnnouncementNotifications(announcement.id, announcement.title);
       } catch (notificationError) {
@@ -245,7 +247,7 @@ export async function getActiveAnnouncements(): Promise<{
 
     // Get active announcements
     // Note: Using schema column names (is_active, scheduled_time)
-    const now = new Date().toISOString();
+    const now = createTimestamp(); // Use UTC timestamp for comparison (best practice)
     const { data: announcements, error } = await supabase
       .from('announcements')
       .select('*')

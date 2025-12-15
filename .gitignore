@@ -46,4 +46,20 @@ next-env.d.ts
 
 # MCP configuration (contains secrets)
 .factory/mcp.json
+
+# vercel
 .vercel
+
+# VS Code workspace settings
+.vscode/
+
+# Playwright
+.playwright-mcp/
+playwright-report/
+test-results/
+
+# Screenshot testing
+screenshot-droid/
+
+# archive folder
+/archive

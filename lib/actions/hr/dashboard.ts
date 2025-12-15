@@ -20,9 +20,10 @@ import { requireHRAdmin } from '@/lib/auth/server';
 import { DayActivity, Activity } from '../shared/attendance';
 import {
   getTodayDateString,
-  getNowInGMT7,
+  getNowPartsInGMT7,
   formatDateISO,
   formatTimeShort,
+  formatDateDisplay,
   APP_TIMEZONE
 } from '@/lib/utils/timezone';
 
@@ -479,25 +480,18 @@ export async function getAllRecentActivities(limit: number = 20): Promise<{ data
       }
     };
 
-    // Format date as YYYY-MM-DD in local timezone
+    // Format date as YYYY-MM-DD using GMT+7 timezone
     const formatLocalDate = (date: Date): string => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
+      return formatDateISO(date);
     };
 
-    // Calculate today's date in local timezone
-    const todayDate = new Date();
-    const localYear = todayDate.getFullYear();
-    const localMonth = todayDate.getMonth();
-    const localDay = todayDate.getDate();
-    const todayLocal = new Date(localYear, localMonth, localDay);
-    const today = formatLocalDate(todayLocal);
+    // Calculate today's date in GMT+7 timezone
+    const nowParts = getNowPartsInGMT7();
+    const today = getTodayDateString();
 
-    // Calculate today's date range for leave requests
-    const todayStart = new Date(localYear, localMonth, localDay, 0, 0, 0);
-    const todayEnd = new Date(localYear, localMonth, localDay, 23, 59, 59);
+    // Calculate today's date range for leave requests (in GMT+7)
+    const todayStart = new Date(nowParts.year, nowParts.month - 1, nowParts.day, 0, 0, 0);
+    const todayEnd = new Date(nowParts.year, nowParts.month - 1, nowParts.day, 23, 59, 59);
 
     // Fetch today's attendance records and leave requests in parallel
     const [recordsResult, leaveRequestsResult] = await Promise.all([
@@ -777,10 +771,11 @@ export async function getRecentActivitiesForDashboard(
     // Require HR admin role
     const { supabase } = await requireHRAdmin();
 
-    // Format timestamp helper
+    // Format timestamp helper - uses GMT+7 for consistent display
     const formatTimestamp = (date: Date): string => {
-      const now = new Date();
-      const diffMs = now.getTime() - date.getTime();
+      const nowParts = getNowPartsInGMT7();
+      const nowDate = new Date(nowParts.year, nowParts.month - 1, nowParts.day, nowParts.hour, nowParts.minute, nowParts.second);
+      const diffMs = nowDate.getTime() - date.getTime();
       const diffMins = Math.floor(diffMs / 60000);
 
       if (diffMins < 1) return 'Now';
@@ -789,7 +784,7 @@ export async function getRecentActivitiesForDashboard(
       if (diffHours < 24) return `${diffHours}h`;
       const diffDays = Math.floor(diffHours / 24);
       if (diffDays < 7) return `${diffDays}d`;
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return formatDateDisplay(date, { month: 'short', day: 'numeric' });
     };
 
     // Fetch announcements, payslips, leave requests, approved leave requests, and rejected leave requests in parallel

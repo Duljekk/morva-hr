@@ -2,7 +2,7 @@
  * Employee Detail Page
  * 
  * This page displays detailed information about a specific employee.
- * Route: /hr/employees/[id]
+ * Route: /admin/employees/[id]
  */
 
 interface PageProps {

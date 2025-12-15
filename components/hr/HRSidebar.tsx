@@ -99,31 +99,31 @@ export default function HRSidebar({ weather }: HRSidebarProps) {
       href: '/admin',
       icon: <DashboardIcon className="w-4 h-4" />,
     },
-    {
-      text: 'Attendance',
-      href: '/admin/attendance',
-      icon: <AttendanceIcon className="w-4 h-4" />,
-    },
+    // {
+    //   text: 'Attendance',
+    //   href: '/admin/attendance',
+    //   icon: <AttendanceIcon className="w-4 h-4" />,
+    // },
     {
       text: 'Employees',
       href: '/admin/employees',
       icon: <EmployeesIcon className="w-4 h-4" />,
     },
-    {
-      text: 'Announcements',
-      href: '/admin/announcements',
-      icon: <AnnouncementsIcon className="w-4 h-4" />,
-    },
-    {
-      text: 'Leave Requests',
-      href: '/admin/leaves',
-      icon: <LeaveRequestsIcon className="w-4 h-4" />,
-    },
-    {
-      text: 'Payroll',
-      href: '/admin/payslips',
-      icon: <PayrollIcon className="w-4 h-4" />,
-    },
+    // {
+    //   text: 'Announcements',
+    //   href: '/admin/announcements',
+    //   icon: <AnnouncementsIcon className="w-4 h-4" />,
+    // },
+    // {
+    //   text: 'Leave Requests',
+    //   href: '/admin/leaves',
+    //   icon: <LeaveRequestsIcon className="w-4 h-4" />,
+    // },
+    // {
+    //   text: 'Payroll',
+    //   href: '/admin/payslips',
+    //   icon: <PayrollIcon className="w-4 h-4" />,
+    // },
   ];
 
   // Check if a route is active
