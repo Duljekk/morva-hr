@@ -37,7 +37,7 @@ export default function SignUpPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { showToast } = useToast();
-  
+
   const [username, setUsername] = useState('');
   const [fullName, setFullName] = useState('');
   const [password, setPassword] = useState('');
@@ -72,7 +72,7 @@ export default function SignUpPage() {
       try {
         // Use server action to verify token and get email
         const result = await getInvitationEmail(tokenHash);
-        
+
         if (!result.success || !result.email) {
           showToast('danger', 'Invalid Token', result.error || 'Your invitation link is invalid or has expired. Please contact HR for a new invitation.');
           router.replace('/login');
@@ -96,7 +96,7 @@ export default function SignUpPage() {
   useEffect(() => {
     if (state.message && !state.errors?._form) {
       showToast('success', 'Account Created', state.message);
-      
+
       // Wait a bit before signing out and redirecting
       setTimeout(async () => {
         try {
@@ -244,9 +244,9 @@ export default function SignUpPage() {
                   <p className="text-sm text-red-600 -mt-2">{state.errors.full_name[0]}</p>
                 )}
 
-                {/* Email Input (Disabled) */}
+                {/* Email Input (Disabled for display) */}
                 <FormInput
-                  name="email"
+                  name="email_display"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Email"
@@ -254,11 +254,12 @@ export default function SignUpPage() {
                   LeadIcon={<MailIcon className="text-neutral-300" />}
                   type="email"
                   bgColor="white"
-                  required
                   disabled={true}
                   data-name="Email (Disabled)"
                   data-node-id="634:3328"
                 />
+                {/* Hidden input for actual email submission (disabled inputs don't submit) */}
+                <input type="hidden" name="email" value={email} />
                 {state.errors?.email && (
                   <p className="text-sm text-red-600 -mt-2">{state.errors.email[0]}</p>
                 )}
