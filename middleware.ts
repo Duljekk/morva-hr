@@ -35,6 +35,13 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const startTime = Date.now();
 
+  // CRITICAL: Skip middleware for server actions
+  // Server actions use the Next-Action header and middleware interfering
+  // causes "unexpected response" errors in production
+  if (request.headers.get('next-action')) {
+    return NextResponse.next();
+  }
+
   // Cleanup expired cache entries periodically (every 100 requests)
   // This prevents memory leaks while maintaining performance
   if (Math.random() < 0.01) {
@@ -56,7 +63,7 @@ export async function middleware(request: NextRequest) {
   if (pathname === '/signup') {
     const tokenHash = request.nextUrl.searchParams.get('token_hash');
     const type = request.nextUrl.searchParams.get('type');
-    
+
     if (!tokenHash || type !== 'invite') {
       console.warn(`⚠️ [Middleware] Signup page accessed without valid invitation token`);
       const url = request.nextUrl.clone();
@@ -142,7 +149,7 @@ export async function middleware(request: NextRequest) {
   if (user) {
     // Try to get cached profile first
     const cached = getCachedProfile(user.id);
-    
+
     if (cached) {
       userRole = cached.role;
       userProfile = {
@@ -170,7 +177,7 @@ export async function middleware(request: NextRequest) {
       } else if (profile) {
         userRole = profile.role as UserRole;
         userProfile = profile;
-        
+
         // Cache the profile for future requests
         setCachedProfile(user.id, userRole, profile.is_active);
         console.log(`💾 [Middleware] Cached profile for user ${user.id} (role: ${userRole})`);
@@ -190,13 +197,13 @@ export async function middleware(request: NextRequest) {
   // Check route permissions using the permission system
   if (routeGroup && user) {
     const hasPermission = hasRoutePermission(userRole, routeGroup);
-    
+
     if (!hasPermission) {
       console.warn(
         `🚫 [Middleware] Unauthorized access attempt: User ${user.id} (role: ${userRole}) ` +
         `attempted to access ${pathname} (requires: ${(ROUTE_GROUPS[routeGroup] as any).requiredRoles?.join(', ') || 'unknown'})`
       );
-      
+
       // Redirect to default path for user role
       const redirectPath = getDefaultRedirectPath(userRole);
       const url = request.nextUrl.clone();
@@ -211,7 +218,7 @@ export async function middleware(request: NextRequest) {
   if ((pathname === '/login' || pathname === '/signup') && user && userRole) {
     // Check if this is part of a logout flow by looking for the logout=true query param
     const isLogoutFlow = request.nextUrl.searchParams.get('logout') === 'true';
-    
+
     // If user is authenticated AND not in logout flow, redirect to default path
     // This handles the case where logged-in users manually navigate to /login
     if (!isLogoutFlow) {
@@ -264,12 +271,14 @@ export const config = {
      * - favicon.ico (favicon file)
      * - Static file extensions (images, fonts, etc.)
      * - Prefetch requests (next-router-prefetch header)
+     * - Server actions (next-action header)
      */
     {
       source: '/((?!api|_next/static|_next/image|_next/webpack|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff|woff2|ttf|eot|css|js)$).*)',
       missing: [
         { type: 'header', key: 'next-router-prefetch' },
         { type: 'header', key: 'purpose', value: 'prefetch' },
+        { type: 'header', key: 'next-action' },
       ],
     },
   ],
