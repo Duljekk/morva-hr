@@ -7,10 +7,13 @@ export interface Notification {
   user_id: string;
   title: string;
   message: string;
+  description: string;
   type: string;
   is_read: boolean;
   created_at: string;
   read_at?: string | null;
+  related_entity_type?: string | null;
+  related_entity_id?: string | null;
 }
 
 interface UseNotificationsOptions {
@@ -46,7 +49,7 @@ export function useNotifications(
     try {
       // TODO: Implement server action call
       console.log('[useNotifications] Mark as read:', notificationId);
-      
+
       // Optimistic update
       setNotifications((prev) =>
         prev.map((n) =>
@@ -64,7 +67,7 @@ export function useNotifications(
     try {
       // TODO: Implement server action call
       console.log('[useNotifications] Mark all as read');
-      
+
       // Optimistic update
       const now = new Date().toISOString();
       setNotifications((prev) =>
@@ -82,7 +85,7 @@ export function useNotifications(
       setLoading(true);
       // TODO: Implement fetch from server
       console.log('[useNotifications] Refresh notifications');
-      
+
       // Stub: Set empty notifications
       setNotifications([]);
       setUnreadCount(0);

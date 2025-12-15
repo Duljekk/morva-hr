@@ -46,21 +46,21 @@ export async function getInvitationEmail(
 
     if (verifyError || !verifyData.session || !verifyData.user) {
       console.error('[getInvitationEmail] Token verification error:', verifyError);
-      return { 
-        success: false, 
-        error: 'Invalid or expired invitation token. Please request a new invitation.' 
+      return {
+        success: false,
+        error: 'Invalid or expired invitation token. Please request a new invitation.'
       };
     }
 
-    return { 
-      success: true, 
-      email: verifyData.user.email || undefined 
+    return {
+      success: true,
+      email: verifyData.user.email || undefined
     };
   } catch (error) {
     console.error('[getInvitationEmail] Unexpected error:', error);
-    return { 
-      success: false, 
-      error: 'An unexpected error occurred. Please try again.' 
+    return {
+      success: false,
+      error: 'An unexpected error occurred. Please try again.'
     };
   }
 }
@@ -115,10 +115,10 @@ export async function signup(
 
     // Check if user is already authenticated (from getInvitationEmail)
     const { data: { user: existingUser }, error: existingUserError } = await supabase.auth.getUser();
-    
+
     let user;
     let session;
-    
+
     // If user is already authenticated, use existing session
     if (existingUser && !existingUserError) {
       user = existingUser;
@@ -139,7 +139,7 @@ export async function signup(
           },
         };
       }
-      
+
       user = verifyData.user;
       session = verifyData.session;
     }
@@ -210,7 +210,7 @@ export async function signup(
         shift_end_hour: user.user_metadata?.shift_end_hour || 19,
         updated_at: new Date().toISOString(),
         is_active: true,
-      }, {
+      } as any, {
         onConflict: 'id',
       });
 

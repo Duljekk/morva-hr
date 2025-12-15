@@ -8,7 +8,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { Database } from '@/lib/supabase/types';
 import { revalidateTag } from 'next/cache';
-import { createNotification } from './notifications';
+import { createNotification } from '@/lib/actions/shared/notifications';
 
 type Announcement = Database['public']['Tables']['announcements']['Row'];
 type AnnouncementInsert = Database['public']['Tables']['announcements']['Insert'];
@@ -226,9 +226,9 @@ async function createAnnouncementNotifications(
 /**
  * Get active announcements
  */
-export async function getActiveAnnouncements(): Promise<{ 
-  data?: Announcement[]; 
-  error?: string 
+export async function getActiveAnnouncements(): Promise<{
+  data?: Announcement[];
+  error?: string
 }> {
   try {
     const supabase = await createClient();
@@ -268,9 +268,9 @@ export async function getActiveAnnouncements(): Promise<{
 /**
  * Get all announcements (HR Admin only)
  */
-export async function getAllAnnouncements(): Promise<{ 
-  data?: Announcement[]; 
-  error?: string 
+export async function getAllAnnouncements(): Promise<{
+  data?: Announcement[];
+  error?: string
 }> {
   try {
     const supabase = await createClient();

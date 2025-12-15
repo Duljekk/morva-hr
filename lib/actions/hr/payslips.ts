@@ -8,7 +8,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { Database } from '@/lib/supabase/types';
 import { revalidateTag } from 'next/cache';
-import { createNotification } from './notifications';
+import { createNotification } from '@/lib/actions/shared/notifications';
 
 type Payslip = Database['public']['Tables']['payslips']['Row'];
 type PayslipInsert = Database['public']['Tables']['payslips']['Insert'];
@@ -87,7 +87,7 @@ export async function createPayslip(
         'July', 'August', 'September', 'October', 'November', 'December'
       ];
       const monthName = monthNames[payslipData.month - 1];
-      
+
       const notificationResult = await createNotification({
         user_id: payslipData.user_id,
         type: 'payslip_ready',

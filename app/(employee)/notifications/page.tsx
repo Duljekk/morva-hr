@@ -5,12 +5,11 @@ import { useCallback, useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import ArrowLeftIcon from '@/app/assets/icons/arrow-left.svg';
 import NotificationIllustration from '@/components/employee/NotificationIllustration';
-import { 
-  markNotificationAsRead, 
+import {
+  markNotificationAsRead,
   markAllNotificationsAsRead,
-  type Notification as NotificationData 
 } from '@/lib/actions/shared/notifications';
-import { useNotifications } from '@/lib/hooks/useNotifications';
+import { useNotifications, type Notification as NotificationData } from '@/lib/hooks/useNotifications';
 import { getLeaveRequest } from '@/lib/actions/employee/leaves';
 
 // Lazy load modal component
@@ -39,7 +38,7 @@ interface NotificationGroup {
 
 export default function NotificationsPage() {
   const router = useRouter();
-  
+
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [leaveRequestData, setLeaveRequestData] = useState<{
@@ -56,13 +55,13 @@ export default function NotificationsPage() {
   const [isLoadingLeaveRequest, setIsLoadingLeaveRequest] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [processingNotificationIds, setProcessingNotificationIds] = useState<Set<string>>(new Set());
-  
+
   // Track unread notifications that were visible when page opened
   // Use ref to persist across renders and avoid re-tracking on re-renders
   // Best Practice: Refs are ideal for values that don't need to trigger re-renders
   const initialUnreadNotificationIdsRef = useRef<Set<string>>(new Set());
   const hasTrackedInitialNotificationsRef = useRef<boolean>(false);
-  
+
   // Handle scroll detection for header shadow
   useEffect(() => {
     const handleScroll = () => {
@@ -80,13 +79,13 @@ export default function NotificationsPage() {
       window.removeEventListener('scroll', handleScroll);
     };
   }, []);
-  
+
   // Use real-time notifications hook
-  const { 
-    notifications: notificationData, 
-    loading, 
+  const {
+    notifications: notificationData,
+    loading,
     error,
-    refreshNotifications 
+    refreshNotifications
   } = useNotifications({
     autoFetch: true,
     enableRealtime: true,
@@ -100,10 +99,10 @@ export default function NotificationsPage() {
       const unreadIds = notificationData
         .filter(notification => !notification.is_read)
         .map(notification => notification.id);
-      
+
       initialUnreadNotificationIdsRef.current = new Set(unreadIds);
       hasTrackedInitialNotificationsRef.current = true;
-      
+
       console.log('[NotificationsPage] Tracked initial unread notifications:', unreadIds.length);
     }
   }, [loading, notificationData]);
@@ -115,10 +114,10 @@ export default function NotificationsPage() {
     return () => {
       // Cleanup function runs when component unmounts (user navigates away)
       const remainingUnreadIds = Array.from(initialUnreadNotificationIdsRef.current);
-      
+
       if (remainingUnreadIds.length > 0) {
         console.log('[NotificationsPage] Marking remaining notifications as read on unmount:', remainingUnreadIds.length);
-        
+
         // Mark all remaining tracked notifications as read
         // Use Promise.all for parallel execution, but don't await (fire and forget)
         Promise.all(
@@ -148,23 +147,23 @@ export default function NotificationsPage() {
       markNotificationAsRead(notification.id).catch((error) => {
         console.error('[NotificationsPage] Failed to mark notification as read:', error);
       });
-      
+
       // Remove from tracked set so it won't be marked again on unmount
       // This prevents duplicate API calls
       initialUnreadNotificationIdsRef.current.delete(notification.id);
     }
-    
+
     // Check if this is a leave-related notification
-    const isLeaveNotification = notification.type && 
+    const isLeaveNotification = notification.type &&
       ['leave_sent', 'leave_approved', 'leave_rejected'].includes(notification.type);
-    
+
     // Check if it has a related leave request ID
     if (isLeaveNotification && notification.related_entity_type === 'leave_request' && notification.related_entity_id) {
       // Fetch leave request details
       setIsLoadingLeaveRequest(true);
       try {
         const result = await getLeaveRequest(notification.related_entity_id);
-        
+
         if (result.data) {
           // Set modal data and open modal
           setLeaveRequestData({
@@ -188,7 +187,7 @@ export default function NotificationsPage() {
         setIsLoadingLeaveRequest(false);
       }
     }
-    
+
     // Remove from processing set
     setProcessingNotificationIds(prev => {
       const next = new Set(prev);
@@ -215,8 +214,8 @@ export default function NotificationsPage() {
   // Fetch leave types for leave notifications
   const fetchLeaveTypes = useCallback(async (notifications: NotificationData[]): Promise<Map<string, 'annual' | 'sick' | 'unpaid'>> => {
     const leaveNotifications = notifications.filter(
-      n => n.type && ['leave_sent', 'leave_approved', 'leave_rejected'].includes(n.type) 
-        && n.related_entity_type === 'leave_request' 
+      n => n.type && ['leave_sent', 'leave_approved', 'leave_rejected'].includes(n.type)
+        && n.related_entity_type === 'leave_request'
         && n.related_entity_id
     );
 
@@ -226,7 +225,7 @@ export default function NotificationsPage() {
 
     try {
       // Fetch all leave requests in parallel
-      const leaveRequestPromises = leaveNotifications.map(notification => 
+      const leaveRequestPromises = leaveNotifications.map(notification =>
         getLeaveRequest(notification.related_entity_id!)
       );
 
@@ -280,7 +279,7 @@ export default function NotificationsPage() {
   const groupNotificationsByDate = (notifications: NotificationData[]): NotificationGroup[] => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
@@ -290,17 +289,17 @@ export default function NotificationsPage() {
     notifications.forEach((notification) => {
       const notificationDate = new Date(notification.created_at);
       notificationDate.setHours(0, 0, 0, 0);
-      
+
       let dateLabel: string;
       if (notificationDate.getTime() === today.getTime()) {
         dateLabel = 'Today';
       } else if (notificationDate.getTime() === yesterday.getTime()) {
         dateLabel = 'Yesterday';
       } else {
-        dateLabel = notificationDate.toLocaleDateString('en-US', { 
-          month: 'long', 
-          day: 'numeric', 
-          year: 'numeric' 
+        dateLabel = notificationDate.toLocaleDateString('en-US', {
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric'
         });
       }
 
@@ -408,9 +407,8 @@ export default function NotificationsPage() {
                       <div
                         key={notification.id}
                         onClick={() => handleNotificationClick(notification)}
-                        className={`flex gap-3 items-center cursor-pointer hover:bg-neutral-100 rounded-lg p-2 -mx-2 transition-colors ${
-                          isLoadingLeaveRequest || processingNotificationIds.has(notification.id) ? 'opacity-50 pointer-events-none' : ''
-                        }`}
+                        className={`flex gap-3 items-center cursor-pointer hover:bg-neutral-100 rounded-lg p-2 -mx-2 transition-colors ${isLoadingLeaveRequest || processingNotificationIds.has(notification.id) ? 'opacity-50 pointer-events-none' : ''
+                          }`}
                       >
                         {/* Notification Illustration */}
                         <NotificationIllustration
