@@ -51,27 +51,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Use useCallback to prevent recreation and ensure stable reference
   const fetchProfile = useCallback(async (userId: string): Promise<void> => {
     try {
+      console.log('[AuthContext] Fetching profile for user:', userId);
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('id', userId)
         .single();
 
+      console.log('[AuthContext] Profile query result:', { data, error });
+
       if (error) {
-        // Check if this is a "no rows" error (PGRST116) - this is expected for new invitations
-        if (error.code === 'PGRST116') {
-          // This is normal for invited users who haven't completed signup yet
-          console.log('[AuthContext] No profile found for user - likely a new invitation');
-          setProfile(null);
-          return;
-        }
-        // For other errors, throw them
+        console.error('[AuthContext] Profile fetch error details:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+        });
         throw error;
       }
 
+      if (!data) {
+        console.error('[AuthContext] No profile data returned for user:', userId);
+        throw new Error('No profile data found');
+      }
+
+      console.log('[AuthContext] Profile fetched successfully:', data.email);
       setProfile(data as UserProfile);
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      console.error('[AuthContext] Error fetching profile:', error);
+      console.error('[AuthContext] Error type:', typeof error);
+      console.error('[AuthContext] Error keys:', error ? Object.keys(error) : 'null');
       setProfile(null);
     }
   }, [supabase]);
@@ -86,26 +95,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Sign in function
   const signIn = async (email: string, password: string) => {
     try {
-      console.log('[AuthContext] Attempting signInWithPassword for email:', email);
+      console.log('[AuthContext] signInWithPassword attempt for:', email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
-        console.error('[AuthContext] Sign in error:', error);
+        console.error('[AuthContext] signInWithPassword error:', error);
         return { error };
       }
 
-      console.log('[AuthContext] Sign in successful, user:', data.user?.id);
+      console.log('[AuthContext] signInWithPassword success, user ID:', data.user?.id);
 
       if (data.user) {
+        console.log('[AuthContext] Fetching profile for user...');
         await fetchProfile(data.user.id);
       }
 
       return { error: null };
     } catch (error) {
-      console.error('[AuthContext] Sign in exception:', error);
+      console.error('[AuthContext] Sign in error:', error);
       return { error: error as AuthError };
     }
   };

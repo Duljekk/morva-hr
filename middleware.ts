@@ -51,6 +51,21 @@ export async function middleware(request: NextRequest) {
     console.log(`🟢 [Middleware] Route: ${pathname} → Group: ${routeGroup} (Public: ${isPublic})`);
   }
 
+  // PROTECTED: Signup page requires invitation token
+  // Only allow access if token_hash and type=invite are present
+  if (pathname === '/signup') {
+    const tokenHash = request.nextUrl.searchParams.get('token_hash');
+    const type = request.nextUrl.searchParams.get('type');
+    
+    if (!tokenHash || type !== 'invite') {
+      console.warn(`⚠️ [Middleware] Signup page accessed without valid invitation token`);
+      const url = request.nextUrl.clone();
+      url.pathname = '/login';
+      url.searchParams.set('error', 'signup_requires_invitation');
+      return NextResponse.redirect(url);
+    }
+  }
+
   // OPTIMIZATION: Check for auth cookies first before making Supabase call
   // This reduces unnecessary Supabase API calls for unauthenticated requests
   const hasAuthCookie = request.cookies.getAll().some(cookie =>
@@ -191,12 +206,23 @@ export async function middleware(request: NextRequest) {
   }
 
   // Handle authenticated users accessing login or signup pages
+  // Best Practice: Check for logout query param to allow access during logout flow
+  // This prevents redirect loops where middleware redirects users back to dashboard during logout
   if ((pathname === '/login' || pathname === '/signup') && user && userRole) {
-    const redirectPath = getDefaultRedirectPath(userRole);
-    console.log(`🔄 [Middleware] Authenticated user accessing ${pathname}, redirecting to ${redirectPath}`);
-    const url = request.nextUrl.clone();
-    url.pathname = redirectPath;
-    return NextResponse.redirect(url);
+    // Check if this is part of a logout flow by looking for the logout=true query param
+    const isLogoutFlow = request.nextUrl.searchParams.get('logout') === 'true';
+    
+    // If user is authenticated AND not in logout flow, redirect to default path
+    // This handles the case where logged-in users manually navigate to /login
+    if (!isLogoutFlow) {
+      const redirectPath = getDefaultRedirectPath(userRole);
+      console.log(`🔄 [Middleware] Authenticated user accessing ${pathname}, redirecting to ${redirectPath}`);
+      const url = request.nextUrl.clone();
+      url.pathname = redirectPath;
+      return NextResponse.redirect(url);
+    } else {
+      console.log(`🔄 [Middleware] Allowing access to ${pathname} during logout flow`);
+    }
   }
 
   // Handle role-based redirects for home page

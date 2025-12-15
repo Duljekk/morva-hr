@@ -1,140 +1,86 @@
-/**
- * Route Permission System for Middleware
- * 
- * Defines route groups and their required permissions
- * Used by middleware to enforce access control
- */
-
 import type { UserRole } from '@/lib/types/roles';
 
-export interface RoutePermission {
-  /** Route pattern (supports wildcards) */
-  pattern: string | RegExp;
-  /** Required role(s) - empty array means any authenticated user */
+export type RouteGroup = 'EMPLOYEE' | 'ADMIN' | 'AUTH';
+
+interface RouteGroupConfig {
+  patterns: RegExp[];
   requiredRoles: UserRole[];
-  /** Whether route is public (no auth required) */
   isPublic?: boolean;
 }
 
-/**
- * Route group definitions
- * Route groups in Next.js don't appear in URLs, so we check the actual pathname
- */
-export const ROUTE_GROUPS = {
-  /** Employee routes - accessible at root level (/, /notifications, /request-leave) */
+export const ROUTE_GROUPS: Record<RouteGroup, RouteGroupConfig> = {
   EMPLOYEE: {
-    patterns: [
-      /^\/$/, // Root/home page
-      /^\/notifications(\/.*)?$/, // Notifications
-      /^\/request-leave(\/.*)?$/, // Request leave
-    ],
-    requiredRoles: ['employee', 'hr_admin'], // HR admins can also access employee routes
+    patterns: [/^\/employee/],
+    requiredRoles: ['employee', 'hr_admin'],
+    isPublic: false,
   },
-  /** Admin routes - accessible at /admin, /admin/leaves, /admin/payslips */
   ADMIN: {
-    patterns: [
-      /^\/admin(\/.*)?$/, // All /admin routes
-    ],
-    requiredRoles: ['hr_admin'], // Only HR admins
+    patterns: [/^\/admin/],
+    requiredRoles: ['hr_admin'],
+    isPublic: false,
   },
-  /** Auth routes - accessible at /login and /signup */
   AUTH: {
-    patterns: [
-      /^\/login(\/.*)?$/, // Login page
-      /^\/signup(\/.*)?$/, // Signup page
-    ],
-    isPublic: true, // Public route
+    patterns: [/^\/(login|signup)/],
+    requiredRoles: [],
+    isPublic: true,
   },
-  /** Test routes - accessible for component testing */
-  TEST: {
-    patterns: [
-      /^\/.*-test(\/.*)?$/, // All routes ending with -test (e.g., /table-header-test, /dropdown-test)
-    ],
-    isPublic: true, // Public route
-  },
-} as const;
+};
 
-/**
- * Check if a pathname matches a route group pattern
- */
-export function getRouteGroup(pathname: string): keyof typeof ROUTE_GROUPS | null {
-  for (const [groupName, config] of Object.entries(ROUTE_GROUPS)) {
-    for (const pattern of config.patterns) {
-      if (pattern.test(pathname)) {
-        return groupName as keyof typeof ROUTE_GROUPS;
-      }
+// Routes that don't require authentication
+const PUBLIC_ROUTES = ['/login', '/signup'];
+
+// Routes that require authentication
+const PROTECTED_ROUTE_PATTERNS = [/^\/employee/, /^\/admin/];
+
+export function getRouteGroup(pathname: string): RouteGroup | null {
+  for (const [group, config] of Object.entries(ROUTE_GROUPS)) {
+    if (config.patterns.some(pattern => pattern.test(pathname))) {
+      return group as RouteGroup;
     }
-  }
-  // Check for legacy /hr routes and map to ADMIN
-  if (/^\/hr(\/.*)?$/.test(pathname)) {
-    return 'ADMIN';
   }
   return null;
 }
 
-/**
- * Check if a user role has permission to access a route group
- */
-export function hasRoutePermission(
-  userRole: UserRole | null,
-  routeGroup: keyof typeof ROUTE_GROUPS | null
-): boolean {
-  // Public routes (auth and test routes) are accessible to everyone
-  if (routeGroup === 'AUTH' || routeGroup === 'TEST') {
-    return true;
-  }
-  
-  // Map old HR route group name to ADMIN for backward compatibility
-  if ((routeGroup as any) === 'HR') {
-    routeGroup = 'ADMIN';
-  }
+export function isPublicRoute(pathname: string): boolean {
+  return PUBLIC_ROUTES.includes(pathname);
+}
 
-  // No route group means it's not a protected route
-  if (!routeGroup) {
-    return true;
-  }
+export function requiresAuthentication(pathname: string): boolean {
+  return PROTECTED_ROUTE_PATTERNS.some(pattern => pattern.test(pathname));
+}
 
-  // Unauthenticated users cannot access protected routes
+export function hasRoutePermission(userRole: UserRole | null, routeGroup: RouteGroup): boolean {
   if (!userRole) {
     return false;
   }
-
-  const routeConfig = ROUTE_GROUPS[routeGroup];
+  
+  const config = ROUTE_GROUPS[routeGroup];
+  if (!config) {
+    return false;
+  }
+  
+  // Public routes are accessible to all authenticated users
+  if (config.isPublic) {
+    return true;
+  }
   
   // Check if user role is in required roles
-  // Only check if requiredRoles exists (public routes don't have this property)
-  if (!routeConfig.requiredRoles) {
-    return true;
+  return config.requiredRoles.includes(userRole);
+}
+
+export function getDefaultRedirectPath(userRole: UserRole | null): string {
+  if (!userRole) {
+    return '/login';
   }
   
-  return routeConfig.requiredRoles.includes(userRole as any);
-}
-
-/**
- * Get the default redirect path for a user role
- */
-export function getDefaultRedirectPath(userRole: UserRole | null): string {
-  if (userRole === 'hr_admin') {
-    return '/admin';
+  switch (userRole) {
+    case 'hr_admin':
+      return '/admin';
+    case 'employee':
+      return '/employee';
+    default:
+      return '/login';
   }
-  return '/';
 }
 
-/**
- * Check if a pathname is a public route
- */
-export function isPublicRoute(pathname: string): boolean {
-  const routeGroup = getRouteGroup(pathname);
-  if (routeGroup === 'AUTH' || routeGroup === 'TEST') {
-    return true;
-  }
-  return false;
-}
-
-/**
- * Check if a pathname requires authentication
- */
-export function requiresAuthentication(pathname: string): boolean {
-  return !isPublicRoute(pathname);
-}
 

@@ -244,7 +244,7 @@ export async function getLeaveBalance(leaveTypeId: string): Promise<{ data?: Lea
       return { error: 'Failed to fetch leave types' };
     }
 
-    const leaveType: any = leaveTypesResult.data.find((lt: any) => lt.id === leaveTypeId);
+    const leaveType = leaveTypesResult.data.find(lt => lt.id === leaveTypeId);
     if (!leaveType) {
       console.error('[getLeaveBalance] Leave type not found:', leaveTypeId);
       return { error: 'Leave type not found' };
@@ -272,7 +272,7 @@ export async function getLeaveBalance(leaveTypeId: string): Promise<{ data?: Lea
     }
 
     // Calculate used days
-    const usedDays = approvedLeaves?.reduce((sum: number, leave: any) => sum + leave.total_days, 0) || 0;
+    const usedDays = approvedLeaves?.reduce((sum, leave) => sum + leave.total_days, 0) || 0;
 
     console.log('[getLeaveBalance] Calculated balance:', {
       leaveType: leaveType.name,
@@ -350,11 +350,11 @@ export async function getAllLeaveBalances(): Promise<{ data?: LeaveBalance[]; er
     console.log('[getAllLeaveBalances] Approved leaves:', approvedLeaves);
 
     // Calculate balance for each leave type
-    const balances: LeaveBalance[] = leaveTypes.map((leaveType: any) => {
+    const balances: LeaveBalance[] = leaveTypes.map((leaveType) => {
       const usedDays =
         approvedLeaves
-          ?.filter((leave: any) => leave.leave_type_id === leaveType.id)
-          .reduce((sum: number, leave: any) => sum + leave.total_days, 0) || 0;
+          ?.filter((leave) => leave.leave_type_id === leaveType.id)
+          .reduce((sum, leave) => sum + leave.total_days, 0) || 0;
 
       // If no quota, treat as unlimited
       if (!leaveType.max_days_per_year) {
@@ -419,8 +419,8 @@ async function _hasActiveLeaveRequestUncached(userId: string, today: string): Pr
 
   // Format the response with leave type name
   const formattedRequest = activeRequest ? {
-    ...(activeRequest as any),
-    leaveTypeName: ((activeRequest as any).leave_types as any)?.name || undefined,
+    ...activeRequest,
+    leaveTypeName: (activeRequest.leave_types as any)?.name || undefined,
   } : undefined;
 
   return {
@@ -557,7 +557,7 @@ export async function submitLeaveRequest(
       status: 'pending',
     };
 
-    const { data: leaveRequest, error: insertError } = await (supabase as any)
+    const { data: leaveRequest, error: insertError } = await supabase
       .from('leave_requests')
       .insert(leaveRequestInsert)
       .select()
@@ -583,7 +583,7 @@ export async function submitLeaveRequest(
         };
       });
 
-      const { error: attachmentError } = await (supabase as any)
+      const { error: attachmentError } = await supabase
         .from('leave_request_attachments')
         .insert(attachments);
 
@@ -668,7 +668,7 @@ export async function cancelLeaveRequest(requestId: string): Promise<{ success: 
 
     // Update request status to cancelled
     // RLS policies will ensure user can only cancel their own requests
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from('leave_requests')
       .update({ status: 'cancelled' })
       .eq('id', requestId)
@@ -740,7 +740,7 @@ export async function getLeaveRequest(
       return { error: 'Failed to verify user permissions' };
     }
 
-    const isHrAdmin = (userData as any)?.role === 'hr_admin';
+    const isHrAdmin = userData?.role === 'hr_admin';
 
     // Query leave request with leave type name
     let query = supabase
@@ -774,31 +774,30 @@ export async function getLeaveRequest(
     }
 
     // Check permissions: users can only see their own requests, HR admins can see all
-    if (!isHrAdmin && (leaveRequest as any).user_id !== user.id) {
+    if (!isHrAdmin && leaveRequest.user_id !== user.id) {
       return { error: 'You do not have permission to view this leave request' };
     }
 
     // Extract leave type name
-    const leaveTypeName = ((leaveRequest as any).leave_types as any)?.name || 'Unknown';
+    const leaveTypeName = (leaveRequest.leave_types as any)?.name || 'Unknown';
 
     // Format dates
-    const leaveReq = leaveRequest as any;
-    const requestedOn = leaveReq.created_at.split('T')[0]; // Date part
-    const requestedAt = leaveReq.created_at; // Full timestamp
-    const approvedAt = leaveReq.approved_at || undefined;
+    const requestedOn = leaveRequest.created_at.split('T')[0]; // Date part
+    const requestedAt = leaveRequest.created_at; // Full timestamp
+    const approvedAt = leaveRequest.approved_at || undefined;
 
     return {
       data: {
-        id: leaveReq.id,
-        startDate: leaveReq.start_date,
-        endDate: leaveReq.end_date,
-        status: leaveReq.status as 'pending' | 'approved' | 'rejected',
+        id: leaveRequest.id,
+        startDate: leaveRequest.start_date,
+        endDate: leaveRequest.end_date,
+        status: leaveRequest.status as 'pending' | 'approved' | 'rejected',
         requestedOn,
         requestedAt,
         approvedAt,
-        rejectionReason: leaveReq.rejection_reason || undefined,
+        rejectionReason: leaveRequest.rejection_reason || undefined,
         leaveType: leaveTypeName,
-        reason: leaveReq.reason || '',
+        reason: leaveRequest.reason || '',
       },
     };
   } catch (error) {

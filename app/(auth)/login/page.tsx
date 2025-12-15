@@ -83,14 +83,23 @@ export default function LoginPage() {
       }
 
       // Fetch user profile to get role
+      console.log('[LoginPage] Fetching profile for user:', user.id);
       const { data: userProfile, error: profileError } = await supabase
         .from('users')
         .select('role')
         .eq('id', user.id)
         .single<{ role: string }>();
 
+      console.log('[LoginPage] Profile query result:', { userProfile, profileError });
+
       if (profileError || !userProfile) {
         console.error('[LoginPage] Error fetching user profile:', profileError);
+        console.error('[LoginPage] Profile error details:', {
+          message: profileError?.message,
+          code: profileError?.code,
+          details: profileError?.details,
+          hint: profileError?.hint,
+        });
         setError('Failed to load user profile. Please try again.');
         setIsSubmitting(false);
         return;

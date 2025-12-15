@@ -479,20 +479,26 @@ export default function EmployeeDashboardClient() {
             {/* Logout Button */}
             <button
               onClick={async () => {
+                // Best Practice: Add logout=true flag to prevent middleware redirect loops
+                // This tells middleware that we're in a logout flow and should allow access to /login
                 const redirectTimeout = setTimeout(() => {
-                  window.location.replace('/login');
+                  window.location.replace('/login?logout=true');
                 }, 8000);
                 
                 try {
+                  console.log('[EmployeeDashboard] Starting logout...');
                   await signOut();
                   clearTimeout(redirectTimeout);
+                  console.log('[EmployeeDashboard] Logout complete, redirecting...');
+                  // Wait for cookies to be cleared before redirecting
                   await new Promise(resolve => setTimeout(resolve, 300));
-                  window.location.replace('/login');
+                  // Use logout=true flag to bypass middleware redirect
+                  window.location.replace('/login?logout=true');
                 } catch (error) {
-                  console.error('Error during logout:', error);
+                  console.error('[EmployeeDashboard] Error during logout:', error);
                   clearTimeout(redirectTimeout);
                   await new Promise(resolve => setTimeout(resolve, 300));
-                  window.location.replace('/login');
+                  window.location.replace('/login?logout=true');
                 }
               }}
               className="mt-6 w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-50 active:bg-neutral-100"

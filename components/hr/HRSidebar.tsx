@@ -337,13 +337,16 @@ export default function HRSidebar({ weather }: HRSidebarProps) {
             `}
             onClick={async () => {
               try {
+                console.log('[HRSidebar] Starting logout...');
                 await signOut();
+                console.log('[HRSidebar] Logout complete, redirecting...');
                 await new Promise(resolve => setTimeout(resolve, 300));
-                window.location.replace('/login');
+                // Best Practice: Add logout=true flag to prevent middleware redirect loops
+                window.location.replace('/login?logout=true');
               } catch (error) {
-                console.error('Error during logout:', error);
+                console.error('[HRSidebar] Error during logout:', error);
                 await new Promise(resolve => setTimeout(resolve, 300));
-                window.location.replace('/login');
+                window.location.replace('/login?logout=true');
               }
             }}
             aria-label="Log out"

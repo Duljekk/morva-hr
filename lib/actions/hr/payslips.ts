@@ -1,19 +1,14 @@
 'use server';
 
 /**
- * Server actions for HR payslip management
+ * Server actions for payslip management
  * Handles payslip generation and retrieval
- * 
- * Location: lib/actions/hr/ - HR-only actions
- * createPayslip requires HR admin role (enforced via requireHRAdmin)
- * getPayslips and getPayslip are employee functions (should be moved to shared)
  */
 
 import { createClient } from '@/lib/supabase/server';
 import { Database } from '@/lib/supabase/types';
 import { revalidateTag } from 'next/cache';
-import { requireHRAdmin } from '@/lib/auth/requireHRAdmin';
-import { createNotification } from '../shared/notifications';
+import { createNotification } from './notifications';
 
 type Payslip = Database['public']['Tables']['payslips']['Row'];
 type PayslipInsert = Database['public']['Tables']['payslips']['Insert'];
@@ -36,8 +31,28 @@ export async function createPayslip(
   }
 ): Promise<{ data?: Payslip; error?: string }> {
   try {
-    // Require HR admin role
-    const { userId, supabase } = await requireHRAdmin();
+    const supabase = await createClient();
+
+    // Verify authentication
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return { error: 'You must be logged in' };
+    }
+
+    // Check if user is HR admin
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (userError || !userData || userData.role !== 'hr_admin') {
+      return { error: 'Only HR admins can create payslips' };
+    }
 
     // Insert payslip
     const payslipInsert: PayslipInsert = {
@@ -51,7 +66,7 @@ export async function createPayslip(
       pdf_url: payslipData.pdf_url,
       file_name: payslipData.file_name,
       file_size: payslipData.file_size || null,
-      generated_by: userId,
+      generated_by: user.id,
     };
 
     const { data: payslip, error: insertError } = await supabase

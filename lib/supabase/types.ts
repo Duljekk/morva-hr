@@ -3,8 +3,7 @@
  * These types provide TypeScript autocomplete and type safety for database queries
  */
 
-// Re-export UserRole from centralized types module
-export type { UserRole } from '@/lib/types/roles';
+export type UserRole = 'employee' | 'hr_admin';
 export type CheckInStatus = 'ontime' | 'late';
 export type CheckOutStatus = 'ontime' | 'overtime' | 'leftearly';
 export type DayType = 'full' | 'half';
@@ -26,7 +25,7 @@ export interface Database {
           email: string;
           username: string;
           full_name: string;
-          role: 'employee' | 'hr_admin';
+          role: UserRole;
           employee_id: string | null;
           shift_start_hour: number;
           shift_end_hour: number;
@@ -39,7 +38,7 @@ export interface Database {
           email: string;
           username: string;
           full_name: string;
-          role?: 'employee' | 'hr_admin';
+          role?: UserRole;
           employee_id?: string | null;
           shift_start_hour?: number;
           shift_end_hour?: number;
@@ -52,7 +51,7 @@ export interface Database {
           email?: string;
           username?: string;
           full_name?: string;
-          role?: 'employee' | 'hr_admin';
+          role?: UserRole;
           employee_id?: string | null;
           shift_start_hour?: number;
           shift_end_hour?: number;
@@ -280,29 +279,6 @@ export interface Database {
           updated_at?: string;
         };
       };
-      announcement_reactions: {
-        Row: {
-          id: string;
-          announcement_id: string;
-          user_id: string;
-          emoji: string;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          announcement_id: string;
-          user_id: string;
-          emoji: string;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          announcement_id?: string;
-          user_id?: string;
-          emoji?: string;
-          created_at?: string;
-        };
-      };
       notifications: {
         Row: {
           id: string;
@@ -437,7 +413,7 @@ export interface Database {
       };
     };
     Enums: {
-      user_role: 'employee' | 'hr_admin';
+      user_role: UserRole;
       check_in_status: CheckInStatus;
       check_out_status: CheckOutStatus;
       day_type: DayType;

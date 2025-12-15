@@ -6,6 +6,7 @@ import EmployeesActionRow from '@/components/hr/employees/EmployeesActionRow';
 import EmployeesTableHeaderRow from '@/components/hr/employees/EmployeesTableHeaderRow';
 import EmployeesGroupingRow from '@/components/hr/employees/EmployeesGroupingRow';
 import EmployeeTableRow, { Employee } from '@/components/hr/employees/EmployeeTableRow';
+import InviteUserModal from '@/components/hr/users/InviteUserModal';
 import type { ViewType } from '@/components/shared/ToggleView';
 
 // Sample employee data
@@ -79,10 +80,10 @@ export default function EmployeesPage() {
   const [filterValue, setFilterValue] = useState('all');
   const [allSelected, setAllSelected] = useState(false);
   const [selectedEmployees, setSelectedEmployees] = useState<Set<string>>(new Set());
+  const [showInviteModal, setShowInviteModal] = useState(false);
 
   const handleAddEmployee = () => {
-    // TODO: Implement add employee functionality
-    console.log('Add employee clicked');
+    setShowInviteModal(true);
   };
 
   const handleEmployeeSelectionChange = (id: string, selected: boolean) => {
@@ -166,6 +167,12 @@ export default function EmployeesPage() {
           />
         ))}
       </div>
+
+      {/* Invite User Modal */}
+      <InviteUserModal 
+        isOpen={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+      />
     </div>
   );
 }

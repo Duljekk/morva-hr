@@ -1,18 +1,14 @@
 'use server';
 
 /**
- * Server actions for HR announcement management
+ * Server actions for announcement management
  * Handles announcement creation, publishing, and retrieval
- * 
- * Location: lib/actions/hr/ - HR-only actions
- * All functions require HR admin role (enforced via requireHRAdmin)
  */
 
-import { Database } from '@/lib/supabase/types';
 import { createClient } from '@/lib/supabase/server';
+import { Database } from '@/lib/supabase/types';
 import { revalidateTag } from 'next/cache';
-import { requireHRAdmin } from '@/lib/auth/requireHRAdmin';
-import { createNotification } from '../shared/notifications';
+import { createNotification } from './notifications';
 
 type Announcement = Database['public']['Tables']['announcements']['Row'];
 type AnnouncementInsert = Database['public']['Tables']['announcements']['Insert'];
@@ -29,15 +25,35 @@ export async function createAnnouncement(
   }
 ): Promise<{ data?: Announcement; error?: string }> {
   try {
-    // Require HR admin role
-    const { userId, supabase } = await requireHRAdmin();
+    const supabase = await createClient();
+
+    // Verify authentication
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return { error: 'You must be logged in' };
+    }
+
+    // Check if user is HR admin
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (userError || !userData || userData.role !== 'hr_admin') {
+      return { error: 'Only HR admins can create announcements' };
+    }
 
     // Insert announcement
     // Note: Using schema column names (scheduled_time, is_active) instead of types (scheduled_for, is_published)
     const announcementInsert = {
       title: announcementData.title,
       content: announcementData.content,
-      created_by: userId,
+      created_by: user.id,
       scheduled_time: announcementData.scheduled_for || null,
       is_active: announcementData.is_published ?? false,
     };
@@ -85,8 +101,28 @@ export async function publishAnnouncement(
   announcementId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // Require HR admin role
-    const { supabase } = await requireHRAdmin();
+    const supabase = await createClient();
+
+    // Verify authentication
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return { success: false, error: 'You must be logged in' };
+    }
+
+    // Check if user is HR admin
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (userError || !userData || userData.role !== 'hr_admin') {
+      return { success: false, error: 'Only HR admins can publish announcements' };
+    }
 
     // Get announcement
     // Note: Using schema column name (is_active) instead of types (is_published)
@@ -159,7 +195,7 @@ async function createAnnouncementNotifications(
     const batchSize = 100;
     for (let i = 0; i < users.length; i += batchSize) {
       const batch = users.slice(i, i + batchSize);
-      const notifications = batch.map((user: any) => ({
+      const notifications = batch.map((user) => ({
         user_id: user.id,
         type: 'announcement' as const,
         title: 'New announcement',
@@ -168,7 +204,7 @@ async function createAnnouncementNotifications(
         related_entity_id: announcementId,
       }));
 
-      const { error: insertError } = await (supabase as any)
+      const { error: insertError } = await supabase
         .from('notifications')
         .insert(notifications);
 
@@ -195,10 +231,6 @@ export async function getActiveAnnouncements(): Promise<{
   error?: string 
 }> {
   try {
-    // Note: This function is accessible to all authenticated users (shared)
-    // Moving to shared folder would require updating imports, so keeping here for now
-    // but it doesn't require HR admin role
-    const { createClient } = await import('@/lib/supabase/server');
     const supabase = await createClient();
 
     // Verify authentication
@@ -241,8 +273,28 @@ export async function getAllAnnouncements(): Promise<{
   error?: string 
 }> {
   try {
-    // Require HR admin role
-    const { supabase } = await requireHRAdmin();
+    const supabase = await createClient();
+
+    // Verify authentication
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return { error: 'You must be logged in' };
+    }
+
+    // Check if user is HR admin
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (userError || !userData || userData.role !== 'hr_admin') {
+      return { error: 'Only HR admins can view all announcements' };
+    }
 
     // Get all announcements
     const { data: announcements, error } = await supabase

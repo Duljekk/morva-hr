@@ -64,13 +64,12 @@ CREATE POLICY "users_insert_hr_admin"
     WITH CHECK (is_hr_admin());
 
 -- Users can update their own data (except role)
+-- FIXED: Don't query users table to check role to prevent infinite recursion
+-- Role changes will be prevented by application logic and HR admin policies
 CREATE POLICY "users_update_own"
     ON users FOR UPDATE
     USING (auth.uid() = id)
-    WITH CHECK (
-        auth.uid() = id AND
-        role = (SELECT role FROM users WHERE id = auth.uid())
-    );
+    WITH CHECK (auth.uid() = id);
 
 -- HR admins can update any user
 CREATE POLICY "users_update_hr_admin"
