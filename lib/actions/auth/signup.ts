@@ -22,15 +22,20 @@ export interface SignupFormState {
  * Get invitation email from token
  * 
  * This verifies the invitation token and returns the email address
- * without requiring a password. This creates a temporary session
- * that will be used when the user completes signup.
+ * and user metadata (full_name, username) that HR set when inviting.
  * 
  * @param tokenHash - The invitation token hash from URL
- * @returns Email address or error message
+ * @returns Email address, username, full_name or error message
  */
 export async function getInvitationEmail(
   tokenHash: string
-): Promise<{ success: boolean; email?: string; error?: string }> {
+): Promise<{
+  success: boolean;
+  email?: string;
+  username?: string;
+  full_name?: string;
+  error?: string
+}> {
   if (!tokenHash) {
     return { success: false, error: 'Invalid invitation token' };
   }
@@ -52,9 +57,15 @@ export async function getInvitationEmail(
       };
     }
 
+    // Extract user metadata set by HR during invitation
+    const userMetadata = verifyData.user.user_metadata || {};
+    console.log('[getInvitationEmail] User metadata:', userMetadata);
+
     return {
       success: true,
-      email: verifyData.user.email || undefined
+      email: verifyData.user.email || undefined,
+      username: userMetadata.username || undefined,
+      full_name: userMetadata.full_name || undefined,
     };
   } catch (error) {
     console.error('[getInvitationEmail] Unexpected error:', error);

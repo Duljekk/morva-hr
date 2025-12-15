@@ -60,7 +60,7 @@ export default function SignUpPage() {
   // Check passwords match in real-time
   const passwordsMatch = password === confirmPassword && confirmPassword.length > 0;
 
-  // Fetch user email from token on mount
+  // Fetch user email and metadata from token on mount
   useEffect(() => {
     async function fetchUserEmail() {
       if (!tokenHash || type !== 'invite') {
@@ -70,7 +70,7 @@ export default function SignUpPage() {
       }
 
       try {
-        // Use server action to verify token and get email
+        // Use server action to verify token and get email + metadata
         const result = await getInvitationEmail(tokenHash);
 
         if (!result.success || !result.email) {
@@ -81,6 +81,15 @@ export default function SignUpPage() {
 
         // Set email from server action result
         setEmail(result.email);
+
+        // Pre-fill username and full_name if provided by HR
+        if (result.username) {
+          setUsername(result.username);
+        }
+        if (result.full_name) {
+          setFullName(result.full_name);
+        }
+
         setLoading(false);
       } catch (err) {
         console.error('[SignupPage] Unexpected error:', err);
