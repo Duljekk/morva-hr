@@ -743,8 +743,11 @@ export async function getRecentActivitiesCount(): Promise<{ data?: number; error
     const rejectedLeaveRequestsCount = rejectedLeaveRequestsResult.count || 0;
     const totalCount = announcementsCount + payslipsCount + leaveRequestsCount + approvedLeaveRequestsCount + rejectedLeaveRequestsCount;
 
-    console.log('[getRecentActivitiesCount] Total activities:', totalCount, `(announcements: ${announcementsCount}, payslips: ${payslipsCount}, leave requests: ${leaveRequestsCount}, approved leave requests: ${approvedLeaveRequestsCount}, rejected leave requests: ${rejectedLeaveRequestsCount})`);
-    return { data: totalCount };
+    // Cap at 3 to match the UI display limit
+    const cappedCount = Math.min(totalCount, 3);
+
+    console.log('[getRecentActivitiesCount] Total activities:', totalCount, `(capped to ${cappedCount}, announcements: ${announcementsCount}, payslips: ${payslipsCount}, leave requests: ${leaveRequestsCount}, approved leave requests: ${approvedLeaveRequestsCount}, rejected leave requests: ${rejectedLeaveRequestsCount})`);
+    return { data: cappedCount };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error('[getRecentActivitiesCount] Error:', errorMessage);
