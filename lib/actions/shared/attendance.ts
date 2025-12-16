@@ -3,13 +3,14 @@
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
 import {
-  getTodayDateString as getTodayGMT7,
+  todayLocal,
   createTimestamp,
-  getNowInGMT7,
-  formatDateISO,
-  formatTimeShort,
+  compareToShiftTime,
+  nowUTC,
+  getNowPartsLocal,
   APP_TIMEZONE
-} from '@/lib/utils/timezone';
+} from '@/lib/time/time-engine';
+import { formatDateISO, formatTimeWIB } from '@/lib/time/format';
 
 /**
  * ATTENDANCE ACTIONS
@@ -19,9 +20,9 @@ import {
  * Uses GMT+7 (Asia/Bangkok) timezone for all date operations.
  */
 
-// Re-export helper functions using GMT+7 timezone
+// DO NOT use server local time - all date logic goes through time-engine.ts
 function getTodayDateString(): string {
-  return getTodayGMT7();
+  return todayLocal();
 }
 
 function getCurrentTimestamp(): string {
@@ -132,7 +133,6 @@ export async function checkIn(): Promise<
       return { error: 'Not authenticated' };
     }
 
-    const now = getNowInGMT7();
     const today = getTodayDateString();
     const checkInTime = getCurrentTimestamp();
 
@@ -167,18 +167,13 @@ export async function checkIn(): Promise<
       return { error: 'Already checked in today' };
     }
 
-    // Calculate shift start time for today
+    // TIMEZONE-SAFE: Determine check-in status using time-engine
     // Use default shift hours if not set in database (9 AM default)
     const shiftStartHour = (userData as any)?.shift_start_hour || 9;
-    const shiftStart = new Date(now);
-    shiftStart.setHours(shiftStartHour, 0, 0, 0);
-    shiftStart.setSeconds(0, 0); // Ensure seconds and milliseconds are 0
 
-    // Determine check-in status: late if check-in time is >= shift start + 1 minute
-    // This allows for exact time (11:00:00) or up to 59 seconds after (11:00:59) to be considered ontime
-    // Only 11:01:00 and later will be marked as late
-    const shiftStartWithTolerance = new Date(shiftStart.getTime() + 60000); // Add 1 minute tolerance (60 seconds)
-    const checkInStatus = now >= shiftStartWithTolerance ? 'late' : 'ontime';
+    // compareToShiftTime returns: -1 before, 0 on time, 1 after (late)
+    // tolerance of 1 minute: 09:00:00 to 09:00:59 is ontime, 09:01:00+ is late
+    const checkInStatus = compareToShiftTime(shiftStartHour, 1) > 0 ? 'late' : 'ontime';
 
     // Insert attendance record
     const { data, error } = await (supabase as any)
@@ -275,33 +270,30 @@ export async function checkOut(): Promise<
       return { error: 'Failed to fetch user data' };
     }
 
-    const now = getNowInGMT7();
     const checkInDate = new Date(attendance.check_in_time);
 
-    // Calculate shift end time for today
+    // TIMEZONE-SAFE: Determine check-out status using time-engine
     // Use default shift hours if not set in database (6 PM default)
     const shiftEndHour = (userData as any)?.shift_end_hour || 18;
-    const shiftEnd = new Date(now);
-    shiftEnd.setHours(shiftEndHour, 0, 0, 0);
+    const shiftStartHour = (userData as any)?.shift_start_hour || 9;
 
-    // Determine check-out status
-    // Allow 1 minute tolerance for "ontime" (check-out at 19:00:00 to 19:00:59 is ontime)
-    const shiftEndWithTolerance = new Date(shiftEnd.getTime() + 60000); // Add 1 minute tolerance
+    // compareToShiftTime returns: -1 before (left early), 0 on time, 1 after (overtime)
+    const compareResult = compareToShiftTime(shiftEndHour, 1);
     let checkOutStatus: 'leftearly' | 'ontime' | 'overtime';
-    if (now < shiftEnd) {
+    if (compareResult < 0) {
       checkOutStatus = 'leftearly';
-    } else if (now.getTime() <= shiftEndWithTolerance.getTime()) {
+    } else if (compareResult === 0) {
       checkOutStatus = 'ontime';
     } else {
       checkOutStatus = 'overtime';
     }
 
-    // Calculate total hours worked
-    const totalMs = now.getTime() - checkInDate.getTime();
+    // Calculate total hours worked using actual UTC timestamps
+    const currentUTC = nowUTC();
+    const totalMs = currentUTC.getTime() - checkInDate.getTime();
     const totalHours = totalMs / (1000 * 60 * 60); // Convert ms to hours
 
-    // Calculate overtime hours (hours worked beyond shift end)
-    const shiftStartHour = (userData as any)?.shift_start_hour || 9;
+    // Calculate overtime hours (hours worked beyond expected shift duration)
     const expectedShiftMs = (shiftEndHour - shiftStartHour) * 60 * 60 * 1000;
     const overtimeMs = Math.max(0, totalMs - expectedShiftMs);
     const overtimeHours = overtimeMs / (1000 * 60 * 60);
@@ -371,15 +363,15 @@ async function _getRecentActivitiesUncached(
   const supabase = await createClient();
 
   // Calculate date range (last N days, including today)
-  // Use GMT+7 timezone for consistency across all operations
-  const today = getNowInGMT7();
-  const todayLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  // Use time-engine for consistent timezone handling across all operations
+  const nowParts = getNowPartsLocal();
+  const todayLocalDate = new Date(nowParts.year, nowParts.month - 1, nowParts.day);
 
-  const startDate = new Date(todayLocal);
+  const startDate = new Date(todayLocalDate);
   startDate.setDate(startDate.getDate() - (days - 1)); // Include today, so subtract (days - 1)
 
   // Use timezone utility for date formatting
-  const todayDateString = formatDateISO(todayLocal);
+  const todayDateString = formatDateISO(todayLocalDate);
   const startDateString = formatDateISO(startDate);
 
   console.log('[getRecentActivities] Fetching activities for user:', userId);
@@ -404,7 +396,7 @@ async function _getRecentActivitiesUncached(
   // Condition 1: Leaves that overlap with past/current range (start_date <= today AND end_date >= startDate)
   // Condition 2: Future leaves that start within extended range (start_date > today AND start_date <= extendedEndDate)
   // Calculate extended end date to show future leaves (extend by same number of days)
-  const extendedEndDate = new Date(today);
+  const extendedEndDate = new Date(todayLocalDate);
   extendedEndDate.setDate(extendedEndDate.getDate() + days);
   const extendedEndDateString = extendedEndDate.toISOString().split('T')[0];
 
@@ -433,7 +425,7 @@ async function _getRecentActivitiesUncached(
         console.warn('[getRecentActivities] PostgreSQL function not found, using fallback query:', leaveError.message);
 
         // Fallback: Use original two-query approach
-        const extendedEndDate = new Date(today);
+        const extendedEndDate = new Date(todayLocalDate);
         extendedEndDate.setDate(extendedEndDate.getDate() + days);
         const extendedEndDateStringFallback = extendedEndDate.toISOString().split('T')[0];
 

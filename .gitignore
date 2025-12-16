@@ -41,7 +41,7 @@ yarn-error.log*
 next-env.d.ts
 
 # markdown files (ignore all except README.md)
-*.md
+# *.md
 !README.md
 
 # MCP configuration (contains secrets)
