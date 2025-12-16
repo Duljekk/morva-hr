@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import StatisticWidget from '@/components/hr/StatisticWidget';
 import EmployeeActivitiesPanel, { type ActivityGroupData } from './EmployeeActivitiesPanel';
 import Clock18Icon from '@/components/icons/shared/Clock18';
 import HourglassIcon from '@/components/icons/shared/HourglassIcon';
+import { getEmployeeActivities, type EmployeeActivitiesResult } from '@/lib/actions/hr/employeeDetails';
 
 export interface EmployeeDetailsRightSectionProps {
   /** Employee ID to fetch activities for */
@@ -18,74 +19,66 @@ export interface EmployeeDetailsRightSectionProps {
  * 
  * Right section of the employee details page containing statistics and activities.
  * Based on Figma design node 587:1499.
- * 
- * Features:
- * - Two statistic widgets (Avg. Check-In Time, Total Hours Worked)
- * - Activities section with tabbed navigation (Attendance, Leave Request)
- * - Date-grouped activity feed with timeline
- * - Responsive layout matching Figma specifications
- * 
- * @example
- * ```tsx
- * <EmployeeDetailsRightSection employeeId="123" />
- * ```
  */
 export default function EmployeeDetailsRightSection({
   employeeId,
   className = '',
 }: EmployeeDetailsRightSectionProps) {
-  // Mock data - in real app, fetch based on employeeId
+  const [activities, setActivities] = useState<EmployeeActivitiesResult | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Mock statistics (to be implemented separately)
   const avgCheckInTime = '11:05';
   const avgCheckInTrend = '1 minute';
   const totalHoursWorked = '168';
   const totalHoursTrend = '8 hours';
 
-  // Mock attendance groups matching Figma design
-  const attendanceGroups: ActivityGroupData[] = [
-    {
-      id: 'today',
-      label: 'Today',
-      activities: [
-        { id: 'a1', type: 'checkIn', time: '11:00', status: 'onTime' },
-        { id: 'a2', type: 'checkOut', time: '19:20', status: 'overtime' },
-      ],
-    },
-    {
-      id: 'yesterday',
-      label: 'Yesterday',
-      activities: [
-        { id: 'a3', type: 'checkIn', time: '11:12', status: 'late' },
-        { id: 'a4', type: 'checkOut', time: '19:00', status: 'onTime' },
-      ],
-    },
-    {
-      id: 'dec6',
-      label: 'December 6',
-      isLast: true,
-      activities: [
-        { id: 'a5', type: 'checkIn', time: '11:00', status: 'onTime' },
-        { id: 'a6', type: 'checkOut', time: '19:00', status: 'onTime' },
-      ],
-    },
-  ];
+  useEffect(() => {
+    if (!employeeId) {
+      setLoading(false);
+      return;
+    }
 
-  // Mock leave request groups
-  const leaveRequestGroups: ActivityGroupData[] = [
-    {
-      id: 'leave1',
-      label: 'November 15',
-      isLast: true,
-      activities: [
-        { id: 'l1', type: 'checkIn', time: '10:30', status: 'onTime' },
-      ],
-    },
-  ];
+    async function fetchActivities() {
+      try {
+        setLoading(true);
+        setError(null);
+        const result = await getEmployeeActivities(employeeId!);
+
+        if (result.error) {
+          setError(result.error);
+          return;
+        }
+
+        if (result.data) {
+          setActivities(result.data);
+        }
+      } catch (err) {
+        console.error('[EmployeeDetailsRightSection] Error:', err);
+        setError('Failed to load activities');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchActivities();
+  }, [employeeId]);
 
   return (
     <div className={`flex flex-col gap-6 ${className}`.trim()}>
       {/* Statistics Section */}
       <div className="flex gap-4">
-        {/* Average Check-In Time Widget */}
+        <StatisticWidget
+          title="Avg. Hours Worked"
+          value={totalHoursWorked}
+          unit="hours"
+          trend={totalHoursTrend}
+          comparison="vs last month"
+          trendDirection="up"
+          icon={<HourglassIcon className="w-[18px] h-[18px]" />}
+          className="flex-1"
+        />
         <StatisticWidget
           title="Avg. Check-In Time"
           value={avgCheckInTime}
@@ -96,26 +89,24 @@ export default function EmployeeDetailsRightSection({
           icon={<Clock18Icon className="w-[18px] h-[18px]" />}
           className="flex-1"
         />
-
-        {/* Total Hours Worked Widget */}
-        <StatisticWidget
-          title="Total Hours Worked"
-          value={totalHoursWorked}
-          unit="hours"
-          trend={totalHoursTrend}
-          comparison="vs last month"
-          trendDirection="up"
-          icon={<HourglassIcon className="w-[18px] h-[18px]" />}
-          className="flex-1"
-        />
       </div>
 
       {/* Activities Section */}
-      <EmployeeActivitiesPanel
-        attendanceGroups={attendanceGroups}
-        leaveRequestGroups={leaveRequestGroups}
-        leaveRequestCount={1}
-      />
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2b7fff]" />
+        </div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center py-12">
+          <p className="text-red-600 text-sm">{error}</p>
+        </div>
+      ) : (
+        <EmployeeActivitiesPanel
+          attendanceGroups={activities?.attendanceGroups || []}
+          leaveRequestGroups={activities?.leaveRequestGroups || []}
+          leaveRequestCount={activities?.leaveRequestCount || 0}
+        />
+      )}
     </div>
   );
 }

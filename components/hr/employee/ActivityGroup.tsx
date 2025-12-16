@@ -120,7 +120,8 @@ const ActivityGroup = memo(function ActivityGroup({
               type={activity.type}
               time={activity.time}
               status={activity.status}
-              showDivider={index > 0}
+              isSingle={activities.length === 1}
+              isFirst={index === 0 && activities.length > 1}
             />
           ))}
         </div>

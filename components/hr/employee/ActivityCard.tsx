@@ -24,10 +24,18 @@ export interface ActivityCardProps {
   status: ActivityStatus;
   
   /**
-   * Whether to show divider above this card
+   * Whether this is the first item in a group with multiple activities
+   * First item gets border-bottom, subsequent items get padding-top
    * @default false
    */
-  showDivider?: boolean;
+  isFirst?: boolean;
+
+  /**
+   * Whether this is the only activity in the group
+   * Single items have no border or extra padding
+   * @default false
+   */
+  isSingle?: boolean;
   
   /**
    * Additional CSS classes
@@ -61,28 +69,27 @@ const ActivityCard = memo(function ActivityCard({
   type,
   time,
   status,
-  showDivider = false,
+  isFirst = false,
+  isSingle = false,
   className = '',
 }: ActivityCardProps) {
   const isCheckIn = type === 'checkIn';
   const label = isCheckIn ? 'Checked In' : 'Checked Out';
   const Icon = isCheckIn ? CheckInIcon : CheckoutIcon;
 
+  // Single item: no border, no extra padding
+  // First item (in multi): has border-bottom and pb-[12px]
+  // Subsequent items: has pt-[10px], no border
+  const containerClasses = isSingle
+    ? ''
+    : isFirst
+      ? 'pb-[12px] border-b border-solid border-[#f5f5f5]'
+      : 'pt-[10px]';
+
   return (
-    <>
-      {/* Divider */}
-      {showDivider && (
-        <div className="h-0 relative w-full" data-name="Divider">
-          <div className="absolute bottom-0 left-0 right-0 top-[-1px]">
-            <div className="w-full h-[1px] bg-[#f5f5f5]" />
-          </div>
-        </div>
-      )}
-      
-      {/* Activity Entry */}
-      <div
-        className={`flex gap-[8px] items-center ${showDivider ? 'pt-[10px]' : 'pb-[12px]'} w-full ${className}`}
-        data-name={isCheckIn ? 'Check In' : 'Check Out'}
+    <div
+      className={`flex gap-[8px] items-center w-full ${containerClasses} ${className}`}
+      data-name={isCheckIn ? 'Check In' : 'Check Out'}
       >
         {/* Icon Container */}
         <div
@@ -117,7 +124,6 @@ const ActivityCard = memo(function ActivityCard({
           <ActivityStatusBadge status={status} />
         </div>
       </div>
-    </>
   );
 });
 

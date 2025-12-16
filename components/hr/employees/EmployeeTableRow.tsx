@@ -88,6 +88,11 @@ export interface EmployeeTableRowProps {
   onRowClick?: (id: string) => void;
 
   /**
+   * Callback when employee name is clicked
+   */
+  onNameClick?: (id: string) => void;
+
+  /**
    * Additional CSS classes
    */
   className?: string;
@@ -325,6 +330,7 @@ const EmployeeTableRow = memo(function EmployeeTableRow({
   onSelectionChange,
   onActionClick,
   onRowClick,
+  onNameClick,
   className = '',
 }: EmployeeTableRowProps) {
   const handleCheckboxChange = (checked: boolean) => {
@@ -337,6 +343,11 @@ const EmployeeTableRow = memo(function EmployeeTableRow({
 
   const handleRowClick = () => {
     onRowClick?.(employee.id);
+  };
+
+  const handleNameClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onNameClick?.(employee.id);
   };
 
   return (
@@ -391,10 +402,11 @@ const EmployeeTableRow = memo(function EmployeeTableRow({
             data-node-id="557:2357"
           >
             <p
-              className="font-sans font-medium leading-[18px] text-[#262626] text-[14px] w-full overflow-hidden text-ellipsis whitespace-nowrap"
+              className={`font-sans font-medium leading-[18px] text-[#262626] text-[14px] w-full overflow-hidden text-ellipsis whitespace-nowrap ${onNameClick ? 'cursor-pointer hover:underline' : ''}`}
               data-node-id="557:2358"
               style={{ fontVariationSettings: "'wdth' 100" }}
               title={employee.name}
+              onClick={onNameClick ? handleNameClick : undefined}
             >
               {employee.name}
             </p>

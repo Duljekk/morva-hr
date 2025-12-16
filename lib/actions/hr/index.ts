@@ -11,6 +11,8 @@ export * from './dashboard';
 export * from './leaves';
 export * from './announcements';
 export * from './payslips';
+export * from './employees';
+export * from './employeeDetails';
 
 
 
