@@ -76,30 +76,10 @@ export async function getTodaysAttendance(): Promise<
 
     const today = getTodayDateString();
 
-    // Cache with 5-minute revalidation and user-specific tags
-    // Tags: 'attendance' (general) and 'user-{userId}' (user-specific)
-    try {
-      const getCachedAttendance = unstable_cache(
-        async () => {
-          return await _getTodaysAttendanceUncached(user.id, today);
-        },
-        ['attendance', `user-${user.id}`, `date-${today}`],
-        {
-          revalidate: 300, // 5 minutes
-          tags: ['attendance', `user-${user.id}`],
-        }
-      );
-
-      return await getCachedAttendance();
-    } catch (cacheError) {
-      console.error('[getTodaysAttendance] Cache error, falling back to direct call:', cacheError);
-      console.error('[getTodaysAttendance] Cache error details:', {
-        message: cacheError instanceof Error ? cacheError.message : String(cacheError),
-        stack: cacheError instanceof Error ? cacheError.stack : undefined,
-      });
-      // Fallback to direct call if caching fails
-      return await _getTodaysAttendanceUncached(user.id, today);
-    }
+    // NOTE: Server-side caching removed to prevent stale data during hydration
+    // Client-side SWR caching in useDashboardData.ts handles caching with keepPreviousData
+    // This ensures real-time accuracy for attendance status badges
+    return await _getTodaysAttendanceUncached(user.id, today);
   } catch (error) {
     console.error('[getTodaysAttendance] Unexpected error:', error);
     console.error('[getTodaysAttendance] Error details:', {

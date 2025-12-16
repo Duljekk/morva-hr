@@ -12,6 +12,7 @@
  */
 
 import useSWR from 'swr';
+import { useRef, useEffect } from 'react';
 import { getTodaysAttendance, getRecentActivities, type DayActivity } from '@/lib/actions/shared/attendance';
 import { hasActiveLeaveRequest } from '@/lib/actions/employee/leaves';
 import { getActiveAnnouncements } from '@/lib/actions/hr/announcements';
@@ -57,16 +58,21 @@ const formatTimeWithPeriod = (date: Date) =>
 async function fetchAttendance(): Promise<AttendanceData> {
   const result = await getTodaysAttendance();
 
+  console.log('[fetchAttendance] Raw result:', result);
+
   if ('data' in result && result.data) {
-    return {
+    const attendance = {
       checkInTime: result.data.check_in_time ? new Date(result.data.check_in_time) : null,
       checkOutTime: result.data.check_out_time ? new Date(result.data.check_out_time) : null,
       // Fetch status directly from database - ensures consistency with HR app
       checkInStatus: (result.data.check_in_status as CheckInStatus) || null,
       checkOutStatus: (result.data.check_out_status as CheckOutStatus) || null,
     };
+    console.log('[fetchAttendance] Parsed attendance:', attendance);
+    return attendance;
   }
 
+  console.log('[fetchAttendance] No data, returning nulls');
   return { checkInTime: null, checkOutTime: null, checkInStatus: null, checkOutStatus: null };
 }
 
@@ -140,10 +146,12 @@ const swrConfig = {
   revalidateOnReconnect: true, // Refetch when reconnecting
   dedupingInterval: 5000, // Dedupe requests within 5 seconds
   errorRetryCount: 2, // Retry failed requests twice
+  keepPreviousData: true, // Keep previous data while revalidating to prevent UI flicker
 };
 
 /**
  * Hook for fetching attendance data with SWR caching
+ * Uses a ref to preserve last known good data during re-renders
  */
 export function useAttendance() {
   const { data, error, isLoading, mutate } = useSWR(
@@ -152,8 +160,64 @@ export function useAttendance() {
     swrConfig
   );
 
+  // Preserve last known good attendance data using a ref
+  // This prevents status from disappearing during component re-renders
+  const lastKnownDataRef = useRef<AttendanceData | null>(null);
+  const renderCountRef = useRef(0);
+  renderCountRef.current += 1;
+
+  console.log(`[useAttendance] Render #${renderCountRef.current}`, {
+    'SWR data': data,
+    'SWR isLoading': isLoading,
+    'SWR error': error,
+    'Last known data (ref)': lastKnownDataRef.current,
+  });
+
+  // Update the ref only when we have COMPLETE data (with status)
+  // This preserves the full data including status
+  if (data?.checkInTime && data?.checkInStatus) {
+    console.log('[useAttendance] Updating ref with complete data:', data);
+    lastKnownDataRef.current = data;
+  } else if (data !== undefined) {
+    console.warn('[useAttendance] SWR returned incomplete data:', data);
+  }
+
+  // FIXED: Properly merge data - use individual property fallbacks
+  // If SWR data exists but has undefined status, fall back to ref's status
+  const refData = lastKnownDataRef.current;
+  const defaultData: AttendanceData = {
+    checkInTime: null,
+    checkOutTime: null,
+    checkInStatus: null,
+    checkOutStatus: null,
+  };
+
+  const effectiveData: AttendanceData = {
+    // For times: prefer data, then ref, then null
+    checkInTime: data?.checkInTime ?? refData?.checkInTime ?? null,
+    checkOutTime: data?.checkOutTime ?? refData?.checkOutTime ?? null,
+    // For statuses: CRITICAL - prefer data if explicitly set, else ref, else null
+    // Use explicit undefined check because status can be null legitimately
+    checkInStatus: data?.checkInStatus !== undefined
+      ? data.checkInStatus
+      : (refData?.checkInStatus ?? null),
+    checkOutStatus: data?.checkOutStatus !== undefined
+      ? data.checkOutStatus
+      : (refData?.checkOutStatus ?? null),
+  };
+
+  console.log('[useAttendance] Effective data (merged):', effectiveData);
+
+  // Track when data changes using useEffect
+  useEffect(() => {
+    console.log('[useAttendance] useEffect - SWR data changed:', {
+      data,
+      checkInStatus: data?.checkInStatus,
+    });
+  }, [data]);
+
   return {
-    attendance: data ?? { checkInTime: null, checkOutTime: null, checkInStatus: null, checkOutStatus: null },
+    attendance: effectiveData,
     isLoading,
     error,
     mutate, // Allows manual revalidation after check-in/check-out

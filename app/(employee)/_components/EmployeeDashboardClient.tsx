@@ -91,6 +91,26 @@ export default function EmployeeDashboardClient() {
   const hasActiveLeave = leaveStatus.hasActiveLeave;
   const activeLeaveInfo = leaveStatus.activeLeaveInfo;
 
+  // DEBUG: Log attendance data changes with stack trace to find caller
+  useEffect(() => {
+    const trace = new Error().stack;
+    console.log('[EmployeeDashboard] Attendance data changed:', {
+      checkInTime: checkInDateTime?.toISOString(),
+      checkOutTime: checkOutDateTime?.toISOString(),
+      checkInStatus: dbCheckInStatus,
+      checkOutStatus: dbCheckOutStatus,
+      timestamp: new Date().toISOString(),
+    });
+
+    if (dbCheckInStatus === undefined && checkInDateTime) {
+      console.error('[EmployeeDashboard] 🔴 BUG DETECTED: Status is undefined but we have checkInTime!', {
+        checkInTime: checkInDateTime?.toISOString(),
+        fullAttendanceObject: attendance,
+        stackTrace: trace,
+      });
+    }
+  }, [checkInDateTime, checkOutDateTime, dbCheckInStatus, dbCheckOutStatus, attendance]);
+
   // Local UI state (not fetched from server)
   const [showCheckOutConfirm, setShowCheckOutConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
