@@ -191,15 +191,14 @@ export async function getAttendanceFeed(
       return (names[0].charAt(0) + names[names.length - 1].charAt(0)).toUpperCase();
     };
 
-    // Helper: Format time as "HH:MM AM/PM"
+    // Helper: Format time as "HH:MM AM/PM" in WIB timezone
     const formatTime = (timestamp: string): string => {
-      const date = new Date(timestamp);
-      const hours = date.getHours();
-      const minutes = date.getMinutes();
-      const ampm = hours >= 12 ? 'PM' : 'AM';
-      const displayHours = hours % 12 || 12;
-      const displayMinutes = minutes.toString().padStart(2, '0');
-      return `${displayHours}:${displayMinutes} ${ampm}`;
+      return new Intl.DateTimeFormat('en-US', {
+        timeZone: APP_TIMEZONE,
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      }).format(new Date(timestamp));
     };
 
     // Process records into feed entries
@@ -456,12 +455,14 @@ export async function getAllRecentActivities(limit: number = 20): Promise<{ data
     // Require HR admin role
     const { supabase } = await requireHRAdmin();
 
-    // Helper functions
+    // Helper functions - Format time in WIB timezone (HH:MM 24h format)
     const formatTime = (timestamp: string): string => {
-      const date = new Date(timestamp);
-      const hours = date.getHours().toString().padStart(2, '0');
-      const minutes = date.getMinutes().toString().padStart(2, '0');
-      return `${hours}:${minutes}`;
+      return new Intl.DateTimeFormat('en-GB', {
+        timeZone: APP_TIMEZONE,
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }).format(new Date(timestamp));
     };
 
     const formatDateRange = (startDate: string, endDate: string): string => {

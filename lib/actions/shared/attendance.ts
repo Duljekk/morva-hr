@@ -488,12 +488,14 @@ async function _getRecentActivitiesUncached(
     return `${month} ${day}`;
   };
 
-  // Helper function to format time (e.g., "11:12")
+  // Helper function to format time (e.g., "11:12") in WIB timezone
   const formatTime = (timestamp: string): string => {
-    const date = new Date(timestamp);
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    return `${hours}:${minutes}`;
+    return new Intl.DateTimeFormat('en-GB', {
+      timeZone: APP_TIMEZONE,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(new Date(timestamp));
   };
 
   // Helper function to format date range (e.g., "14-15 Nov")
