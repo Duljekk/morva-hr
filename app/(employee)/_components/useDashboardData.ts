@@ -16,10 +16,18 @@ import { getTodaysAttendance, getRecentActivities, type DayActivity } from '@/li
 import { hasActiveLeaveRequest } from '@/lib/actions/employee/leaves';
 import { getActiveAnnouncements } from '@/lib/actions/hr/announcements';
 
+// Status types matching database values
+export type CheckInStatus = 'ontime' | 'late';
+export type CheckOutStatus = 'ontime' | 'overtime' | 'leftearly';
+
 // Types for dashboard data
 export interface AttendanceData {
   checkInTime: Date | null;
   checkOutTime: Date | null;
+  /** Check-in status from database - single source of truth for both Employee and HR apps */
+  checkInStatus: CheckInStatus | null;
+  /** Check-out status from database - single source of truth for both Employee and HR apps */
+  checkOutStatus: CheckOutStatus | null;
 }
 
 export interface AnnouncementData {
@@ -48,56 +56,59 @@ const formatTimeWithPeriod = (date: Date) =>
 // Fetcher functions for SWR
 async function fetchAttendance(): Promise<AttendanceData> {
   const result = await getTodaysAttendance();
-  
+
   if ('data' in result && result.data) {
     return {
       checkInTime: result.data.check_in_time ? new Date(result.data.check_in_time) : null,
       checkOutTime: result.data.check_out_time ? new Date(result.data.check_out_time) : null,
+      // Fetch status directly from database - ensures consistency with HR app
+      checkInStatus: (result.data.check_in_status as CheckInStatus) || null,
+      checkOutStatus: (result.data.check_out_status as CheckOutStatus) || null,
     };
   }
-  
-  return { checkInTime: null, checkOutTime: null };
+
+  return { checkInTime: null, checkOutTime: null, checkInStatus: null, checkOutStatus: null };
 }
 
 async function fetchAnnouncements(): Promise<AnnouncementData | null> {
   const result = await getActiveAnnouncements();
-  
+
   if (result.data && result.data.length > 0) {
     const announcement = result.data[0];
     const announcementDate = new Date(announcement.created_at);
-    
+
     return {
       id: announcement.id,
       title: announcement.title,
-      date: announcementDate.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric', 
-        year: 'numeric' 
+      date: announcementDate.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
       }),
       time: formatTimeWithPeriod(announcementDate),
       body: announcement.content || '',
     };
   }
-  
+
   return null;
 }
 
 async function fetchLeaveStatus(): Promise<LeaveStatusData> {
   const result = await hasActiveLeaveRequest();
-  
+
   if (result.data) {
     const leaveTypeName = result.data.request
-      ? ((result.data.request as any).leaveTypeName || 
-          (() => {
-            const leaveTypeMap: Record<string, string> = {
-              'annual': 'Annual Leave',
-              'sick': 'Sick Leave',
-              'unpaid': 'Unpaid Leave',
-            };
-            return leaveTypeMap[result.data.request.leave_type_id] || 'Leave';
-          })())
+      ? ((result.data.request as any).leaveTypeName ||
+        (() => {
+          const leaveTypeMap: Record<string, string> = {
+            'annual': 'Annual Leave',
+            'sick': 'Sick Leave',
+            'unpaid': 'Unpaid Leave',
+          };
+          return leaveTypeMap[result.data.request.leave_type_id] || 'Leave';
+        })())
       : undefined;
-    
+
     return {
       hasActiveLeave: result.data.hasActive,
       activeLeaveInfo: result.data.request ? {
@@ -109,17 +120,17 @@ async function fetchLeaveStatus(): Promise<LeaveStatusData> {
       } : undefined,
     };
   }
-  
+
   return { hasActiveLeave: false };
 }
 
 async function fetchActivities(): Promise<DayActivity[]> {
   const result = await getRecentActivities(3);
-  
+
   if (result.data) {
     return result.data.slice(0, 3);
   }
-  
+
   return [];
 }
 
@@ -142,7 +153,7 @@ export function useAttendance() {
   );
 
   return {
-    attendance: data ?? { checkInTime: null, checkOutTime: null },
+    attendance: data ?? { checkInTime: null, checkOutTime: null, checkInStatus: null, checkOutStatus: null },
     isLoading,
     error,
     mutate, // Allows manual revalidation after check-in/check-out
@@ -216,8 +227,8 @@ export function useDashboardData() {
   const leaveStatus = useLeaveStatus();
   const activities = useActivities();
 
-  const isLoading = attendance.isLoading || announcements.isLoading || 
-                    leaveStatus.isLoading || activities.isLoading;
+  const isLoading = attendance.isLoading || announcements.isLoading ||
+    leaveStatus.isLoading || activities.isLoading;
 
   return {
     attendance: attendance.attendance,

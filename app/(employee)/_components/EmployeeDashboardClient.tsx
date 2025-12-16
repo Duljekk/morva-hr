@@ -69,25 +69,28 @@ export default function EmployeeDashboardClient() {
   const { showToast } = useToast();
   const nowRef = useRef(new Date());
   const [now, setNow] = useState(new Date());
-  
+
   // PERFORMANCE OPTIMIZATION: SWR-based data fetching with caching
   // Benefits: automatic caching, deduplication, stale-while-revalidate
-  const { 
-    attendance, 
-    announcement: currentAnnouncement, 
-    leaveStatus, 
+  const {
+    attendance,
+    announcement: currentAnnouncement,
+    leaveStatus,
     activities: recentActivities,
     isLoading: isInitialLoading,
     mutateAttendance,
     mutateActivities,
   } = useDashboardData();
-  
+
   // Derived state from SWR data
   const checkInDateTime = attendance.checkInTime;
   const checkOutDateTime = attendance.checkOutTime;
+  // Use database status values - single source of truth for both Employee and HR apps
+  const dbCheckInStatus = attendance.checkInStatus;
+  const dbCheckOutStatus = attendance.checkOutStatus;
   const hasActiveLeave = leaveStatus.hasActiveLeave;
   const activeLeaveInfo = leaveStatus.activeLeaveInfo;
-  
+
   // Local UI state (not fetched from server)
   const [showCheckOutConfirm, setShowCheckOutConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -135,24 +138,24 @@ export default function EmployeeDashboardClient() {
   const shiftStart = useMemo(() => {
     return setToHour(nowRef.current, SHIFT_START_HOUR);
   }, [currentDateKey]);
-  
+
   const shiftEnd = useMemo(() => {
     return setToHour(nowRef.current, SHIFT_END_HOUR);
   }, [currentDateKey]);
 
   // PERFORMANCE OPTIMIZATION: Adaptive timer updates
   const isActivelyTiming = !!checkInDateTime && !checkOutDateTime;
-  
+
   useEffect(() => {
     let intervalId: NodeJS.Timeout | null = null;
     let lastUpdateTime = Date.now();
-    
+
     const updateInterval = isActivelyTiming ? 1000 : 10000;
 
     const updateTime = () => {
       const currentTime = new Date();
       nowRef.current = currentTime;
-      
+
       const nowMs = Date.now();
       if (nowMs - lastUpdateTime >= updateInterval) {
         setNow(currentTime);
@@ -183,13 +186,13 @@ export default function EmployeeDashboardClient() {
   }, [currentDateKey]);
 
   const isCheckedIn = !!checkInDateTime && !checkOutDateTime;
-  
+
   const canCheckIn = useMemo(() => {
     return !checkInDateTime && nowRef.current.getTime() >= shiftStart.getTime();
   }, [checkInDateTime, shiftStart, now]);
-  
+
   const canCheckOut = isCheckedIn;
-  
+
   const widgetState: 'preCheckIn' | 'onClock' | 'overtime' | 'checkedOut' = useMemo(() => {
     if (checkOutDateTime) return 'checkedOut';
     if (isCheckedIn) {
@@ -206,7 +209,7 @@ export default function EmployeeDashboardClient() {
     setIsLoading(true);
     try {
       const result = await checkIn();
-      
+
       if (result.error) {
         alert(result.error);
         setIsLoading(false);
@@ -216,17 +219,17 @@ export default function EmployeeDashboardClient() {
       if (result.data?.check_in_time) {
         const checkInTime = new Date(result.data.check_in_time);
         const checkInStatus = result.data.check_in_status || 'ontime';
-        
+
         const shiftStart = setToHour(checkInTime, SHIFT_START_HOUR);
         const timeDiffMs = checkInTime.getTime() - shiftStart.getTime();
         const timeDiffMinutes = Math.floor(timeDiffMs / 60000);
-        
+
         const params = new URLSearchParams({
           time: checkInTime.toISOString(),
           status: checkInStatus,
           minutesDiff: timeDiffMinutes.toString(),
         });
-        
+
         const successUrl = `/check-in-success?${params.toString()}`;
         setIsLoading(false);
         window.location.href = successUrl;
@@ -255,7 +258,7 @@ export default function EmployeeDashboardClient() {
     setIsLoading(true);
     try {
       const result = await checkOut();
-      
+
       if (result.error) {
         alert(result.error);
         setShowCheckOutConfirm(false);
@@ -266,14 +269,14 @@ export default function EmployeeDashboardClient() {
         // Revalidate SWR cache to reflect the new check-out
         mutateAttendance();
         mutateActivities();
-        
+
         showToast(
           'success',
           'Checked out',
           "You've successfully checked out. Have a great day!"
         );
       }
-      
+
       setShowCheckOutConfirm(false);
     } catch (error) {
       console.error('Check-out error:', error);
@@ -290,9 +293,9 @@ export default function EmployeeDashboardClient() {
 
   const handleOpenLeaveDetails = async () => {
     if (!activeLeaveInfo?.id) return;
-    
+
     const result = await getLeaveRequest(activeLeaveInfo.id);
-    
+
     if (result.data) {
       setLeaveDetailsData({
         startDate: result.data.startDate,
@@ -320,12 +323,9 @@ export default function EmployeeDashboardClient() {
   }, [checkInDateTime]);
 
   const checkInCardTime = checkInDateTime ? formatClockTime(checkInDateTime) : '--:--';
-  const checkInStatus = checkInDateTime && shiftStartForCheckIn
-    ? (() => {
-        const shiftStartWithTolerance = new Date(shiftStartForCheckIn.getTime() + 60000);
-        return checkInDateTime.getTime() >= shiftStartWithTolerance.getTime() ? 'late' : 'ontime';
-      })()
-    : undefined;
+  // Use database status instead of client-side recalculation
+  // This ensures consistency with the HR app (single source of truth)
+  const checkInStatus = dbCheckInStatus ?? undefined;
   const checkInDuration = checkInDateTime && shiftStartForCheckIn && checkInDateTime.getTime() > shiftStartForCheckIn.getTime()
     ? formatDurationFromMs(checkInDateTime.getTime() - shiftStartForCheckIn.getTime())
     : undefined;
@@ -333,29 +333,35 @@ export default function EmployeeDashboardClient() {
   const remainingToShiftEndMs = useMemo(() => {
     return Math.max(0, shiftEnd.getTime() - nowRef.current.getTime());
   }, [shiftEnd, now]);
-  
+
   const overtimeMs = useMemo(() => {
     return isCheckedIn ? Math.max(0, nowRef.current.getTime() - shiftEnd.getTime()) : 0;
   }, [isCheckedIn, shiftEnd, now]);
-  
+
   const checkoutOvertimeMs = useMemo(() => {
     return checkOutDateTime ? Math.max(0, checkOutDateTime.getTime() - shiftEnd.getTime()) : 0;
   }, [checkOutDateTime, shiftEnd]);
 
   const checkoutCardTime = checkOutDateTime ? formatClockTime(checkOutDateTime) : '--:--';
-  
+
   const shiftEndWithTolerance = useMemo(() => {
     return new Date(shiftEnd.getTime() + 60000);
   }, [shiftEnd]);
-  
+
   const checkoutStatus = useMemo(() => {
+    // If checked out, use database status (single source of truth - same as HR app)
+    if (checkOutDateTime && dbCheckOutStatus) {
+      return dbCheckOutStatus;
+    }
+    // If checked out but no status in DB (shouldn't happen), calculate fallback
     if (checkOutDateTime) {
-      return checkOutDateTime.getTime() > shiftEndWithTolerance.getTime() 
-        ? 'overtime' 
-        : checkOutDateTime.getTime() < shiftEnd.getTime() 
-          ? 'leftearly' 
+      return checkOutDateTime.getTime() > shiftEndWithTolerance.getTime()
+        ? 'overtime'
+        : checkOutDateTime.getTime() < shiftEnd.getTime()
+          ? 'leftearly'
           : 'ontime';
     }
+    // Real-time display for employees still on the clock
     if (isCheckedIn && nowRef.current.getTime() >= shiftEnd.getTime()) {
       return 'overtime';
     }
@@ -363,7 +369,7 @@ export default function EmployeeDashboardClient() {
       return 'remaining';
     }
     return undefined;
-  }, [checkOutDateTime, shiftEndWithTolerance, shiftEnd, isCheckedIn, now]);
+  }, [checkOutDateTime, dbCheckOutStatus, shiftEndWithTolerance, shiftEnd, isCheckedIn, now]);
 
   const checkoutLeftEarlyMs = useMemo(() => {
     return checkOutDateTime && checkOutDateTime.getTime() < shiftEnd.getTime()
@@ -392,7 +398,7 @@ export default function EmployeeDashboardClient() {
 
 
   // Note: Outer shell (bg, max-width, padding) is handled by DashboardShell server component
-  
+
   // PERFORMANCE OPTIMIZATION: Show skeleton while initial data is loading
   // This provides immediate visual feedback and improves perceived performance
   if (isInitialLoading && authLoading) {
@@ -455,7 +461,7 @@ export default function EmployeeDashboardClient() {
             <p className="text-base font-semibold text-neutral-700 leading-bold-base">
               Attendance Log
             </p>
-            
+
             <div className="flex w-full gap-2">
               <AttendanceCard
                 type="checkin"
@@ -476,32 +482,32 @@ export default function EmployeeDashboardClient() {
           <RecentActivities activities={recentActivities} />
         </div>
 
-            {/* Logout Button */}
-            <button
-              onClick={async () => {
-                // Best Practice: Add logout=true flag to prevent middleware redirect loops
-                // This tells middleware that we're in a logout flow and should allow access to /login
-                const redirectTimeout = setTimeout(() => {
-                  window.location.replace('/login?logout=true');
-                }, 8000);
-                
-                try {
-                  console.log('[EmployeeDashboard] Starting logout...');
-                  await signOut();
-                  clearTimeout(redirectTimeout);
-                  console.log('[EmployeeDashboard] Logout complete, redirecting...');
-                  // Wait for cookies to be cleared before redirecting
-                  await new Promise(resolve => setTimeout(resolve, 300));
-                  // Use logout=true flag to bypass middleware redirect
-                  window.location.replace('/login?logout=true');
-                } catch (error) {
-                  console.error('[EmployeeDashboard] Error during logout:', error);
-                  clearTimeout(redirectTimeout);
-                  await new Promise(resolve => setTimeout(resolve, 300));
-                  window.location.replace('/login?logout=true');
-                }
-              }}
-              className="mt-6 w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-50 active:bg-neutral-100"
+        {/* Logout Button */}
+        <button
+          onClick={async () => {
+            // Best Practice: Add logout=true flag to prevent middleware redirect loops
+            // This tells middleware that we're in a logout flow and should allow access to /login
+            const redirectTimeout = setTimeout(() => {
+              window.location.replace('/login?logout=true');
+            }, 8000);
+
+            try {
+              console.log('[EmployeeDashboard] Starting logout...');
+              await signOut();
+              clearTimeout(redirectTimeout);
+              console.log('[EmployeeDashboard] Logout complete, redirecting...');
+              // Wait for cookies to be cleared before redirecting
+              await new Promise(resolve => setTimeout(resolve, 300));
+              // Use logout=true flag to bypass middleware redirect
+              window.location.replace('/login?logout=true');
+            } catch (error) {
+              console.error('[EmployeeDashboard] Error during logout:', error);
+              clearTimeout(redirectTimeout);
+              await new Promise(resolve => setTimeout(resolve, 300));
+              window.location.replace('/login?logout=true');
+            }
+          }}
+          className="mt-6 w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-50 active:bg-neutral-100"
         >
           Log Out
         </button>
@@ -517,11 +523,11 @@ export default function EmployeeDashboardClient() {
         earlyDuration={(() => {
           const shiftEnd = setToHour(now, SHIFT_END_HOUR);
           const minutesEarly = Math.floor((shiftEnd.getTime() - now.getTime()) / 60000);
-          
+
           if (minutesEarly <= 0) {
             return '0 minutes';
           }
-          
+
           if (minutesEarly > 60) {
             const hours = Math.floor(minutesEarly / 60);
             const minutes = minutesEarly % 60;
@@ -531,7 +537,7 @@ export default function EmployeeDashboardClient() {
               return `${hours} hour${hours !== 1 ? 's' : ''}`;
             }
           }
-          
+
           return `${minutesEarly} minutes`;
         })()}
         confirmText="Check Out"
