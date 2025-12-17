@@ -94,7 +94,8 @@ export default async function HRDashboard() {
     }
 
     if (recentActivitiesCountResult.status === 'fulfilled') {
-      recentActivitiesCount = recentActivitiesCountResult.value.data ?? 3;
+      // Cap to max 3 items to match the Recent Activities card limit
+      recentActivitiesCount = Math.min(recentActivitiesCountResult.value.data ?? 3, 3);
       if (recentActivitiesCountResult.value.error) {
         console.error('[HRDashboard] Recent activities count error:', recentActivitiesCountResult.value.error);
       }
@@ -118,32 +119,32 @@ export default async function HRDashboard() {
     <>
       {/* Dashboard Container - Matching Figma layout */}
       <div className="bg-white box-border content-stretch flex flex-col gap-[40px] items-center justify-center overflow-clip pb-[210px] pt-[140px] px-[142px] relative rounded-bl-[16px] rounded-tl-[16px] size-full" data-name="Dashboard" data-node-id="428:2646">
-            {/* Dashboard Header */}
-            <div className="content-stretch flex flex-col gap-[14px] items-center relative shrink-0 w-full" data-name="Header" data-node-id="428:2647">
-              <HRDashboardHeader />
+        {/* Dashboard Header */}
+        <div className="content-stretch flex flex-col gap-[14px] items-center relative shrink-0 w-full" data-name="Header" data-node-id="428:2647">
+          <HRDashboardHeader />
+        </div>
+
+        {/* Main dashboard content */}
+        <div className="content-stretch flex flex-col lg:flex-row gap-[24px] items-start relative shrink-0" data-name="Contents" data-node-id="428:2661">
+          {/* Attendance Feed - Left column */}
+          <div className="w-full lg:w-[420px] lg:shrink-0" data-name="Attendance Feed" data-node-id="428:2662">
+            <AttendanceFeedClient initialCount={attendanceCount} />
+          </div>
+
+          {/* Leave Request + Recent Activities - Right column */}
+          <div className="content-stretch flex flex-col gap-[20px] items-start relative self-stretch w-full lg:w-[437px] lg:shrink-0" data-name="Leave Request + Recent Activities" data-node-id="428:2761">
+            {/* Leave Request Section */}
+            <div className="shrink-0 w-full" data-name="Leave Request" data-node-id="428:2762">
+              <LeaveRequestSectionClient initialCount={leaveRequestsCount} />
             </div>
-            
-            {/* Main dashboard content */}
-            <div className="content-stretch flex flex-col lg:flex-row gap-[24px] items-start relative shrink-0" data-name="Contents" data-node-id="428:2661">
-              {/* Attendance Feed - Left column */}
-              <div className="w-full lg:w-[420px] lg:shrink-0" data-name="Attendance Feed" data-node-id="428:2662">
-                <AttendanceFeedClient initialCount={attendanceCount} />
-              </div>
 
-              {/* Leave Request + Recent Activities - Right column */}
-              <div className="content-stretch flex flex-col gap-[20px] items-start relative self-stretch w-full lg:w-[437px] lg:shrink-0" data-name="Leave Request + Recent Activities" data-node-id="428:2761">
-                {/* Leave Request Section */}
-                <div className="shrink-0 w-full" data-name="Leave Request" data-node-id="428:2762">
-                  <LeaveRequestSectionClient initialCount={leaveRequestsCount} />
-                </div>
-
-                {/* Recent Activities Card */}
-                <div className="shrink-0 w-full" data-name="Recent Activities" data-node-id="428:2808">
-                  <RecentActivitiesClient initialCount={recentActivitiesCount} />
-                </div>
-              </div>
+            {/* Recent Activities Card */}
+            <div className="shrink-0 w-full" data-name="Recent Activities" data-node-id="428:2808">
+              <RecentActivitiesClient initialCount={recentActivitiesCount} />
             </div>
           </div>
+        </div>
+      </div>
     </>
   );
 }
