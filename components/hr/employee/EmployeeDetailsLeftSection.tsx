@@ -229,16 +229,22 @@ const EmployeeDetailsLeftSection = memo(function EmployeeDetailsLeftSection({
         >
           {/* Profile Image */}
           <div
-            className="border-[2.5px] border-solid border-white rounded-full overflow-hidden shrink-0 size-[80px]"
+            className="bg-white content-stretch flex items-center justify-center overflow-clip p-[2px] rounded-full size-[86px] shrink-0 z-10"
             data-name="Profile"
-            data-node-id="587:1457"
+            data-node-id="677:4621"
           >
-            <Avatar
-              name={name}
-              imageUrl={imageUrl}
-              size="xl"
-              className="!h-[75px] !w-[75px]"
-            />
+            <div
+              className="content-stretch flex items-center justify-center overflow-clip rounded-full size-[80px]"
+              data-name="Frame"
+              data-node-id="677:4622"
+            >
+              <Avatar
+                name={name}
+                imageUrl={imageUrl}
+                size="xl"
+                className="!h-[80px] !w-[80px] !rounded-full"
+              />
+            </div>
           </div>
 
           {/* Contents - Name + Badge + Email */}

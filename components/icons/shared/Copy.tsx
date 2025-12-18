@@ -25,7 +25,7 @@ const CopyIcon = memo(function CopyIcon({
 }: CopyIconProps) {
   return (
     <svg
-      viewBox="0 0 14 14"
+      viewBox="0 -0.75 14 14"
       width={size}
       height={size}
       fill="none"

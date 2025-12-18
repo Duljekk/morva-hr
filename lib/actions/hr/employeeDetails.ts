@@ -33,9 +33,9 @@ export async function getEmployeeDetailsById(
 ): Promise<{ data?: EmployeeDetailsResult; error?: string }> {
   try {
     const { supabase } = await requireHRAdmin();
-    
+
     const currentYear = getCurrentYear();
-    
+
     // Fetch user and leave balances in parallel
     const [userResult, leaveBalancesResult] = await Promise.all([
       // Query user by ID
@@ -45,7 +45,7 @@ export async function getEmployeeDetailsById(
         .eq('id', id)
         .eq('is_active', true)
         .single(),
-      
+
       // Query leave balances for current year
       supabase
         .from('leave_balances')
@@ -64,9 +64,9 @@ export async function getEmployeeDetailsById(
       console.error('[getEmployeeDetailsById] Error fetching user:', userResult.error?.message);
       return { error: 'Failed to fetch employee details' };
     }
-    
+
     const user = userResult.data as DbUserDetail;
-    
+
     // Calculate leave balance
     let leaveBalance = { current: 0, total: 10 };
     if (!leaveBalancesResult.error && leaveBalancesResult.data) {
@@ -78,18 +78,18 @@ export async function getEmployeeDetailsById(
         total: totalAllocated || 10,
       };
     }
-    
+
     // Transform to UI data
     const leftSection = toEmployeeLeftSectionData(user, leaveBalance);
-    
+
     return { data: { leftSection } };
   } catch (error) {
     console.error('[getEmployeeDetailsById] Unexpected error:', error);
-    
+
     if (error instanceof Error && error.message.includes('Unauthorized')) {
       return { error: error.message };
     }
-    
+
     return { error: 'An unexpected error occurred while fetching employee details' };
   }
 }
@@ -116,16 +116,28 @@ export interface EmployeeActivitiesResult {
 }
 
 /**
+ * Attendance statistics for an employee
+ */
+export interface EmployeeAttendanceStats {
+  /** Average hours worked per day (null if no data) */
+  avgHoursWorked: number | null;
+  /** Average check-in time as minutes from midnight in GMT+7 (null if no data) */
+  avgCheckInTimeMinutes: number | null;
+  /** Period description for display (e.g., "Last 30 days") */
+  periodLabel: string;
+}
+
+/**
  * Format date label (Today, Yesterday, or formatted date)
  */
 function formatDateLabel(date: string, today: string, yesterday: string): string {
   if (date === today) return 'Today';
   if (date === yesterday) return 'Yesterday';
-  
+
   // Format as "Month Day" (e.g., "December 6")
   const d = new Date(date + 'T00:00:00');
-  return d.toLocaleDateString('en-US', { 
-    month: 'long', 
+  return d.toLocaleDateString('en-US', {
+    month: 'long',
     day: 'numeric',
     timeZone: APP_TIMEZONE,
   });
@@ -168,15 +180,15 @@ function transformAttendanceToGroups(
   dayBefore: string
 ): ActivityGroupData[] {
   const groupsMap = new Map<string, ActivityEntry[]>();
-  
+
   records.forEach(record => {
     const date = record.date;
     if (!groupsMap.has(date)) {
       groupsMap.set(date, []);
     }
-    
+
     const activities = groupsMap.get(date)!;
-    
+
     // Add check-in activity
     if (record.check_in_time) {
       activities.push({
@@ -186,7 +198,7 @@ function transformAttendanceToGroups(
         status: mapAttendanceStatus(record.check_in_status),
       });
     }
-    
+
     // Add check-out activity
     if (record.check_out_time) {
       activities.push({
@@ -197,11 +209,11 @@ function transformAttendanceToGroups(
       });
     }
   });
-  
+
   // Convert to ActivityGroupData array, sorted by date (newest first)
   const dateOrder = [today, yesterday, dayBefore];
   const groups: ActivityGroupData[] = [];
-  
+
   dateOrder.forEach((date, index) => {
     const activities = groupsMap.get(date);
     if (activities && activities.length > 0) {
@@ -211,7 +223,7 @@ function transformAttendanceToGroups(
         if (a.type === 'checkOut' && b.type === 'checkIn') return 1;
         return a.time.localeCompare(b.time);
       });
-      
+
       groups.push({
         id: date,
         label: formatDateLabel(date, today, yesterday),
@@ -220,12 +232,12 @@ function transformAttendanceToGroups(
       });
     }
   });
-  
+
   // Mark the last group
   if (groups.length > 0) {
     groups[groups.length - 1].isLast = true;
   }
-  
+
   return groups;
 }
 
@@ -253,20 +265,20 @@ function transformLeaveRequestsToGroups(
 ): ActivityGroupData[] {
   const groupsMap = new Map<string, ActivityEntry[]>();
   const dateRange = [today, yesterday, dayBefore];
-  
+
   leaveRequests.forEach(leave => {
     // Group by created_at date
     const createdDate = formatDateISO(new Date(leave.created_at));
     const date = dateRange.includes(createdDate) ? createdDate : null;
-    
+
     if (!date) return;
-    
+
     if (!groupsMap.has(date)) {
       groupsMap.set(date, []);
     }
-    
+
     const activities = groupsMap.get(date)!;
-    
+
     activities.push({
       id: leave.id,
       type: 'checkIn' as ActivityType, // Leave requests use checkIn type for display
@@ -274,16 +286,16 @@ function transformLeaveRequestsToGroups(
       status: 'onTime' as ActivityStatus, // Leave requests default to onTime
     });
   });
-  
+
   // Convert to ActivityGroupData array
   const groups: ActivityGroupData[] = [];
-  
+
   dateRange.forEach((date) => {
     const activities = groupsMap.get(date);
     if (activities && activities.length > 0) {
       // Sort by time (newest first)
       activities.sort((a, b) => b.time.localeCompare(a.time));
-      
+
       groups.push({
         id: `leave-${date}`,
         label: formatDateLabel(date, today, yesterday),
@@ -292,12 +304,12 @@ function transformLeaveRequestsToGroups(
       });
     }
   });
-  
+
   // Mark the last group
   if (groups.length > 0) {
     groups[groups.length - 1].isLast = true;
   }
-  
+
   return groups;
 }
 
@@ -313,19 +325,19 @@ export async function getEmployeeActivities(
 ): Promise<{ data?: EmployeeActivitiesResult; error?: string }> {
   try {
     const { supabase } = await requireHRAdmin();
-    
+
     // Calculate date range (today, yesterday, day before) in GMT+7
     const nowParts = getNowPartsInGMT7();
     const today = getTodayDateString();
-    
+
     // Calculate yesterday and day before
     const yesterdayDate = new Date(nowParts.year, nowParts.month - 1, nowParts.day - 1);
     const dayBeforeDate = new Date(nowParts.year, nowParts.month - 1, nowParts.day - 2);
     const yesterday = formatDateISO(yesterdayDate);
     const dayBefore = formatDateISO(dayBeforeDate);
-    
+
     const dateRange = [today, yesterday, dayBefore];
-    
+
     // Fetch attendance records and leave requests in parallel
     const [attendanceResult, leaveRequestsResult] = await Promise.all([
       // Fetch attendance records for last 3 days
@@ -335,7 +347,7 @@ export async function getEmployeeActivities(
         .eq('user_id', employeeId)
         .in('date', dateRange)
         .order('date', { ascending: false }),
-      
+
       // Fetch leave requests created in last 3 days
       supabase
         .from('leave_requests')
@@ -345,17 +357,17 @@ export async function getEmployeeActivities(
         .gte('created_at', `${dayBefore}T00:00:00`)
         .order('created_at', { ascending: false }),
     ]);
-    
+
     if (attendanceResult.error) {
       console.error('[getEmployeeActivities] Attendance error:', attendanceResult.error);
       return { error: 'Failed to fetch attendance records' };
     }
-    
+
     if (leaveRequestsResult.error) {
       console.error('[getEmployeeActivities] Leave requests error:', leaveRequestsResult.error);
       return { error: 'Failed to fetch leave requests' };
     }
-    
+
     // Transform attendance records to ActivityGroupData
     const attendanceGroups = transformAttendanceToGroups(
       (attendanceResult.data || []) as AttendanceRecord[],
@@ -363,7 +375,7 @@ export async function getEmployeeActivities(
       yesterday,
       dayBefore
     );
-    
+
     // Transform leave requests to ActivityGroupData
     const leaveRequestGroups = transformLeaveRequestsToGroups(
       (leaveRequestsResult.data || []) as LeaveRequest[],
@@ -371,12 +383,12 @@ export async function getEmployeeActivities(
       yesterday,
       dayBefore
     );
-    
+
     // Count pending leave requests
     const leaveRequestCount = (leaveRequestsResult.data || []).filter(
       (lr: LeaveRequest) => lr.status === 'pending'
     ).length;
-    
+
     return {
       data: {
         attendanceGroups,
@@ -386,11 +398,99 @@ export async function getEmployeeActivities(
     };
   } catch (error) {
     console.error('[getEmployeeActivities] Unexpected error:', error);
-    
+
     if (error instanceof Error && error.message.includes('Unauthorized')) {
       return { error: error.message };
     }
-    
+
     return { error: 'An unexpected error occurred while fetching activities' };
+  }
+}
+
+
+/**
+ * Fetch employee attendance statistics for the last 30 days
+ * 
+ * Calculates:
+ * - Average hours worked per day (from total_hours field)
+ * - Average check-in time as minutes from midnight in GMT+7
+ * 
+ * @param employeeId - The employee's user ID
+ * @returns Promise with attendance stats or error
+ */
+export async function getEmployeeAttendanceStats(
+  employeeId: string
+): Promise<{ data?: EmployeeAttendanceStats; error?: string }> {
+  try {
+    const { supabase } = await requireHRAdmin();
+
+    // Calculate date range: last 30 days in GMT+7
+    const nowParts = getNowPartsInGMT7();
+    const today = getTodayDateString();
+
+    // Calculate 30 days ago
+    const thirtyDaysAgoDate = new Date(nowParts.year, nowParts.month - 1, nowParts.day - 30);
+    const startDate = formatDateISO(thirtyDaysAgoDate);
+
+    // Fetch attendance records for the period
+    const { data: records, error: queryError } = await supabase
+      .from('attendance_records')
+      .select('total_hours, check_in_time')
+      .eq('user_id', employeeId)
+      .gte('date', startDate)
+      .lte('date', today);
+
+    if (queryError) {
+      console.error('[getEmployeeAttendanceStats] Query error:', queryError);
+      return { error: 'Failed to fetch attendance statistics' };
+    }
+
+    // Calculate average hours worked (only where total_hours is not null)
+    const hoursRecords = (records || []).filter(r => r.total_hours !== null && r.total_hours !== undefined);
+    const avgHoursWorked = hoursRecords.length > 0
+      ? hoursRecords.reduce((sum, r) => sum + (r.total_hours as number), 0) / hoursRecords.length
+      : null;
+
+    // Calculate average check-in time as minutes from midnight in GMT+7
+    const checkInRecords = (records || []).filter(r => r.check_in_time !== null);
+    let avgCheckInTimeMinutes: number | null = null;
+
+    if (checkInRecords.length > 0) {
+      const totalMinutes = checkInRecords.reduce((sum, r) => {
+        // Parse the check_in_time (ISO timestamp) and convert to GMT+7 time
+        const checkInDate = new Date(r.check_in_time as string);
+        const formatter = new Intl.DateTimeFormat('en-US', {
+          timeZone: APP_TIMEZONE,
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        });
+        const parts = formatter.formatToParts(checkInDate);
+        const hour = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10);
+        const minute = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10);
+
+        // Convert to minutes from midnight
+        const minutesFromMidnight = (hour === 24 ? 0 : hour) * 60 + minute;
+        return sum + minutesFromMidnight;
+      }, 0);
+
+      avgCheckInTimeMinutes = Math.round(totalMinutes / checkInRecords.length);
+    }
+
+    return {
+      data: {
+        avgHoursWorked: avgHoursWorked !== null ? Math.round(avgHoursWorked * 10) / 10 : null, // Round to 1 decimal
+        avgCheckInTimeMinutes,
+        periodLabel: 'Last 30 days',
+      },
+    };
+  } catch (error) {
+    console.error('[getEmployeeAttendanceStats] Unexpected error:', error);
+
+    if (error instanceof Error && error.message.includes('Unauthorized')) {
+      return { error: error.message };
+    }
+
+    return { error: 'An unexpected error occurred while fetching attendance statistics' };
   }
 }

@@ -36,8 +36,8 @@ export const leaveTypes: LeaveType[] = [
     icon: LeaveAnnualIcon
   },
   { 
-    id: 'unpaid', 
-    name: 'Unpaid Leave', 
+    id: 'wfh', 
+    name: 'Work from Home', 
     icon: LeaveUnpaidIcon
   },
 ];
@@ -166,7 +166,7 @@ export default function LeaveTypeBottomSheet({ selected, onSelect }: LeaveTypeBo
 
             {/* Options */}
             <div className="flex flex-col gap-[10px]">
-              {leaveTypes.map((leaveType) => {
+            {leaveTypes.map((leaveType) => {
                 const isSelected = pendingSelection.id === leaveType.id;
                 
                 return (

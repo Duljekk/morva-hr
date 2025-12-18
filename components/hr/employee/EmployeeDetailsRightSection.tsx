@@ -3,9 +3,16 @@
 import { useState, useEffect } from 'react';
 import StatisticWidget from '@/components/hr/StatisticWidget';
 import EmployeeActivitiesPanel, { type ActivityGroupData } from './EmployeeActivitiesPanel';
+import EmployeeDetailsRightSkeleton from './EmployeeDetailsRightSkeleton';
 import Clock18Icon from '@/components/icons/shared/Clock18';
 import HourglassIcon from '@/components/icons/shared/HourglassIcon';
-import { getEmployeeActivities, type EmployeeActivitiesResult } from '@/lib/actions/hr/employeeDetails';
+import {
+  getEmployeeActivities,
+  getEmployeeAttendanceStats,
+  type EmployeeActivitiesResult,
+  type EmployeeAttendanceStats,
+} from '@/lib/actions/hr/employeeDetails';
+import { formatCheckInTimeDisplay } from '@/lib/utils/attendanceStats';
 
 export interface EmployeeDetailsRightSectionProps {
   /** Employee ID to fetch activities for */
@@ -25,14 +32,19 @@ export default function EmployeeDetailsRightSection({
   className = '',
 }: EmployeeDetailsRightSectionProps) {
   const [activities, setActivities] = useState<EmployeeActivitiesResult | null>(null);
+  const [stats, setStats] = useState<EmployeeAttendanceStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Mock statistics (to be implemented separately)
-  const avgCheckInTime = '11:05';
+  // Placeholder comparison values (to be implemented later per user request)
   const avgCheckInTrend = '1 minute';
-  const totalHoursWorked = '168';
   const totalHoursTrend = '8 hours';
+
+  // Format stats for display
+  const checkInDisplay = formatCheckInTimeDisplay(stats?.avgCheckInTimeMinutes ?? null);
+  const avgHoursDisplay = stats?.avgHoursWorked !== null && stats?.avgHoursWorked !== undefined
+    ? stats.avgHoursWorked.toFixed(1)
+    : '--';
 
   useEffect(() => {
     if (!employeeId) {
@@ -40,19 +52,31 @@ export default function EmployeeDetailsRightSection({
       return;
     }
 
-    async function fetchActivities() {
+    async function fetchData() {
       try {
         setLoading(true);
         setError(null);
-        const result = await getEmployeeActivities(employeeId!);
 
-        if (result.error) {
-          setError(result.error);
+        // Fetch activities and stats in parallel
+        const [activitiesResult, statsResult] = await Promise.all([
+          getEmployeeActivities(employeeId!),
+          getEmployeeAttendanceStats(employeeId!),
+        ]);
+
+        // Handle activities result
+        if (activitiesResult.error) {
+          setError(activitiesResult.error);
           return;
         }
+        if (activitiesResult.data) {
+          setActivities(activitiesResult.data);
+        }
 
-        if (result.data) {
-          setActivities(result.data);
+        // Handle stats result (log error but don't block UI)
+        if (statsResult.error) {
+          console.warn('[EmployeeDetailsRightSection] Stats error:', statsResult.error);
+        } else if (statsResult.data) {
+          setStats(statsResult.data);
         }
       } catch (err) {
         console.error('[EmployeeDetailsRightSection] Error:', err);
@@ -62,50 +86,53 @@ export default function EmployeeDetailsRightSection({
       }
     }
 
-    fetchActivities();
+    fetchData();
   }, [employeeId]);
 
   return (
     <div className={`flex flex-col gap-6 ${className}`.trim()}>
-      {/* Statistics Section */}
-      <div className="flex gap-4">
-        <StatisticWidget
-          title="Avg. Hours Worked"
-          value={totalHoursWorked}
-          unit="hours"
-          trend={totalHoursTrend}
-          comparison="vs last month"
-          trendDirection="up"
-          icon={<HourglassIcon className="w-[18px] h-[18px]" />}
-          className="flex-1"
-        />
-        <StatisticWidget
-          title="Avg. Check-In Time"
-          value={avgCheckInTime}
-          unit="AM"
-          trend={avgCheckInTrend}
-          comparison="vs last month"
-          trendDirection="down"
-          icon={<Clock18Icon className="w-[18px] h-[18px]" />}
-          className="flex-1"
-        />
-      </div>
-
-      {/* Activities Section */}
+      {/* Show skeleton for the entire right section when loading */}
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2b7fff]" />
-        </div>
-      ) : error ? (
-        <div className="flex flex-col items-center justify-center py-12">
-          <p className="text-red-600 text-sm">{error}</p>
-        </div>
+        <EmployeeDetailsRightSkeleton />
       ) : (
-        <EmployeeActivitiesPanel
-          attendanceGroups={activities?.attendanceGroups || []}
-          leaveRequestGroups={activities?.leaveRequestGroups || []}
-          leaveRequestCount={activities?.leaveRequestCount || 0}
-        />
+        <>
+          {/* Statistics Section */}
+          <div className="flex gap-4">
+            <StatisticWidget
+              title="Avg. Hours Worked"
+              value={avgHoursDisplay}
+              unit="hours"
+              trend={totalHoursTrend}
+              comparison="vs last month"
+              trendDirection="up"
+              icon={<HourglassIcon className="w-[18px] h-[18px]" />}
+              className="flex-1"
+            />
+            <StatisticWidget
+              title="Avg. Check-In Time"
+              value={checkInDisplay.time}
+              unit={checkInDisplay.meridiem || 'AM'}
+              trend={avgCheckInTrend}
+              comparison="vs last month"
+              trendDirection="down"
+              icon={<Clock18Icon className="w-[18px] h-[18px]" />}
+              className="flex-1"
+            />
+          </div>
+
+          {/* Activities Section */}
+          {error ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          ) : (
+            <EmployeeActivitiesPanel
+              attendanceGroups={activities?.attendanceGroups || []}
+              leaveRequestGroups={activities?.leaveRequestGroups || []}
+              leaveRequestCount={activities?.leaveRequestCount || 0}
+            />
+          )}
+        </>
       )}
     </div>
   );
