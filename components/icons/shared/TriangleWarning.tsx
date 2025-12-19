@@ -28,7 +28,7 @@ const TriangleWarningIcon = memo(function TriangleWarningIcon({
 
   return (
     <svg
-      viewBox="0 0 13 13"
+      viewBox="-0.35 -0.6 13 13"
       width={size}
       height={size}
       fill="none"

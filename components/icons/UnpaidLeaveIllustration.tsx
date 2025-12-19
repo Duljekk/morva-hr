@@ -1,0 +1,50 @@
+'use client';
+
+import type { SVGProps } from 'react';
+
+export interface UnpaidLeaveIllustrationProps extends SVGProps<SVGSVGElement> {
+    /**
+     * Width and height of the SVG.
+     * @default 36
+     */
+    size?: number | string;
+}
+
+/**
+ * Unpaid Leave Illustration
+ * 
+ * A wallet/payment icon with a crossed-out circle, representing unpaid leave.
+ * Primary color: #E17100 (orange)
+ */
+export default function UnpaidLeaveIllustration({
+    size = 36,
+    className = '',
+    ...props
+}: UnpaidLeaveIllustrationProps) {
+    return (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width={size}
+            height={size}
+            viewBox="0 0 36 36"
+            fill="none"
+            className={className}
+            aria-hidden="true"
+            {...props}
+        >
+            {/* Crossed-out circle (semi-transparent) */}
+            <path
+                opacity="0.4"
+                d="M30 11.4375C30 10.7779 29.7866 10.1691 29.4258 9.67383L25.2363 13.8633C25.7316 14.2241 26.3404 14.4375 27 14.4375C28.6569 14.4375 30 13.0944 30 11.4375ZM24 11.4375C24 12.0968 24.213 12.7053 24.5735 13.2004L28.7629 9.01099C28.2678 8.65052 27.6593 8.4375 27 8.4375C25.3431 8.4375 24 9.78065 24 11.4375ZM30.9375 11.4375C30.9375 13.6121 29.1746 15.375 27 15.375C25.9128 15.375 24.9281 14.9335 24.2161 14.2214C23.504 13.5094 23.0625 12.5247 23.0625 11.4375C23.0625 9.26288 24.8254 7.5 27 7.5C28.0872 7.5 29.0719 7.94153 29.7839 8.65356C30.496 9.3656 30.9375 10.3503 30.9375 11.4375Z"
+                fill="#E17100"
+            />
+            {/* Wallet icon */}
+            <path
+                fillRule="evenodd"
+                clipRule="evenodd"
+                d="M6.75 11.4375C6.75 9.26276 8.51276 7.5 10.6875 7.5H20.5312C21.5143 7.5 22.3292 8.22043 22.4764 9.16223C22.1317 9.84613 21.9375 10.6193 21.9375 11.4375C21.9375 12.8355 22.5066 14.1028 23.4207 15.0168C24.3347 15.9309 25.602 16.5 27 16.5V25.5C27 26.7426 25.9926 27.75 24.75 27.75H11.25C8.76462 27.75 6.75 25.7354 6.75 23.25V11.4375ZM10.6875 13.125H20.25V9.75H10.6875C9.75558 9.75 9 10.5056 9 11.4375C9 12.3694 9.75558 13.125 10.6875 13.125ZM22.2188 20.4375C22.2188 21.2142 21.5892 21.8438 20.8125 21.8438C20.0358 21.8438 19.4062 21.2142 19.4062 20.4375C19.4062 19.6608 20.0358 19.0312 20.8125 19.0312C21.5892 19.0312 22.2188 19.6608 22.2188 20.4375Z"
+                fill="#E17100"
+            />
+        </svg>
+    );
+}

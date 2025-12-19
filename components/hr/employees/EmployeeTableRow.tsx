@@ -132,10 +132,11 @@ const LeaveBalanceIndicator = memo(function LeaveBalanceIndicator({
   }
   const emptyBars = MAX_BARS - filledBars;
 
-  // Determine bar variant based on current balance
+  // Determine bar variant based on number of filled bars
+  // 6-10 bars: Green (High), 3-5 bars: Orange (Medium), 1-2 bars: Red (Low)
   const getBarVariant = (): 'High' | 'Medium' | 'Low' => {
-    if (current <= 3) return 'Low';
-    if (current <= 6) return 'Medium';
+    if (filledBars <= 2) return 'Low';
+    if (filledBars <= 5) return 'Medium';
     return 'High';
   };
 
@@ -159,10 +160,10 @@ const LeaveBalanceIndicator = memo(function LeaveBalanceIndicator({
  * Leave Balance Badge Component
  * Shows the fraction as text in a badge
  * 
- * Color variants match the bar indicator:
- * - <= 3: Low (Red) - bg-[#fef2f2], text-[#dc2626]
- * - <= 6: Medium (Amber) - bg-[#fffbeb], text-[#d97706]
- * - > 6: High (Green) - bg-[#ecfdf5], text-[#009966]
+ * Color variants match the bar indicator (based on filled bars):
+ * - 6-10 bars: High (Green) - bg-[#ecfdf5], text-[#009966]
+ * - 3-5 bars: Medium (Amber) - bg-[#fffbeb], text-[#d97706]
+ * - 1-2 bars: Low (Red) - bg-[#fef2f2], text-[#dc2626]
  */
 const LeaveBalanceBadge = memo(function LeaveBalanceBadge({
   current,
@@ -171,15 +172,28 @@ const LeaveBalanceBadge = memo(function LeaveBalanceBadge({
   current: number;
   total: number;
 }) {
-  // Determine badge variant based on current balance
+  const MAX_BARS = 10;
+
+  // Calculate filled bars (same logic as LeaveBalanceIndicator)
+  const proportion = total > 0 ? current / total : 0;
+  let filledBars: number;
+  if (current === 0) {
+    filledBars = 0;
+  } else if (current === total) {
+    filledBars = MAX_BARS;
+  } else {
+    filledBars = Math.max(1, Math.floor(proportion * MAX_BARS));
+  }
+
+  // Determine badge variant based on number of filled bars
   const getBadgeStyles = () => {
-    if (current <= 3) {
+    if (filledBars <= 2) {
       return {
         bg: 'bg-[#fef2f2]', // red-50
         text: 'text-[#dc2626]', // red-600
       };
     }
-    if (current <= 6) {
+    if (filledBars <= 5) {
       return {
         bg: 'bg-[#fffbeb]', // amber-50
         text: 'text-[#d97706]', // amber-600

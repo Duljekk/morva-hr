@@ -1,6 +1,7 @@
 'use client';
 
 import { memo } from 'react';
+import UnifiedBadge, { type UnifiedBadgeColor } from '@/components/shared/UnifiedBadge';
 
 /**
  * Role Badge Variants
@@ -32,34 +33,19 @@ export interface RoleBadgeProps {
   'aria-label'?: string;
 }
 
+// Map roles to UnifiedBadge colors
+const roleConfig: Record<RoleBadgeVariant, UnifiedBadgeColor> = {
+  Intern: 'cyan',
+  'Full-time': 'sky',
+};
+
 /**
  * Role Badge Component
  *
  * A badge component specifically designed for displaying employee roles.
  * Currently supports two variants: Intern and Full-time.
  *
- * Figma specs:
- * - Intern (node 556:1035):
- *   - Background: bg-[#cefafe] (cyan-100)
- *   - Text: text-[#005f78] (cyan-800)
- *   - Height: 22px
- *   - Padding: px-[8px], pb-[2px], pt-0
- *   - Border radius: rounded-[32px]
- *   - Width: auto (content-based)
- *
- * - Full-time (node 556:1038):
- *   - Background: bg-[#dff2fe] (sky-100)
- *   - Text: text-[#00598a] (sky-800)
- *   - Height: 22px
- *   - Padding: px-[8px], pb-[2px], pt-0
- *   - Border radius: rounded-[32px]
- *   - Width: w-[67px] (fixed)
- *
- * Typography:
- * - Font: Mona Sans Medium
- * - Size: 12px (text-xs)
- * - Line height: 16px
- * - Weight: 500 (medium)
+ * Now uses UnifiedBadge internally for consistent styling.
  *
  * Features:
  * - Two variants (Intern, Full-time)
@@ -84,49 +70,20 @@ const RoleBadge = memo(function RoleBadge({
   className = '',
   'aria-label': ariaLabel,
 }: RoleBadgeProps) {
-  // Variant configuration matching Figma exactly
-  const variantConfig = {
-    Intern: {
-      containerClassName: `bg-[#cefafe] content-stretch flex h-[22px] items-center justify-center px-[8px] relative rounded-[32px] ${className}`,
-      dataName: 'Role=Intern',
-      containerNodeId: '556:1035',
-      textContainerNodeId: '556:1036',
-      textNodeId: '556:1037',
-      textClassName: "font-sans font-medium leading-[16px] relative shrink-0 text-[#005f78] text-[12px] text-center text-nowrap whitespace-pre",
-    },
-    'Full-time': {
-      containerClassName: `bg-[#dff2fe] content-stretch flex h-[22px] items-center justify-center px-[8px] relative rounded-[32px] w-[67px] ${className}`,
-      dataName: 'Role=Full-time',
-      containerNodeId: '556:1038',
-      textContainerNodeId: '556:1039',
-      textNodeId: '556:1040',
-      textClassName: "font-sans font-medium leading-[16px] relative shrink-0 text-[#00598a] text-[12px] text-center text-nowrap whitespace-pre",
-    },
-  };
-
-  const config = variantConfig[role];
+  const color = roleConfig[role];
 
   return (
     <div
-      className={config.containerClassName}
-      data-name={config.dataName}
-      data-node-id={config.containerNodeId}
       role="status"
       aria-label={ariaLabel || `Role: ${role}`}
     >
-      <div
-        className="content-stretch flex items-center justify-center relative shrink-0"
-        data-name="Text Container"
-        data-node-id={config.textContainerNodeId}
-      >
-        <p
-          className={config.textClassName}
-          data-node-id={config.textNodeId}
-          style={{ fontVariationSettings: "'wdth' 100" }}
-        >
-          {role}
-        </p>
-      </div>
+      <UnifiedBadge
+        text={role}
+        color={color}
+        size="md"
+        font="medium"
+        className={className}
+      />
     </div>
   );
 });

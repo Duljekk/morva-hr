@@ -1,28 +1,38 @@
 'use client';
 
-import { useState, memo } from 'react';
+import { useState, useEffect, useCallback, memo } from 'react';
 import Tab from '@/components/shared/Tab';
 import TabList from '@/components/shared/TabList';
 import Tabs from '@/components/shared/Tabs';
 import ActivityGroup, { type ActivityEntry } from './ActivityGroup';
+import PendingLeaveRequestCard from './PendingLeaveRequestCard';
+import LeaveRequestHistorySection from './LeaveRequestHistorySection';
+import RejectLeaveRequestDialog from '@/components/hr/dashboard/RejectLeaveRequestDialog';
 import { CalendarOutlineIcon } from '@/components/icons';
+import {
+  getEmployeePendingLeaveRequest,
+  getEmployeeLeaveHistory,
+  type EmployeePendingLeaveRequest,
+  type EmployeeLeaveHistoryItem,
+} from '@/lib/actions/hr/employeeDetails';
+import { approveLeaveRequest, rejectLeaveRequest } from '@/lib/actions/hr/leaves';
 
 export interface ActivityGroupData {
   /**
    * Unique identifier for the group
    */
   id: string;
-  
+
   /**
    * Date label (e.g., "Today", "Yesterday", "December 6")
    */
   label: string;
-  
+
   /**
    * Whether this is the last group (hides timeline)
    */
   isLast?: boolean;
-  
+
   /**
    * Activities in this group
    */
@@ -34,17 +44,22 @@ export interface EmployeeActivitiesPanelProps {
    * Attendance activity groups
    */
   attendanceGroups?: ActivityGroupData[];
-  
+
   /**
    * Leave request activity groups
    */
   leaveRequestGroups?: ActivityGroupData[];
-  
+
   /**
    * Leave request notification count
    */
   leaveRequestCount?: number;
-  
+
+  /**
+   * Employee ID for fetching pending leave request
+   */
+  employeeId?: string;
+
   /**
    * Additional CSS classes
    */
@@ -84,9 +99,87 @@ const EmployeeActivitiesPanel = memo(function EmployeeActivitiesPanel({
   attendanceGroups = [],
   leaveRequestGroups = [],
   leaveRequestCount = 0,
+  employeeId,
   className = '',
 }: EmployeeActivitiesPanelProps) {
   const [activeTab, setActiveTab] = useState<'attendance' | 'leave'>('attendance');
+  const [pendingRequest, setPendingRequest] = useState<EmployeePendingLeaveRequest | null>(null);
+  const [leaveHistory, setLeaveHistory] = useState<EmployeeLeaveHistoryItem[]>([]);
+  const [pendingLoading, setPendingLoading] = useState(false);
+
+  // Reject dialog state
+  const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const [activeRejectId, setActiveRejectId] = useState<string | null>(null);
+
+  // Fetch pending leave request and history when employeeId is available
+  useEffect(() => {
+    if (!employeeId) return;
+
+    async function fetchLeaveData() {
+      setPendingLoading(true);
+      try {
+        // Fetch pending request and history in parallel
+        const [pendingResult, historyResult] = await Promise.all([
+          getEmployeePendingLeaveRequest(employeeId!),
+          getEmployeeLeaveHistory(employeeId!, 5),
+        ]);
+
+        if (!pendingResult.error && pendingResult.data) {
+          setPendingRequest(pendingResult.data);
+        }
+
+        if (!historyResult.error && historyResult.data) {
+          setLeaveHistory(historyResult.data);
+        }
+      } catch (err) {
+        console.error('[EmployeeActivitiesPanel] Error fetching leave data:', err);
+      } finally {
+        setPendingLoading(false);
+      }
+    }
+
+    fetchLeaveData();
+  }, [employeeId]);
+
+  // Handle approve action
+  const handleApprove = useCallback(async (requestId: string) => {
+    const result = await approveLeaveRequest(requestId);
+    if (result.success) {
+      setPendingRequest(null);
+      // Refetch history to show approved request
+      if (employeeId) {
+        const historyResult = await getEmployeeLeaveHistory(employeeId, 5);
+        if (!historyResult.error && historyResult.data) {
+          setLeaveHistory(historyResult.data);
+        }
+      }
+    }
+  }, [employeeId]);
+
+  // Open reject dialog
+  const handleReject = useCallback(async (requestId: string) => {
+    setActiveRejectId(requestId);
+    setIsRejectDialogOpen(true);
+  }, []);
+
+  // Confirm rejection with reason
+  const handleConfirmReject = useCallback(async (reason: string) => {
+    if (!activeRejectId) return;
+
+    setIsRejectDialogOpen(false);
+    const result = await rejectLeaveRequest(activeRejectId, reason);
+    if (result.success) {
+      setPendingRequest(null);
+      // Refetch history to show rejected request
+      if (employeeId) {
+        const historyResult = await getEmployeeLeaveHistory(employeeId, 5);
+        if (!historyResult.error && historyResult.data) {
+          setLeaveHistory(historyResult.data);
+        }
+      }
+    }
+    setActiveRejectId(null);
+  }, [activeRejectId, employeeId]);
 
   const activeGroups = activeTab === 'attendance' ? attendanceGroups : leaveRequestGroups;
 
@@ -137,30 +230,74 @@ const EmployeeActivitiesPanel = memo(function EmployeeActivitiesPanel({
         data-name="Activities Feed"
         data-node-id="587:1543"
       >
-        {activeGroups.length > 0 ? (
-          activeGroups.map((group, index) => (
-            <ActivityGroup
-              key={group.id}
-              dateLabel={group.label}
-              activities={group.activities}
-              showTimeline={!group.isLast && index < activeGroups.length - 1}
-            />
-          ))
-        ) : (
-          /* Empty State */
+        {/* Pending Leave Request Card - shown when on Leave Request tab */}
+        {activeTab === 'leave' && pendingRequest && !pendingLoading && (
+          <PendingLeaveRequestCard
+            id={pendingRequest.id}
+            leaveType={pendingRequest.leaveType}
+            startDate={pendingRequest.startDate}
+            endDate={pendingRequest.endDate}
+            reason={pendingRequest.reason || undefined}
+            onApprove={handleApprove}
+            onReject={handleReject}
+          />
+        )}
+
+        {/* Leave Request History - shown when on Leave Request tab */}
+        {activeTab === 'leave' && leaveHistory.length > 0 && !pendingLoading && (
+          <LeaveRequestHistorySection
+            items={leaveHistory.map(item => ({
+              ...item,
+              reason: item.reason || undefined,
+            }))}
+          />
+        )}
+
+        {/* Attendance Activities - shown when on Attendance tab */}
+        {activeTab === 'attendance' && (
+          activeGroups.length > 0 ? (
+            activeGroups.map((group, index) => (
+              <ActivityGroup
+                key={group.id}
+                dateLabel={group.label}
+                activities={group.activities}
+                showTimeline={!group.isLast && index < activeGroups.length - 1}
+              />
+            ))
+          ) : (
+            /* Empty State for Attendance */
+            <div className="flex flex-col items-center justify-center w-full py-12">
+              <CalendarOutlineIcon size={48} className="text-[#d4d4d4] mb-3" />
+              <p className="text-[#737373] text-sm font-medium">
+                No attendance records
+              </p>
+              <p className="text-[#a3a3a3] text-xs mt-1">
+                Attendance records will appear here
+              </p>
+            </div>
+          )
+        )}
+
+        {/* Empty State for Leave Requests - only show if no pending request and no history */}
+        {activeTab === 'leave' && !pendingRequest && leaveHistory.length === 0 && !pendingLoading && (
           <div className="flex flex-col items-center justify-center w-full py-12">
             <CalendarOutlineIcon size={48} className="text-[#d4d4d4] mb-3" />
             <p className="text-[#737373] text-sm font-medium">
-              No {activeTab === 'attendance' ? 'attendance records' : 'leave requests'}
+              No leave requests
             </p>
             <p className="text-[#a3a3a3] text-xs mt-1">
-              {activeTab === 'attendance'
-                ? 'Attendance records will appear here'
-                : 'Leave requests will appear here'}
+              Leave requests will appear here
             </p>
           </div>
         )}
       </div>
+
+      {/* Reject Leave Request Dialog */}
+      <RejectLeaveRequestDialog
+        isOpen={isRejectDialogOpen}
+        onClose={() => setIsRejectDialogOpen(false)}
+        onConfirm={handleConfirmReject}
+      />
     </div>
   );
 });

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useLockBodyScroll from '@/app/hooks/useLockBodyScroll';
 import { backdropVariants, modalVariants } from '@/app/lib/animations/modalVariants';
-import { BellIcon } from '@/components/icons';
+import { TriangleWarningIcon } from '@/components/icons';
 import FormInput from '@/components/shared/FormInput';
 
 interface RejectLeaveRequestDialogProps {
@@ -111,9 +111,12 @@ export default function RejectLeaveRequestDialog({
             animate="visible"
             exit="exit"
           >
-            {/* Illustration */}
-            <div className="bg-[#dff2fe] rounded-[8px] shrink-0 w-10 h-10 flex items-center justify-center">
-              <BellIcon className="w-5 h-5 text-[#0069a8]" />
+            {/* Illustration - Based on Figma node 715:1429 */}
+            <div
+              className="bg-[#e7000b] rounded-[99px] shrink-0 w-10 h-10 flex items-center justify-center"
+              data-name="Icon"
+            >
+              <TriangleWarningIcon size={28} className="text-white" />
             </div>
 
             {/* Content + Form + Buttons */}

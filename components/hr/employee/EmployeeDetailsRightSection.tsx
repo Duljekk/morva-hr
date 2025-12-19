@@ -130,6 +130,7 @@ export default function EmployeeDetailsRightSection({
               attendanceGroups={activities?.attendanceGroups || []}
               leaveRequestGroups={activities?.leaveRequestGroups || []}
               leaveRequestCount={activities?.leaveRequestCount || 0}
+              employeeId={employeeId}
             />
           )}
         </>

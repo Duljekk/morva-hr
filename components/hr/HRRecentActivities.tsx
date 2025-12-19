@@ -1,10 +1,8 @@
 'use client';
 
 import { memo } from 'react';
-import CheckInNeutralIcon from '@/app/assets/icons/check-in-neutral.svg';
-import CheckOutNeutralIcon from '@/app/assets/icons/check-out-neutral.svg';
 import { SpriteIcon } from '@/components/shared/IconSprite';
-import AttendanceBadge, { type AttendanceStatus, type LeaveStatus } from '@/components/employee/AttendanceBadge';
+import UnifiedBadge, { type UnifiedBadgeColor } from '@/components/shared/UnifiedBadge';
 import type { DayEmployeeActivity } from '@/lib/actions/hr/dashboard';
 
 // Leave icon imports
@@ -36,6 +34,28 @@ const getLeaveIcon = (leaveType: 'annual' | 'sick' | 'unpaid', status: 'pending'
   return UnpaidPendingIcon;
 };
 
+// Helper function to map status to UnifiedBadge color and label
+const getStatusBadgeConfig = (status: string): { color: UnifiedBadgeColor; text: string } => {
+  switch (status) {
+    case 'late':
+      return { color: 'warning', text: 'Late' };
+    case 'ontime':
+      return { color: 'success', text: 'On Time' };
+    case 'overtime':
+      return { color: 'neutral', text: 'Overtime' };
+    case 'leftearly':
+      return { color: 'warning', text: 'Left Early' };
+    case 'pending':
+      return { color: 'warning', text: 'Pending' };
+    case 'approved':
+      return { color: 'success', text: 'Approved' };
+    case 'rejected':
+      return { color: 'danger', text: 'Rejected' };
+    default:
+      return { color: 'neutral', text: status };
+  }
+};
+
 interface HRRecentActivitiesProps {
   activities: DayEmployeeActivity[];
 }
@@ -64,7 +84,7 @@ function HRRecentActivities({ activities }: HRRecentActivitiesProps) {
                 // Handle leave requests
                 if (activity.type === 'leave') {
                   const LeaveIcon = getLeaveIcon(activity.leaveType!, activity.status as 'pending' | 'approved' | 'rejected');
-                  
+
                   return (
                     <div
                       key={actIndex}
@@ -101,9 +121,10 @@ function HRRecentActivities({ activities }: HRRecentActivitiesProps) {
                           </div>
 
                           {/* Status Badge */}
-                          {activity.status && (
-                            <AttendanceBadge status={activity.status as LeaveStatus} size="sm" />
-                          )}
+                          {activity.status && (() => {
+                            const badgeConfig = getStatusBadgeConfig(activity.status);
+                            return <UnifiedBadge text={badgeConfig.text} color={badgeConfig.color} size="sm" />;
+                          })()}
                         </div>
 
                         {/* Time */}
@@ -117,53 +138,54 @@ function HRRecentActivities({ activities }: HRRecentActivitiesProps) {
 
                 // Handle check-in/check-out
                 return (
-                <div 
-                  key={actIndex}
-                  className="flex items-center gap-3 rounded-xl bg-white p-3 shadow-sm border border-neutral-100"
-                >
-                  {/* Avatar / Icon */}
-                  <div className="h-10 w-10 shrink-0 rounded-full bg-neutral-100 flex items-center justify-center overflow-hidden">
-                    {activity.user.avatar_url ? (
-                      <img src={activity.user.avatar_url} alt={activity.user.full_name} className="h-full w-full object-cover" />
-                    ) : (
-                       // Initials
-                      <span className="text-sm font-bold text-neutral-500">
-                        {activity.user.full_name?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'U'}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Content */}
-                  <div className="flex flex-1 flex-col">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold text-neutral-900">
-                        {activity.user.full_name}
-                      </p>
-                      <p className="text-xs text-neutral-500">
-                        {activity.time}
-                      </p>
+                  <div
+                    key={actIndex}
+                    className="flex items-center gap-3 rounded-xl bg-white p-3 shadow-sm border border-neutral-100"
+                  >
+                    {/* Avatar / Icon */}
+                    <div className="h-10 w-10 shrink-0 rounded-full bg-neutral-100 flex items-center justify-center overflow-hidden">
+                      {activity.user.avatar_url ? (
+                        <img src={activity.user.avatar_url} alt={activity.user.full_name} className="h-full w-full object-cover" />
+                      ) : (
+                        // Initials
+                        <span className="text-sm font-bold text-neutral-500">
+                          {activity.user.full_name?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'U'}
+                        </span>
+                      )}
                     </div>
-                    
-                    <div className="flex items-center gap-2 mt-0.5">
+
+                    {/* Content */}
+                    <div className="flex flex-1 flex-col">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold text-neutral-900">
+                          {activity.user.full_name}
+                        </p>
+                        <p className="text-xs text-neutral-500">
+                          {activity.time}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 mt-0.5">
                         <span className={`text-xs font-medium ${activity.type === 'checkin' ? 'text-green-700' : 'text-amber-700'}`}>
                           {activity.type === 'checkin' ? 'Checked In' : 'Checked Out'}
                         </span>
-                        {activity.status && (
-                             <AttendanceBadge status={activity.status as AttendanceStatus} size="sm" />
-                        )}
+                        {activity.status && (() => {
+                          const badgeConfig = getStatusBadgeConfig(activity.status);
+                          return <UnifiedBadge text={badgeConfig.text} color={badgeConfig.color} size="sm" />;
+                        })()}
+                      </div>
                     </div>
                   </div>
-                </div>
                 );
               })}
             </div>
           </div>
         ))}
-        
+
         {activities.length === 0 && (
-            <div className="p-8 text-center text-neutral-500 bg-white rounded-xl border border-dashed border-neutral-200">
-                No recent activities found.
-            </div>
+          <div className="p-8 text-center text-neutral-500 bg-white rounded-xl border border-dashed border-neutral-200">
+            No recent activities found.
+          </div>
         )}
       </div>
     </div>

@@ -95,6 +95,163 @@ export async function getEmployeeDetailsById(
 }
 
 
+/**
+ * Pending leave request data for display
+ */
+export interface EmployeePendingLeaveRequest {
+  id: string;
+  leaveType: string;
+  startDate: string;
+  endDate: string;
+  reason: string | null;
+}
+
+/**
+ * Fetch pending leave request for a specific employee
+ * 
+ * Returns the most recent pending leave request for the employee,
+ * or null if no pending request exists.
+ * 
+ * @param employeeId - Employee UUID
+ * @returns Object containing pending leave request data or null
+ */
+export async function getEmployeePendingLeaveRequest(
+  employeeId: string
+): Promise<{ data?: EmployeePendingLeaveRequest | null; error?: string }> {
+  try {
+    const { supabase } = await requireHRAdmin();
+
+    // Query for pending leave requests with leave type name
+    const { data: pendingRequest, error: queryError } = await supabase
+      .from('leave_requests')
+      .select(`
+        id,
+        start_date,
+        end_date,
+        reason,
+        leave_type:leave_types!leave_type_id (
+          name
+        )
+      `)
+      .eq('user_id', employeeId)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (queryError) {
+      console.error('[getEmployeePendingLeaveRequest] Query error:', queryError);
+      return { error: 'Failed to fetch pending leave request' };
+    }
+
+    if (!pendingRequest) {
+      return { data: null };
+    }
+
+    // Transform to UI-friendly format
+    const leaveTypeData = pendingRequest.leave_type as any;
+    return {
+      data: {
+        id: pendingRequest.id,
+        leaveType: leaveTypeData?.name || 'Unknown',
+        startDate: pendingRequest.start_date,
+        endDate: pendingRequest.end_date,
+        reason: pendingRequest.reason,
+      },
+    };
+  } catch (error) {
+    console.error('[getEmployeePendingLeaveRequest] Unexpected error:', error);
+
+    if (error instanceof Error && error.message.includes('Unauthorized')) {
+      return { error: error.message };
+    }
+
+    return { error: 'An unexpected error occurred while fetching pending leave request' };
+  }
+}
+
+
+/**
+ * Leave history item for display
+ */
+export interface EmployeeLeaveHistoryItem {
+  id: string;
+  leaveType: string;
+  startDate: string;
+  endDate: string;
+  reason: string | null;
+  status: 'approved' | 'rejected';
+}
+
+/**
+ * Fetch leave history for a specific employee
+ * 
+ * Returns recent approved/rejected leave requests for the employee.
+ * 
+ * @param employeeId - Employee UUID
+ * @param limit - Maximum number of items to return (default: 5)
+ * @returns Object containing leave history array
+ */
+export async function getEmployeeLeaveHistory(
+  employeeId: string,
+  limit: number = 5
+): Promise<{ data?: EmployeeLeaveHistoryItem[]; error?: string }> {
+  try {
+    const { supabase } = await requireHRAdmin();
+
+    // Query for approved/rejected leave requests
+    const { data: leaveRequests, error: queryError } = await supabase
+      .from('leave_requests')
+      .select(`
+        id,
+        start_date,
+        end_date,
+        reason,
+        status,
+        leave_type:leave_types!leave_type_id (
+          name
+        )
+      `)
+      .eq('user_id', employeeId)
+      .in('status', ['approved', 'rejected'])
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (queryError) {
+      console.error('[getEmployeeLeaveHistory] Query error:', queryError);
+      return { error: 'Failed to fetch leave history' };
+    }
+
+    if (!leaveRequests || leaveRequests.length === 0) {
+      return { data: [] };
+    }
+
+    // Transform to UI-friendly format
+    const history: EmployeeLeaveHistoryItem[] = leaveRequests.map((request: any) => {
+      const leaveTypeData = request.leave_type as any;
+      return {
+        id: request.id,
+        leaveType: leaveTypeData?.name || 'Unknown',
+        startDate: request.start_date,
+        endDate: request.end_date,
+        reason: request.reason,
+        status: request.status as 'approved' | 'rejected',
+      };
+    });
+
+    return { data: history };
+  } catch (error) {
+    console.error('[getEmployeeLeaveHistory] Unexpected error:', error);
+
+    if (error instanceof Error && error.message.includes('Unauthorized')) {
+      return { error: error.message };
+    }
+
+    return { error: 'An unexpected error occurred while fetching leave history' };
+  }
+}
+
+
 import {
   getNowPartsInGMT7,
   getTodayDateString,

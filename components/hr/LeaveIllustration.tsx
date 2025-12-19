@@ -1,28 +1,46 @@
 'use client';
 
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ComponentType, SVGProps } from 'react';
 
-// Leave illustrations – complex SVGs kept as assets (with gradients, filters, etc.)
-// These are treated similarly to other complex illustrations in the app.
-import IlustAnnual from '@/app/assets/icons/ilust-annual.svg';
-import IlustUnpaid from '@/app/assets/icons/ilust-unpaid.svg';
-import IlustSick from '@/app/assets/icons/ilust-sick.svg';
+// Leave illustrations – using inline TSX components for better tree-shaking
+// and reduced build complexity (no SVG loader configuration needed).
+import AnnualLeaveIllustration from '@/components/icons/AnnualLeaveIllustration';
+import SickLeaveIllustration from '@/components/icons/SickLeaveIllustration';
+import UnpaidLeaveIllustration from '@/components/icons/UnpaidLeaveIllustration';
 
-export type LeaveVariant = 'annual' | 'unpaid' | 'sick';
+/**
+ * Leave type variants
+ */
+export type LeaveVariant = 'annual' | 'sick' | 'unpaid';
+
+/**
+ * Size variants based on Figma design (node 462:713)
+ * - 40: 40×40px container with 36×36px inner illustration
+ * - 36: 36×36px container with ~28×28px inner illustration
+ */
+export type LeaveSize = 40 | 36;
 
 export interface LeaveIllustrationProps {
   /**
    * Which leave illustration to show.
+   * Determines both the default illustration and background color.
    * @default "annual"
    */
   variant?: LeaveVariant;
 
   /**
-   * Width/height of the outer container (the rounded square with background).
-   * Accepts a number (pixels) or any CSS size string (e.g. "40px", "2.5rem").
-   * @default 40 (matches Figma design 40x40px)
+   * Size variant - determines container and inner illustration size.
+   * - 40: 40×40px container, 36×36px illustration (default)
+   * - 36: 36×36px container, ~28×28px illustration
+   * @default 40
    */
-  size?: number | string;
+  size?: LeaveSize;
+
+  /**
+   * Custom illustration component - overrides the default based on variant.
+   * Use this to swap the inner illustration while keeping the container styling.
+   */
+  illustration?: ComponentType<SVGProps<SVGSVGElement>>;
 
   /**
    * Additional Tailwind / CSS classes for the outer container.
@@ -30,76 +48,106 @@ export interface LeaveIllustrationProps {
   className?: string;
 }
 
-const LEAVE_ICON_MAP: Record<LeaveVariant, React.ComponentType<React.SVGProps<SVGSVGElement>>> = {
-  annual: IlustAnnual,
-  unpaid: IlustUnpaid,
-  sick: IlustSick,
+/**
+ * Icon map: maps variant to default illustration component
+ */
+const LEAVE_ICON_MAP: Record<LeaveVariant, ComponentType<SVGProps<SVGSVGElement>>> = {
+  annual: AnnualLeaveIllustration,
+  sick: SickLeaveIllustration,
+  unpaid: UnpaidLeaveIllustration,
 };
 
 /**
- * Get background color based on leave variant
+ * Size configuration based on Figma design
+ * - Container: outer wrapper size
+ * - Illustration: inner SVG size
  */
-function getBackgroundColor(variant: LeaveVariant): string {
-  switch (variant) {
-    case 'unpaid':
-      return 'bg-[#fef3c6]'; // amber-100 from Figma
-    case 'sick':
-      return 'bg-[#d0fae5]'; // emerald-100 from Figma
-    case 'annual':
-    default:
-      return 'bg-[#dff2fe]'; // sky-100 from Figma
-  }
-}
+const SIZE_CONFIG: Record<LeaveSize, { container: number; illustration: number }> = {
+  40: { container: 40, illustration: 36 },
+  36: { container: 36, illustration: 32 }, // User-requested: 32px instead of Figma's ~28.444px
+};
+
+/**
+ * Background color map based on variant
+ */
+const BACKGROUND_COLOR_MAP: Record<LeaveVariant, string> = {
+  annual: 'bg-[#dff2fe]',   // sky-100 from Figma
+  sick: 'bg-[#d0fae5]',     // emerald-100 from Figma
+  unpaid: 'bg-[#fef3c6]',   // amber-100 from Figma
+};
 
 /**
  * LeaveIllustration Component
  *
- * Renders one of the complex leave SVG illustrations (annual, unpaid, sick).
+ * Renders one of the leave SVG illustrations inside a styled container.
+ * Supports two size variants and swappable illustrations.
  *
  * Figma references:
- * - Leave Illustration container (node 465:1188): 40x40px, rounded-8px, 2px padding
- * - Background colors:
- *   - Annual Leave: sky-100 (#dff2fe)
- *   - Unpaid Leave: amber-100 (#fef3c6)
- *   - Sick Leave: emerald-100 (#d0fae5)
- * - Inner SVG illustration: 36x36px, centered
+ * - Leave Illustration (node 462:713)
+ * - Size=40px (node 462:714): 40×40px container, 36×36px illustration
+ * - Size=36px (node 700:1495): 36×36px container, ~28×28px illustration
  *
- * The leave SVGs in `app/assets/icons` already include the detailed illustration.
- * This wrapper recreates the container using CSS so the same SVGs can be reused
- * in other contexts without being locked into a specific background.
+ * Background colors:
+ * - Annual Leave: sky-100 (#dff2fe)
+ * - Sick Leave: emerald-100 (#d0fae5)
+ * - Unpaid Leave: amber-100 (#fef3c6)
  *
  * Best practices:
- * - Keep complex visual effects (multiple gradients, filters) inside the SVG file.
- * - Control layout + sizing with a lightweight React wrapper.
- * - Use this component inside a higher-level card/container for additional styling,
- *   padding, or hover states instead of baking those into the SVG.
+ * - Use inline TSX components for illustrations (better tree-shaking)
+ * - Control layout + sizing with CSS
+ * - Use `illustration` prop to swap icons while keeping container styling
+ *
+ * @example
+ * // Default annual leave, 40px size
+ * <LeaveIllustration />
+ *
+ * @example
+ * // Sick leave, 36px size
+ * <LeaveIllustration variant="sick" size={36} />
+ *
+ * @example
+ * // Custom illustration
+ * <LeaveIllustration variant="annual" illustration={CustomIcon} />
  */
 export default function LeaveIllustration({
   variant = 'annual',
   size = 40,
+  illustration,
   className = '',
 }: LeaveIllustrationProps) {
-  const IllustrationIcon = LEAVE_ICON_MAP[variant] ?? IlustAnnual;
-  const backgroundColor = getBackgroundColor(variant);
+  // Get config for the requested size
+  const sizeConfig = SIZE_CONFIG[size];
 
-  const sizeStyle: CSSProperties =
-    typeof size === 'number'
-      ? { width: `${size}px`, height: `${size}px` }
-      : { width: size, height: size };
+  // Use custom illustration if provided, otherwise use default for variant
+  const IllustrationIcon = illustration ?? LEAVE_ICON_MAP[variant] ?? AnnualLeaveIllustration;
+
+  // Get background color for variant
+  const backgroundColor = BACKGROUND_COLOR_MAP[variant];
+
+  // Container size style
+  const containerStyle: CSSProperties = {
+    width: `${sizeConfig.container}px`,
+    height: `${sizeConfig.container}px`,
+  };
+
+  // Illustration size style
+  const illustrationStyle: CSSProperties = {
+    width: `${sizeConfig.illustration}px`,
+    height: `${sizeConfig.illustration}px`,
+  };
 
   return (
     <div
-      className={`${backgroundColor} box-border content-stretch flex gap-[10px] items-center overflow-clip p-[2px] relative rounded-[8px] ${className}`}
-      style={sizeStyle}
+      className={`${backgroundColor} flex items-center justify-center overflow-clip relative rounded-[8px] shrink-0 ${className}`}
+      style={containerStyle}
       aria-hidden="true"
-      data-name="Leave Illustration"
-      data-node-id="465:1188"
+      data-name={`Size=${size}px`}
+      data-node-id={size === 40 ? '462:714' : '700:1495'}
     >
-      {/* Inner illustration 36x36px, centered as in Figma design */}
-      <div className="relative shrink-0 size-[36px]">
+      {/* Inner illustration - sized based on variant */}
+      <div className="relative shrink-0" style={illustrationStyle}>
         <IllustrationIcon className="h-full w-full" />
       </div>
     </div>
   );
 }
-

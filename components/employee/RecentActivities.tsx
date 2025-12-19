@@ -1,8 +1,8 @@
 'use client';
 
 import { memo, useMemo } from 'react';
-import CheckInNeutralIcon from '@/app/assets/icons/check-in-neutral.svg';
-import CheckOutNeutralIcon from '@/app/assets/icons/check-out-neutral.svg';
+import CheckInIcon from '@/components/icons/shared/CheckInIcon';
+import CheckoutIcon from '@/components/icons/shared/CheckoutIcon';
 import { SpriteIcon } from '@/components/shared/IconSprite';
 import AttendanceBadge, { type AttendanceStatus, type LeaveStatus } from '@/components/employee/AttendanceBadge';
 
@@ -73,7 +73,7 @@ const getLeaveIcon = (leaveType: 'annual' | 'sick' | 'unpaid', status: LeaveStat
 const separateActivities = (activities: Activity[]) => {
   const attendance: Activity[] = [];
   const leave: Activity[] = [];
-  
+
   activities.forEach(activity => {
     if (activity.type === 'leave') {
       leave.push(activity);
@@ -81,7 +81,7 @@ const separateActivities = (activities: Activity[]) => {
       attendance.push(activity);
     }
   });
-  
+
   return { attendance, leave };
 };
 
@@ -117,14 +117,14 @@ function RecentActivities({ activities }: RecentActivitiesProps) {
               <div className={`flex flex-col gap-2.5 flex-1 ${dayIndex < activities.length - 1 ? 'border-l border-dashed border-neutral-300' : ''} pl-3.5`}>
                 {useMemo(() => {
                   const { attendance, leave } = separateActivities(day.activities);
-                  
+
                   return (
                     <>
                       {/* Leave Request Cards - Separate from attendance */}
                       {leave.map((activity, leaveIndex) => {
                         if (!activity.leaveType || !activity.status) return null;
                         const LeaveIcon = getLeaveIcon(activity.leaveType, activity.status as LeaveStatus);
-                        
+
                         return (
                           <div
                             key={`leave-${leaveIndex}`}
@@ -163,41 +163,41 @@ function RecentActivities({ activities }: RecentActivitiesProps) {
                       {attendance.length > 0 && (
                         <div className="flex flex-col rounded-xl bg-[rgba(255,255,255,0.6)] px-3 py-2.5 shadow-[0px_1px_2px_0px_rgba(164,172,185,0.24),0px_0px_0.5px_0.5px_rgba(28,28,28,0.05)] w-full">
                           {attendance.map((activity, actIndex) => (
-                    <div key={actIndex}>
-                      {/* Activity Item */}
+                            <div key={actIndex}>
+                              {/* Activity Item */}
                               <div className={`flex items-center gap-2 ${actIndex > 0 ? 'pt-2.5' : ''} ${actIndex < attendance.length - 1 ? 'pb-3' : ''}`}>
-                        {/* Icon */}
-                        {activity.type === 'checkin' ? (
-                          <CheckInNeutralIcon className="h-8 w-8 shrink-0" />
-                        ) : (
-                          <CheckOutNeutralIcon className="h-8 w-8 shrink-0" />
-                        )}
+                                {/* Icon */}
+                                {activity.type === 'checkin' ? (
+                                  <CheckInIcon className="h-8 w-8 shrink-0 text-neutral-500" size={32} />
+                                ) : (
+                                  <CheckoutIcon className="h-8 w-8 shrink-0 text-neutral-500" size={32} />
+                                )}
 
-                        {/* Text and Badge */}
-                        <div className="flex flex-1 items-start">
-                          <div className="flex-1">
-                            <p className="text-sm font-semibold text-neutral-700 leading-bold-sm">
-                              {activity.type === 'checkin' ? 'Checked In' : 'Checked Out'}
-                            </p>
-                            <p className="text-xs font-medium text-neutral-500 leading-bold-xs">
-                              {activity.time}
-                            </p>
-                          </div>
+                                {/* Text and Badge */}
+                                <div className="flex flex-1 items-start">
+                                  <div className="flex-1">
+                                    <p className="text-sm font-semibold text-neutral-700 leading-bold-sm">
+                                      {activity.type === 'checkin' ? 'Checked In' : 'Checked Out'}
+                                    </p>
+                                    <p className="text-xs font-medium text-neutral-500 leading-bold-xs">
+                                      {activity.time}
+                                    </p>
+                                  </div>
 
-                          {/* Status Badge */}
-                          {activity.status && (
+                                  {/* Status Badge */}
+                                  {activity.status && (
                                     <AttendanceBadge status={activity.status as AttendanceStatus} />
-                          )}
-                        </div>
-                      </div>
+                                  )}
+                                </div>
+                              </div>
 
-                      {/* Divider */}
+                              {/* Divider */}
                               {actIndex < attendance.length - 1 && (
-                        <div className="h-px w-full bg-neutral-100" />
-                      )}
-                    </div>
-                  ))}
-                </div>
+                                <div className="h-px w-full bg-neutral-100" />
+                              )}
+                            </div>
+                          ))}
+                        </div>
                       )}
                     </>
                   );
