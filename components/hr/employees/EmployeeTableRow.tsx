@@ -100,7 +100,8 @@ export interface EmployeeTableRowProps {
 
 /**
  * Leave Balance Indicator Component
- * Shows bars representing leave balance
+ * Shows bars representing leave balance (max 10 bars)
+ * Each bar represents ~2.2 days (22 total / 10 bars)
  * 
  * Color variants based on current balance:
  * - <= 3: Low (Red)
@@ -114,8 +115,22 @@ const LeaveBalanceIndicator = memo(function LeaveBalanceIndicator({
   current: number;
   total: number;
 }) {
-  const filledBars = Math.min(current, total);
-  const emptyBars = Math.max(total - current, 0);
+  const MAX_BARS = 10;
+
+  // Calculate filled bars proportionally
+  // Special cases: 0 bars only for 0 balance, full bars only for full balance
+  // Any non-zero balance shows at least 1 bar
+  const proportion = total > 0 ? current / total : 0;
+  let filledBars: number;
+  if (current === 0) {
+    filledBars = 0;
+  } else if (current === total) {
+    filledBars = MAX_BARS;
+  } else {
+    // Ensure at least 1 bar for any non-zero balance, max 9 for non-full
+    filledBars = Math.max(1, Math.floor(proportion * MAX_BARS));
+  }
+  const emptyBars = MAX_BARS - filledBars;
 
   // Determine bar variant based on current balance
   const getBarVariant = (): 'High' | 'Medium' | 'Low' => {

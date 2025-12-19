@@ -202,7 +202,8 @@ export async function deleteLeaveAttachment(filePath: string): Promise<{ success
 
 /**
  * Get leave balance for a specific leave type
- * OPTIMIZED: Uses cached leave types and batches queries in parallel
+ * Reads from leave_balances table (single source of truth)
+ * Falls back to computing from leave_requests if no balance row exists
  */
 export async function getLeaveBalance(leaveTypeId: string): Promise<{ data?: LeaveBalance; error?: string }> {
   try {
@@ -221,30 +222,21 @@ export async function getLeaveBalance(leaveTypeId: string): Promise<{ data?: Lea
 
     console.log('[getLeaveBalance] Fetching leave balance for type:', leaveTypeId, 'user:', user.id);
 
-    // Calculate date range once
     const currentYear = getCurrentYear();
-    const yearStart = `${currentYear}-01-01`;
-    const yearEnd = `${currentYear}-12-31`;
 
-    // OPTIMIZED: Batch both queries in parallel using Promise.all
-    // Query 1: Get leave type info (using cached function for better performance)
-    // Query 2: Get approved leave requests for this year
-    // These queries are independent and can run concurrently
-    const [leaveTypesResult, approvedLeavesResult] = await Promise.all([
-      // Use cached leave types function
-      getLeaveTypes(),
-      // Query approved leaves
+    // First, try to get balance from leave_balances table
+    const [balanceResult, leaveTypesResult] = await Promise.all([
       supabase
-        .from('leave_requests')
-        .select('total_days')
+        .from('leave_balances')
+        .select('allocated, used, balance')
         .eq('user_id', user.id)
         .eq('leave_type_id', leaveTypeId)
-        .eq('status', 'approved')
-        .gte('start_date', yearStart)
-        .lte('end_date', yearEnd),
+        .eq('year', currentYear)
+        .maybeSingle(),
+      getLeaveTypes(),
     ]);
 
-    // Process leave types result
+    // Get leave type name
     if (leaveTypesResult.error || !leaveTypesResult.data) {
       console.error('[getLeaveBalance] Failed to fetch leave types:', leaveTypesResult.error);
       return { error: 'Failed to fetch leave types' };
@@ -256,14 +248,22 @@ export async function getLeaveBalance(leaveTypeId: string): Promise<{ data?: Lea
       return { error: 'Leave type not found' };
     }
 
-    // Process approved leaves result
-    const { data: approvedLeaves, error: leavesError } = approvedLeavesResult;
-    if (leavesError) {
-      console.error('[getLeaveBalance] Error fetching approved leaves:', leavesError);
-      return { error: 'Failed to calculate leave balance' };
+    // If balance row exists, use it
+    const { data: balanceRow, error: balanceError } = balanceResult;
+    if (balanceRow && !balanceError) {
+      console.log('[getLeaveBalance] Found balance row:', balanceRow);
+      return {
+        data: {
+          leaveTypeId,
+          leaveTypeName: leaveType.name,
+          totalQuota: balanceRow.allocated,
+          used: balanceRow.used,
+          remaining: balanceRow.balance,
+        },
+      };
     }
 
-    // If no quota (e.g., unpaid leave), return unlimited
+    // Fallback: If no quota defined (e.g., unpaid leave), return unlimited
     if (!leaveType.max_days_per_year) {
       console.log('[getLeaveBalance] No quota limit for leave type:', leaveType.name);
       return {
@@ -277,10 +277,28 @@ export async function getLeaveBalance(leaveTypeId: string): Promise<{ data?: Lea
       };
     }
 
-    // Calculate used days
+    // Fallback: Compute from leave_requests (legacy behavior for users without balance rows)
+    console.log('[getLeaveBalance] No balance row found, computing from leave_requests');
+    const yearStart = `${currentYear}-01-01`;
+    const yearEnd = `${currentYear}-12-31`;
+
+    const { data: approvedLeaves, error: leavesError } = await supabase
+      .from('leave_requests')
+      .select('total_days')
+      .eq('user_id', user.id)
+      .eq('leave_type_id', leaveTypeId)
+      .eq('status', 'approved')
+      .gte('start_date', yearStart)
+      .lte('end_date', yearEnd);
+
+    if (leavesError) {
+      console.error('[getLeaveBalance] Error fetching approved leaves:', leavesError);
+      return { error: 'Failed to calculate leave balance' };
+    }
+
     const usedDays = approvedLeaves?.reduce((sum, leave) => sum + leave.total_days, 0) || 0;
 
-    console.log('[getLeaveBalance] Calculated balance:', {
+    console.log('[getLeaveBalance] Computed balance:', {
       leaveType: leaveType.name,
       totalQuota: leaveType.max_days_per_year,
       usedDays,
@@ -304,7 +322,8 @@ export async function getLeaveBalance(leaveTypeId: string): Promise<{ data?: Lea
 
 /**
  * Get all leave balances for the current user
- * OPTIMIZED: Uses cached leave types and batches queries in parallel
+ * Reads from leave_balances table (single source of truth)
+ * Falls back to computing from leave_requests if balance rows don't exist
  */
 export async function getAllLeaveBalances(): Promise<{ data?: LeaveBalance[]; error?: string }> {
   try {
@@ -323,23 +342,64 @@ export async function getAllLeaveBalances(): Promise<{ data?: LeaveBalance[]; er
 
     console.log('[getAllLeaveBalances] Fetching leave balances for user:', user.id);
 
-    // OPTIMIZED: Use cached leave types function (1-hour cache)
-    const leaveTypesResult = await getLeaveTypes();
+    const currentYear = getCurrentYear();
+
+    // Fetch leave types and balance rows in parallel
+    const [leaveTypesResult, balanceRowsResult] = await Promise.all([
+      getLeaveTypes(),
+      supabase
+        .from('leave_balances')
+        .select('leave_type_id, allocated, used, balance')
+        .eq('user_id', user.id)
+        .eq('year', currentYear),
+    ]);
+
     if (leaveTypesResult.error || !leaveTypesResult.data) {
       console.error('[getAllLeaveBalances] Failed to fetch leave types:', leaveTypesResult.error);
       return { error: 'Failed to fetch leave types' };
     }
 
     const leaveTypes = leaveTypesResult.data;
+    const { data: balanceRows, error: balanceError } = balanceRowsResult;
 
-    // OPTIMIZED: Calculate date range once
-    const currentYear = getCurrentYear();
+    // Create a map of balance rows by leave type
+    const balanceMap = new Map<string, { allocated: number; used: number; balance: number }>();
+    if (balanceRows && !balanceError) {
+      for (const row of balanceRows) {
+        balanceMap.set(row.leave_type_id, {
+          allocated: row.allocated,
+          used: row.used,
+          balance: row.balance,
+        });
+      }
+    }
+
+    console.log('[getAllLeaveBalances] Found balance rows:', balanceRows?.length || 0);
+
+    // If we have balance rows for all leave types, use them
+    if (balanceMap.size > 0) {
+      const balances: LeaveBalance[] = leaveTypes
+        .filter((lt) => balanceMap.has(lt.id)) // Only return types with balance rows
+        .map((leaveType) => {
+          const balanceData = balanceMap.get(leaveType.id)!;
+          return {
+            leaveTypeId: leaveType.id,
+            leaveTypeName: leaveType.name,
+            totalQuota: balanceData.allocated,
+            used: balanceData.used,
+            remaining: balanceData.balance,
+          };
+        });
+
+      console.log('[getAllLeaveBalances] Returning balance rows:', balances);
+      return { data: balances };
+    }
+
+    // Fallback: Compute from leave_requests (legacy behavior)
+    console.log('[getAllLeaveBalances] No balance rows found, computing from leave_requests');
     const yearStart = `${currentYear}-01-01`;
     const yearEnd = `${currentYear}-12-31`;
 
-    // Get all approved leaves for this year
-    // This query is independent of leave types, so it could be batched,
-    // but since we're using cached leave types, the benefit is minimal
     const { data: approvedLeaves, error: leavesError } = await supabase
       .from('leave_requests')
       .select('leave_type_id, total_days')
@@ -353,9 +413,6 @@ export async function getAllLeaveBalances(): Promise<{ data?: LeaveBalance[]; er
       return { error: 'Failed to calculate leave balances' };
     }
 
-    console.log('[getAllLeaveBalances] Approved leaves:', approvedLeaves);
-
-    // Calculate balance for each leave type
     const balances: LeaveBalance[] = leaveTypes.map((leaveType) => {
       const usedDays =
         approvedLeaves
@@ -382,8 +439,7 @@ export async function getAllLeaveBalances(): Promise<{ data?: LeaveBalance[]; er
       };
     });
 
-    console.log('[getAllLeaveBalances] Calculated balances:', balances);
-
+    console.log('[getAllLeaveBalances] Computed balances:', balances);
     return { data: balances };
   } catch (error) {
     console.error('Get all balances error:', error);

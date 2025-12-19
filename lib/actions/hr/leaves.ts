@@ -12,7 +12,7 @@
 import { revalidateTag } from 'next/cache';
 import { requireHRAdmin } from '@/lib/auth/requireHRAdmin';
 import { createNotification } from '../shared/notifications';
-import { createTimestamp, formatDateDisplay, APP_TIMEZONE } from '@/lib/utils/timezone';
+import { createTimestamp, formatDateDisplay, getCurrentYear } from '@/lib/utils/timezone';
 
 export interface PendingLeaveRequest {
   id: string;
@@ -129,6 +129,7 @@ export async function getPendingLeaveRequests(): Promise<{ data?: PendingLeaveRe
 /**
  * Approve a leave request (HR Admin only)
  * Sets approved_by and approved_at fields as required by database constraint
+ * Also updates the employee's leave balance (decrements balance, increments used)
  */
 export async function approveLeaveRequest(
   requestId: string
@@ -137,10 +138,10 @@ export async function approveLeaveRequest(
     // Require HR admin role
     const { userId, supabase } = await requireHRAdmin();
 
-    // Get the leave request to find the user_id and details for notification
+    // Get the leave request to find the user_id, total_days, and details for notification
     const { data: leaveRequest, error: fetchError } = await supabase
       .from('leave_requests')
-      .select('user_id, start_date, end_date, leave_type_id')
+      .select('user_id, start_date, end_date, leave_type_id, total_days')
       .eq('id', requestId)
       .single();
 
@@ -163,6 +164,48 @@ export async function approveLeaveRequest(
     if (error) {
       console.error('[approveLeaveRequest] Error updating request:', error);
       return { success: false, error: 'Failed to approve request. It may have already been processed.' };
+    }
+
+    // Update leave balance: increment used, decrement balance
+    const currentYear = getCurrentYear();
+    const { data: balanceRow, error: balanceFetchError } = await supabase
+      .from('leave_balances')
+      .select('id, used, balance')
+      .eq('user_id', leaveRequest.user_id)
+      .eq('leave_type_id', leaveRequest.leave_type_id)
+      .eq('year', currentYear)
+      .maybeSingle();
+
+    if (balanceFetchError) {
+      console.error('[approveLeaveRequest] Error fetching leave balance:', balanceFetchError);
+      // Don't fail the approval - balance update is secondary
+    } else if (balanceRow) {
+      // Update the balance row: increment used, decrement balance
+      const newUsed = Number(balanceRow.used) + leaveRequest.total_days;
+      const newBalance = Number(balanceRow.balance) - leaveRequest.total_days;
+
+      const { error: balanceUpdateError } = await supabase
+        .from('leave_balances')
+        .update({
+          used: newUsed,
+          balance: newBalance,
+        })
+        .eq('id', balanceRow.id);
+
+      if (balanceUpdateError) {
+        console.error('[approveLeaveRequest] Error updating leave balance:', balanceUpdateError);
+        // Don't fail the approval - balance update is secondary
+      } else {
+        console.log('[approveLeaveRequest] Leave balance updated:', {
+          userId: leaveRequest.user_id,
+          leaveTypeId: leaveRequest.leave_type_id,
+          daysUsed: leaveRequest.total_days,
+          newUsed,
+          newBalance,
+        });
+      }
+    } else {
+      console.log('[approveLeaveRequest] No leave balance row found for user, skipping balance update');
     }
 
     // Create notification for the employee

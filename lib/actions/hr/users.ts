@@ -22,6 +22,51 @@ export interface InviteUserData {
 }
 
 /**
+ * Leave quota configuration for new users
+ */
+const LEAVE_QUOTAS = [
+  { leave_type_id: 'annual', allocated: 12 },
+  { leave_type_id: 'sick', allocated: 5 },
+  { leave_type_id: 'wfh', allocated: 5 },
+] as const;
+
+/**
+ * Initialize leave balances for a new user
+ * Creates balance rows for annual, sick, and wfh leave types
+ * 
+ * @param supabase - Supabase client with service role
+ * @param userId - The new user's UUID
+ * @param year - The year to initialize balances for (defaults to current year)
+ * @returns Success status and error message if failed
+ */
+async function initializeLeaveBalancesForUser(
+  supabase: NonNullable<ReturnType<typeof createServiceRoleClient>>,
+  userId: string,
+  year: number = new Date().getFullYear()
+): Promise<{ success: boolean; error?: string }> {
+  const balanceRows = LEAVE_QUOTAS.map((q) => ({
+    user_id: userId,
+    leave_type_id: q.leave_type_id,
+    allocated: q.allocated,
+    used: 0,
+    balance: q.allocated,
+    year,
+  }));
+
+  const { error } = await supabase
+    .from('leave_balances')
+    .insert(balanceRows);
+
+  if (error) {
+    console.error('[initializeLeaveBalancesForUser] Error:', error);
+    return { success: false, error: error.message };
+  }
+
+  console.log('[initializeLeaveBalancesForUser] Successfully initialized balances for user:', userId);
+  return { success: true };
+}
+
+/**
  * Invite a new user by email
  * 
  * This function:
@@ -51,46 +96,46 @@ export async function inviteUserByEmail(
   try {
     // Verify HR admin access
     await requireHRAdmin();
-    
+
     // Get service role client for admin operations
     const supabase = createServiceRoleClient();
     if (!supabase) {
       return { success: false, error: 'Service role key not configured' };
     }
-    
+
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(userData.email)) {
       return { success: false, error: 'Invalid email format' };
     }
-    
+
     // Check if user already exists in users table
     const { data: existingUser } = await supabase
       .from('users')
       .select('id, email')
       .eq('email', userData.email)
       .single();
-    
+
     if (existingUser) {
       return { success: false, error: 'User with this email already exists' };
     }
-    
+
     // Check if user already exists in auth.users
     const { data: { users: authUsers }, error: listError } = await supabase.auth.admin.listUsers();
-    
+
     if (listError) {
       console.error('[inviteUserByEmail] Error listing users:', listError);
       return { success: false, error: 'Failed to check existing users' };
     }
-    
+
     const existingAuthUser = authUsers?.find(u => u.email === userData.email);
     if (existingAuthUser) {
       return { success: false, error: 'User with this email already exists in auth system' };
     }
-    
+
     // Get site URL from environment variable
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-    
+
     // Invite user via Supabase Auth Admin API
     const { data: authUser, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(
       userData.email,
@@ -106,16 +151,16 @@ export async function inviteUserByEmail(
         },
       }
     );
-    
+
     if (inviteError) {
       console.error('[inviteUserByEmail] Invite error:', inviteError);
       return { success: false, error: inviteError.message };
     }
-    
+
     if (!authUser?.user) {
       return { success: false, error: 'Failed to create user' };
     }
-    
+
     // Manually create user profile in users table
     // (Trigger may not work reliably, so we create it manually)
     const { error: profileError } = await supabase
@@ -131,23 +176,33 @@ export async function inviteUserByEmail(
         shift_end_hour: 19,
         is_active: true,
       });
-    
+
     if (profileError) {
       console.error('[inviteUserByEmail] Profile creation error:', profileError);
       // Delete the auth user if profile creation fails
       await supabase.auth.admin.deleteUser(authUser.user.id);
       return { success: false, error: `Failed to create user profile: ${profileError.message}` };
     }
-    
+
+    // Initialize leave balances for the new user (non-critical)
+    const balanceResult = await initializeLeaveBalancesForUser(
+      supabase,
+      authUser.user.id
+    );
+    if (!balanceResult.success) {
+      console.error('[inviteUserByEmail] Failed to initialize leave balances:', balanceResult.error);
+      // Non-critical - don't fail the invitation, user can have balances added later
+    }
+
     console.log('[inviteUserByEmail] Successfully invited user:', {
       userId: authUser.user.id,
       email: userData.email,
       role: userData.role || 'employee',
     });
-    
-    return { 
-      success: true, 
-      userId: authUser.user.id 
+
+    return {
+      success: true,
+      userId: authUser.user.id
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -168,30 +223,30 @@ export async function resendInvitation(
   try {
     // Verify HR admin access
     await requireHRAdmin();
-    
+
     // Get service role client for admin operations
     const supabase = createServiceRoleClient();
     if (!supabase) {
       return { success: false, error: 'Service role key not configured' };
     }
-    
+
     // Get user from auth.users
     const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
-    
+
     if (listError) {
       console.error('[resendInvitation] Error listing users:', listError);
       return { success: false, error: 'Failed to find user' };
     }
-    
+
     const user = users?.find(u => u.email === email);
-    
+
     if (!user) {
       return { success: false, error: 'User not found' };
     }
-    
+
     // Get site URL from environment variable
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-    
+
     // Resend invitation
     const { error: inviteError } = await supabase.auth.admin.inviteUserByEmail(
       email,
@@ -199,14 +254,14 @@ export async function resendInvitation(
         redirectTo: `${siteUrl}/signup`,
       }
     );
-    
+
     if (inviteError) {
       console.error('[resendInvitation] Error resending invitation:', inviteError);
       return { success: false, error: inviteError.message };
     }
-    
+
     console.log('[resendInvitation] Successfully resent invitation to:', email);
-    
+
     return { success: true };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
