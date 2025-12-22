@@ -18,15 +18,14 @@ export interface WeatherLocationConfig {
 }
 
 /**
- * Primary HR location for weather display.
- *
- * TODO: Update these coordinates to match your real office location.
- * For now, this uses a generic example (Jakarta).
+ * Primary HR location for weather display and GPS check-in validation.
+ * 
+ * Morva HQ coordinates extracted from Google Maps.
  */
 export const HR_WEATHER_LOCATION: WeatherLocationConfig = {
-  latitude: -6.3730,
-  longitude: 106.9008,
-  label: 'Jakarta, Indonesia',
+  latitude: -6.3730923,
+  longitude: 106.9034288,
+  label: 'Morva HQ, Jakarta',
 };
 
 
