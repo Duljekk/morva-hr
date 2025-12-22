@@ -402,6 +402,47 @@ export interface Database {
           updated_at?: string;
         };
       };
+      check_in_locations: {
+        Row: {
+          id: string;
+          name: string;
+          latitude: number;
+          longitude: number;
+          radius_meters: number;
+          google_maps_url: string | null;
+          formatted_address: string | null;
+          is_active: boolean;
+          created_by: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          latitude: number;
+          longitude: number;
+          radius_meters?: number;
+          google_maps_url?: string | null;
+          formatted_address?: string | null;
+          is_active?: boolean;
+          created_by: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          latitude?: number;
+          longitude?: number;
+          radius_meters?: number;
+          google_maps_url?: string | null;
+          formatted_address?: string | null;
+          is_active?: boolean;
+          created_by?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
     Views: {
       [_ in never]: never;

@@ -32,11 +32,17 @@ export type { LogoutIconProps } from './shared/Logout';
 export { default as BellIcon } from './shared/Bell';
 export type { BellIconProps } from './shared/Bell';
 
+export { default as BuildingIcon } from './shared/Building';
+export type { BuildingIconProps } from './shared/Building';
+
 export { default as ReceiptIcon } from './shared/Receipt';
 export type { ReceiptIconProps } from './shared/Receipt';
 
 export { default as CircleCheckIcon } from './shared/CircleCheck';
 export type { CircleCheckIconProps } from './shared/CircleCheck';
+
+export { default as CoffeeIcon } from './shared/Coffee';
+export type { CoffeeIconProps } from './shared/Coffee';
 
 export { default as CircleCrossIcon } from './shared/CircleCross';
 export type { CircleCrossIconProps } from './shared/CircleCross';
@@ -71,6 +77,9 @@ export type { CalendarIconProps } from './shared/Calendar';
 export { default as CalendarOutlineIcon } from './shared/CalendarOutline';
 export type { CalendarOutlineIconProps } from './shared/CalendarOutline';
 
+export { default as CalendarClockIcon } from './shared/CalendarClock';
+export type { CalendarClockIconProps } from './shared/CalendarClock';
+
 export { default as InfoCircleIcon } from './shared/InfoCircle';
 export type { InfoCircleIconProps } from './shared/InfoCircle';
 
@@ -101,6 +110,9 @@ export type { FilterIconProps } from './shared/Filter';
 export { default as HourglassIcon } from './shared/HourglassIcon';
 export type { HourglassIconProps } from './shared/HourglassIcon';
 
+export { default as TimerIcon } from './shared/Timer';
+export type { TimerIconProps } from './shared/Timer';
+
 export { default as MailIcon } from './shared/Mail';
 export type { MailIconProps } from './shared/Mail';
 
@@ -118,6 +130,9 @@ export type { EyeClosedIconProps } from './shared/EyeClosed';
 
 export { default as PeopleIcon } from './shared/People';
 export type { PeopleIconProps } from './shared/People';
+
+export { default as LinkIcon } from './shared/Link';
+export type { LinkIconProps } from './shared/Link';
 
 // Icons from shared/Icons.tsx (direct exports)
 export { GrabberIcon, DotGrid1x3HorizontalIcon } from '../shared/Icons';
@@ -166,8 +181,10 @@ export type IconName =
   | 'SettingsIcon'
   | 'LogoutIcon'
   | 'BellIcon'
+  | 'BuildingIcon'
   | 'ReceiptIcon'
   | 'CircleCheckIcon'
+  | 'CoffeeIcon'
   | 'CircleCrossIcon'
   | 'TriangleWarningIcon'
   | 'ClockIcon'
@@ -179,6 +196,7 @@ export type IconName =
   | 'CrossIcon'
   | 'CalendarIcon'
   | 'CalendarOutlineIcon'
+  | 'CalendarClockIcon'
   | 'InfoCircleIcon'
   | 'BubbleInfoIcon'
   | 'CopyIcon'
@@ -189,6 +207,7 @@ export type IconName =
   | 'CirclePlusIcon'
   | 'FilterIcon'
   | 'HourglassIcon'
+  | 'TimerIcon'
   | 'MailIcon'
   | 'AtIcon'
   | 'LockIcon'

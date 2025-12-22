@@ -17,6 +17,18 @@ export interface TabProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 
   state?: TabState;
   
   /**
+   * Whether to show an icon before the label
+   * @default false
+   */
+  hasIcon?: boolean;
+  
+  /**
+   * Custom icon element to display (only shown if hasIcon is true)
+   * If not provided, no icon will be rendered
+   */
+  icon?: ReactNode;
+  
+  /**
    * Whether to show the number badge
    * @default false
    */
@@ -68,12 +80,14 @@ export interface TabProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 
 /**
  * Tab Component
  * 
- * A tab button component based on Figma design specifications with two states:
- * - Active: White background with shadow, dark text
- * - Default: Transparent background, gray text
+ * A tab button component based on Figma design specifications with states:
+ * - Active: White background with shadow, dark text (#404040)
+ * - Default: Transparent background, gray text (#737373)
+ * - Hover (on default): Light gray background (rgba(212,212,212,0.2))
  * 
  * Features:
- * - Optional number badge that can be toggled
+ * - Optional icon support (16x16)
+ * - Optional number badge (16x16, blue background)
  * - Fully accessible with ARIA attributes
  * - Keyboard navigation support
  * 
@@ -82,6 +96,8 @@ export interface TabProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 
  * <Tab 
  *   label="Attendance" 
  *   state="active" 
+ *   hasIcon={true}
+ *   icon={<ClockIcon size={16} />}
  *   hasNumber={true} 
  *   number={5}
  *   onClick={() => console.log('Tab clicked')}
@@ -91,6 +107,8 @@ export interface TabProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 
 export default function Tab({
   label,
   state = 'default',
+  hasIcon = false,
+  icon,
   hasNumber = false,
   number = 1,
   onClick,
@@ -109,10 +127,8 @@ export default function Tab({
    * Following WAI-ARIA best practices
    */
   const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
-    // Call the user's onKeyDown if provided
     props.onKeyDown?.(event);
     
-    // Handle Enter and Space for manual activation
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       if (!disabled) {
@@ -121,16 +137,17 @@ export default function Tab({
     }
   };
   
-  // Base container styles with disabled state
+  // Container styles based on state
   const containerStyles = `
     flex items-center justify-center
-    h-8 
-    px-2.5 py-2.5
+    h-8
+    p-[10px]
     rounded-lg
+    overflow-clip
     transition-all duration-200
     ${isActive 
-      ? 'bg-white shadow-[0px_0px_0px_0.75px_rgba(0,0,0,0.06),0px_1px_2px_0px_rgba(0,0,0,0.05)]' 
-      : 'bg-transparent hover:bg-[#D4D4D4]/20'
+      ? 'bg-white shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05),0px_0px_0px_0.75px_rgba(0,0,0,0.06)]' 
+      : 'bg-transparent hover:bg-[rgba(212,212,212,0.2)]'
     }
     ${disabled 
       ? 'opacity-50 cursor-not-allowed hover:bg-transparent' 
@@ -138,23 +155,40 @@ export default function Tab({
     }
   `;
   
-  // Text styles based on state and disabled
+  // Icon styles (16x16)
+  const iconStyles = `
+    shrink-0 size-4
+    ${isActive ? 'text-neutral-500' : 'text-neutral-400'}
+  `;
+  
+  // Text container styles - pr-1 (4px) when has icon, pr-1.5 (6px) when no icon
+  const textContainerStyles = `
+    flex items-center justify-center
+    pl-1 ${hasIcon && icon ? 'pr-1' : 'pr-1.5'}
+    shrink-0
+  `;
+  
+  // Text styles based on state
   const textStyles = `
     font-['Mona_Sans'] text-sm font-medium leading-[18px]
     whitespace-nowrap
-    ${isActive ? 'text-neutral-800' : 'text-neutral-600'}
+    ${isActive ? 'text-[#404040]' : 'text-[#737373]'}
   `;
   
-  // Number badge styles with disabled state
+  // Number badge styles (16x16)
   const badgeStyles = `
-    flex items-center justify-center
-    min-w-4 h-4
-    px-1
+    flex flex-col items-center justify-center
+    size-4
     rounded
-    bg-[#2B7FFF]
-    text-white text-xs font-medium leading-4
-    text-center
+    bg-[#2b7fff]
+    shrink-0
     ${disabled ? 'opacity-50' : ''}
+  `;
+  
+  // Badge text styles
+  const badgeTextStyles = `
+    font-['Mona_Sans'] text-xs font-medium leading-4
+    text-white text-center
   `;
 
   return (
@@ -173,18 +207,29 @@ export default function Tab({
       type="button"
       {...props}
     >
-      {/* Tab Label */}
-      <span className={textStyles}>
-        {label}
+      {/* Icon (conditional) */}
+      {hasIcon && icon && (
+        <span className={iconStyles}>
+          {icon}
+        </span>
+      )}
+      
+      {/* Text Container */}
+      <span className={textContainerStyles}>
+        <span className={textStyles}>
+          {label}
+        </span>
       </span>
       
       {/* Number Badge (conditional) */}
       {hasNumber && (
         <span 
-          className={`${badgeStyles} ml-1.5`}
+          className={badgeStyles}
           aria-label={`${number} items`}
         >
-          {number}
+          <span className={badgeTextStyles}>
+            {number}
+          </span>
         </span>
       )}
     </button>

@@ -13,6 +13,7 @@ export * from './announcements';
 export * from './payslips';
 export * from './employees';
 export * from './employeeDetails';
+export * from './locations';
 
 
 

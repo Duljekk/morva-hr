@@ -12,12 +12,43 @@ export interface ParsedLocation {
 }
 
 /**
+ * Extract place name from a Google Maps URL
+ * 
+ * Supports URL patterns like:
+ * - https://www.google.com/maps/place/Place+Name/@lat,lng,zoom
+ * - https://www.google.com/maps/place/Place%20Name/@lat,lng,zoom
+ * 
+ * @param url - Google Maps URL
+ * @returns Decoded place name or undefined if not found
+ */
+function extractPlaceLabel(url: string): string | undefined {
+  // Match /place/Name/ pattern where Name is followed by / or @
+  const placeNameMatch = url.match(/\/place\/([^/@]+)/);
+  if (placeNameMatch && placeNameMatch[1]) {
+    const encodedName = placeNameMatch[1];
+    // Check if this looks like coordinates (starts with digit or minus)
+    if (/^-?\d/.test(encodedName)) {
+      return undefined;
+    }
+    try {
+      // Decode URL encoding (e.g., %20 -> space, + -> space)
+      const decoded = decodeURIComponent(encodedName.replace(/\+/g, ' '));
+      return decoded;
+    } catch {
+      // If decoding fails, return the raw string with + replaced by spaces
+      return encodedName.replace(/\+/g, ' ');
+    }
+  }
+  return undefined;
+}
+
+/**
  * Parse a Google Maps URL to extract latitude and longitude
  * 
  * Supports multiple URL formats:
  * - https://www.google.com/maps?q=lat,lng
  * - https://www.google.com/maps/@lat,lng,zoom
- * - https://www.google.com/maps/place/.../@lat,lng,zoom
+ * - https://www.google.com/maps/place/Name/@lat,lng,zoom
  * - https://maps.google.com/?ll=lat,lng
  * - https://goo.gl/maps/... (short URLs - not supported, need redirect)
  * 
@@ -30,13 +61,16 @@ export function parseGoogleMapsUrl(url: string): ParsedLocation | null {
   }
 
   try {
+    // Extract label from place URLs (do this first before coordinate extraction)
+    const label = extractPlaceLabel(url);
+
     // Pattern 1: ?q=lat,lng or ?q=lat+lng
     const qMatch = url.match(/[?&]q=(-?\d+\.?\d*)[,+](-?\d+\.?\d*)/);
     if (qMatch) {
       const lat = parseFloat(qMatch[1]);
       const lng = parseFloat(qMatch[2]);
       if (validateCoordinates(lat, lng)) {
-        return { latitude: lat, longitude: lng };
+        return { latitude: lat, longitude: lng, ...(label && { label }) };
       }
     }
 
@@ -46,7 +80,7 @@ export function parseGoogleMapsUrl(url: string): ParsedLocation | null {
       const lat = parseFloat(atMatch[1]);
       const lng = parseFloat(atMatch[2]);
       if (validateCoordinates(lat, lng)) {
-        return { latitude: lat, longitude: lng };
+        return { latitude: lat, longitude: lng, ...(label && { label }) };
       }
     }
 
@@ -56,7 +90,7 @@ export function parseGoogleMapsUrl(url: string): ParsedLocation | null {
       const lat = parseFloat(llMatch[1]);
       const lng = parseFloat(llMatch[2]);
       if (validateCoordinates(lat, lng)) {
-        return { latitude: lat, longitude: lng };
+        return { latitude: lat, longitude: lng, ...(label && { label }) };
       }
     }
 

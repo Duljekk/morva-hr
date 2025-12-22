@@ -117,17 +117,17 @@ sequenceDiagram
 
 1. Add location columns to `attendance_records`:
    ```sql
-            ALTER TABLE attendance_records
-            ADD COLUMN check_in_latitude DECIMAL(10, 8),
-            ADD COLUMN check_in_longitude DECIMAL(11, 8),
-            ADD COLUMN check_in_location_accuracy DECIMAL(6, 2);
-            
-            -- Add constraints
-            ALTER TABLE attendance_records
-            ADD CONSTRAINT valid_check_in_latitude 
-              CHECK (check_in_latitude IS NULL OR (check_in_latitude >= -90 AND check_in_latitude <= 90)),
-            ADD CONSTRAINT valid_check_in_longitude 
-              CHECK (check_in_longitude IS NULL OR (check_in_longitude >= -180 AND check_in_longitude <= 180));
+               ALTER TABLE attendance_records
+               ADD COLUMN check_in_latitude DECIMAL(10, 8),
+               ADD COLUMN check_in_longitude DECIMAL(11, 8),
+               ADD COLUMN check_in_location_accuracy DECIMAL(6, 2);
+               
+               -- Add constraints
+               ALTER TABLE attendance_records
+               ADD CONSTRAINT valid_check_in_latitude 
+                 CHECK (check_in_latitude IS NULL OR (check_in_latitude >= -90 AND check_in_latitude <= 90)),
+               ADD CONSTRAINT valid_check_in_longitude 
+                 CHECK (check_in_longitude IS NULL OR (check_in_longitude >= -180 AND check_in_longitude <= 180));
    ```
 
 
@@ -135,25 +135,25 @@ sequenceDiagram
 
 2. Create `check_in_locations` table (for future multi-location support):
    ```sql
-            CREATE TABLE check_in_locations (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                name TEXT NOT NULL,
-                latitude DECIMAL(10, 8) NOT NULL,
-                longitude DECIMAL(11, 8) NOT NULL,
-                radius_meters INTEGER NOT NULL DEFAULT 50,
-                google_maps_url TEXT,
-                is_active BOOLEAN NOT NULL DEFAULT TRUE,
-                created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-                updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-                
-                CONSTRAINT valid_latitude CHECK (latitude >= -90 AND latitude <= 90),
-                CONSTRAINT valid_longitude CHECK (longitude >= -180 AND longitude <= 180),
-                CONSTRAINT valid_radius CHECK (radius_meters > 0 AND radius_meters <= 1000)
-            );
-            
-            CREATE INDEX idx_check_in_locations_is_active ON check_in_locations(is_active);
-            CREATE INDEX idx_check_in_locations_created_by ON check_in_locations(created_by);
+               CREATE TABLE check_in_locations (
+                   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                   name TEXT NOT NULL,
+                   latitude DECIMAL(10, 8) NOT NULL,
+                   longitude DECIMAL(11, 8) NOT NULL,
+                   radius_meters INTEGER NOT NULL DEFAULT 50,
+                   google_maps_url TEXT,
+                   is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                   created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+                   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+                   
+                   CONSTRAINT valid_latitude CHECK (latitude >= -90 AND latitude <= 90),
+                   CONSTRAINT valid_longitude CHECK (longitude >= -180 AND longitude <= 180),
+                   CONSTRAINT valid_radius CHECK (radius_meters > 0 AND radius_meters <= 1000)
+               );
+               
+               CREATE INDEX idx_check_in_locations_is_active ON check_in_locations(is_active);
+               CREATE INDEX idx_check_in_locations_created_by ON check_in_locations(created_by);
    ```
 
 
@@ -161,8 +161,8 @@ sequenceDiagram
 
 3. Add location reference to `attendance_records` (optional, for future use):
    ```sql
-            ALTER TABLE attendance_records
-            ADD COLUMN check_in_location_id UUID REFERENCES check_in_locations(id) ON DELETE SET NULL;
+               ALTER TABLE attendance_records
+               ADD COLUMN check_in_location_id UUID REFERENCES check_in_locations(id) ON DELETE SET NULL;
    ```
 
 
@@ -221,9 +221,9 @@ export async function checkIn(
 
 1. **Location Required Check**:
    ```typescript
-            if (latitude === undefined || longitude === undefined) {
-              return { error: 'Location is required for check-in. Please enable location services.' };
-            }
+               if (latitude === undefined || longitude === undefined) {
+                 return { error: 'Location is required for check-in. Please enable location services.' };
+               }
    ```
 
 
@@ -231,9 +231,9 @@ export async function checkIn(
 
 2. **Coordinate Validation**:
    ```typescript
-            if (!validateCoordinates(latitude, longitude)) {
-              return { error: 'Invalid location coordinates' };
-            }
+               if (!validateCoordinates(latitude, longitude)) {
+                 return { error: 'Invalid location coordinates' };
+               }
    ```
 
 
@@ -241,13 +241,13 @@ export async function checkIn(
 
 3. **Distance Calculation**:
    ```typescript
-            const officeLocation = getOfficeLocation();
-            const distance = calculateDistance(
-              latitude,
-              longitude,
-              officeLocation.latitude,
-              officeLocation.longitude
-            );
+               const officeLocation = getOfficeLocation();
+               const distance = calculateDistance(
+                 latitude,
+                 longitude,
+                 officeLocation.latitude,
+                 officeLocation.longitude
+               );
    ```
 
 
@@ -255,11 +255,11 @@ export async function checkIn(
 
 4. **Radius Validation**:
    ```typescript
-            if (distance > officeLocation.radius) {
-              return { 
-                error: `You are ${Math.round(distance)}m away from the office. Please move within ${officeLocation.radius}m to check in.` 
-              };
-            }
+               if (distance > officeLocation.radius) {
+                 return { 
+                   error: `You are ${Math.round(distance)}m away from the office. Please move within ${officeLocation.radius}m to check in.` 
+                 };
+               }
    ```
 
 
@@ -267,15 +267,15 @@ export async function checkIn(
 
 5. **Store Location in Database**:
    ```typescript
-            .insert({
-              user_id: user.id,
-              date: today,
-              check_in_time: checkInTime,
-              check_in_status: checkInStatus,
-              check_in_latitude: latitude,      // NEW
-              check_in_longitude: longitude,   // NEW
-              check_in_location_accuracy: accuracy || null, // NEW (optional)
-            })
+               .insert({
+                 user_id: user.id,
+                 date: today,
+                 check_in_time: checkInTime,
+                 check_in_status: checkInStatus,
+                 check_in_latitude: latitude,      // NEW
+                 check_in_longitude: longitude,   // NEW
+                 check_in_location_accuracy: accuracy || null, // NEW (optional)
+               })
    ```
 
 
@@ -287,11 +287,11 @@ export async function checkIn(
 
 1. **Check Geolocation Support**:
    ```typescript
-            if (!navigator.geolocation) {
-              alert('Geolocation is not supported by your browser. Please use a modern browser.');
-              setIsLoading(false);
-              return;
-            }
+               if (!navigator.geolocation) {
+                 alert('Geolocation is not supported by your browser. Please use a modern browser.');
+                 setIsLoading(false);
+                 return;
+               }
    ```
 
 
@@ -299,33 +299,33 @@ export async function checkIn(
 
 2. **Request Location**:
    ```typescript
-            navigator.geolocation.getCurrentPosition(
-              async (position) => {
-                const { latitude, longitude, accuracy } = position.coords;
-                
-                // Validate coordinates exist
-                if (latitude === undefined || longitude === undefined) {
-                  alert('Failed to get location coordinates. Please try again.');
-                  setIsLoading(false);
-                  return;
-                }
-                
-                // Call server action with location
-                const result = await checkIn(latitude, longitude, accuracy);
-                
-                // Handle result...
-              },
-              (error) => {
-                // Error handling
-                handleGeolocationError(error);
-                setIsLoading(false);
-              },
-              {
-                enableHighAccuracy: true,
-                timeout: 10000, // 10 seconds
-                maximumAge: 0, // Don't use cached position
-              }
-            );
+               navigator.geolocation.getCurrentPosition(
+                 async (position) => {
+                   const { latitude, longitude, accuracy } = position.coords;
+                   
+                   // Validate coordinates exist
+                   if (latitude === undefined || longitude === undefined) {
+                     alert('Failed to get location coordinates. Please try again.');
+                     setIsLoading(false);
+                     return;
+                   }
+                   
+                   // Call server action with location
+                   const result = await checkIn(latitude, longitude, accuracy);
+                   
+                   // Handle result...
+                 },
+                 (error) => {
+                   // Error handling
+                   handleGeolocationError(error);
+                   setIsLoading(false);
+                 },
+                 {
+                   enableHighAccuracy: true,
+                   timeout: 10000, // 10 seconds
+                   maximumAge: 0, // Don't use cached position
+                 }
+               );
    ```
 
 
@@ -333,21 +333,21 @@ export async function checkIn(
 
 3. **Error Handling Function**:
    ```typescript
-            const handleGeolocationError = (error: GeolocationPositionError) => {
-              switch (error.code) {
-                case error.PERMISSION_DENIED:
-                  alert('Location permission is required to check in. Please enable location access in your browser settings and try again.');
-                  break;
-                case error.POSITION_UNAVAILABLE:
-                  alert('Unable to get your location. Please check your device settings and try again.');
-                  break;
-                case error.TIMEOUT:
-                  alert('Location request timed out. Please try again.');
-                  break;
-                default:
-                  alert('Failed to get your location. Please try again.');
-              }
-            };
+               const handleGeolocationError = (error: GeolocationPositionError) => {
+                 switch (error.code) {
+                   case error.PERMISSION_DENIED:
+                     alert('Location permission is required to check in. Please enable location access in your browser settings and try again.');
+                     break;
+                   case error.POSITION_UNAVAILABLE:
+                     alert('Unable to get your location. Please check your device settings and try again.');
+                     break;
+                   case error.TIMEOUT:
+                     alert('Location request timed out. Please try again.');
+                     break;
+                   default:
+                     alert('Failed to get your location. Please try again.');
+                 }
+               };
    ```
 
 
@@ -467,4 +467,3 @@ If issues arise:
 ## Future Enhancements (Not in Scope)
 
 - Multiple office locations management UI
-- Google Maps URL parsing for location setup
