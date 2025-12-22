@@ -221,49 +221,132 @@ export default function EmployeeDashboardClient() {
     return 'preCheckIn';
   }, [checkOutDateTime, isCheckedIn, shiftEnd, now]);
 
+  // Handle geolocation errors with user-friendly messages
+  const handleGeolocationError = (error: GeolocationPositionError) => {
+    switch (error.code) {
+      case error.PERMISSION_DENIED:
+        showToast(
+          'warning',
+          'Location Required',
+          'Location permission is required to check in. Please enable location access in your browser settings and try again.'
+        );
+        break;
+      case error.POSITION_UNAVAILABLE:
+        showToast(
+          'warning',
+          'Location Unavailable',
+          'Unable to get your location. Please check your device settings and try again.'
+        );
+        break;
+      case error.TIMEOUT:
+        showToast(
+          'warning',
+          'Location Timeout',
+          'Location request timed out. Please try again.'
+        );
+        break;
+      default:
+        showToast(
+          'warning',
+          'Location Error',
+          'Failed to get your location. Please try again.'
+        );
+    }
+  };
+
   const handleCheckIn = async () => {
     if (isLoading || checkInDateTime) {
       return;
     }
 
     setIsLoading(true);
-    try {
-      const result = await checkIn();
 
-      if (result.error) {
-        alert(result.error);
-        setIsLoading(false);
-        return;
-      }
-
-      if (result.data?.check_in_time) {
-        const checkInTime = new Date(result.data.check_in_time);
-        const checkInStatus = result.data.check_in_status || 'ontime';
-
-        const shiftStart = setToHour(checkInTime, SHIFT_START_HOUR);
-        const timeDiffMs = checkInTime.getTime() - shiftStart.getTime();
-        const timeDiffMinutes = Math.floor(timeDiffMs / 60000);
-
-        const params = new URLSearchParams({
-          time: checkInTime.toISOString(),
-          status: checkInStatus,
-          minutesDiff: timeDiffMinutes.toString(),
-        });
-
-        const successUrl = `/check-in-success?${params.toString()}`;
-        setIsLoading(false);
-        window.location.href = successUrl;
-        return;
-      } else {
-        console.error('Check-in succeeded but no data returned');
-        alert('Check-in completed but failed to retrieve data. Please refresh the page.');
-        setIsLoading(false);
-      }
-    } catch (error) {
-      console.error('Check-in error:', error);
-      alert('Failed to check in. Please try again.');
+    // Check if geolocation is supported
+    if (!navigator.geolocation) {
+      showToast(
+        'warning',
+        'Not Supported',
+        'Geolocation is not supported by your browser. Please use a modern browser.'
+      );
       setIsLoading(false);
+      return;
     }
+
+    // Request location from browser
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude, accuracy } = position.coords;
+
+        // Validate coordinates exist
+        if (latitude === undefined || longitude === undefined) {
+          showToast(
+            'warning',
+            'Location Error',
+            'Failed to get location coordinates. Please try again.'
+          );
+          setIsLoading(false);
+          return;
+        }
+
+        try {
+          // Call server action with location
+          const result = await checkIn(latitude, longitude, accuracy);
+
+          if (result.error) {
+            // Check if it's a distance error (contains "away from")
+            if (result.error.includes('away from')) {
+              showToast('warning', 'Too Far', result.error);
+            } else {
+              showToast('warning', 'Check-in Failed', result.error);
+            }
+            setIsLoading(false);
+            return;
+          }
+
+          if (result.data?.check_in_time) {
+            const checkInTime = new Date(result.data.check_in_time);
+            const checkInStatus = result.data.check_in_status || 'ontime';
+
+            const shiftStart = setToHour(checkInTime, SHIFT_START_HOUR);
+            const timeDiffMs = checkInTime.getTime() - shiftStart.getTime();
+            const timeDiffMinutes = Math.floor(timeDiffMs / 60000);
+
+            const params = new URLSearchParams({
+              time: checkInTime.toISOString(),
+              status: checkInStatus,
+              minutesDiff: timeDiffMinutes.toString(),
+            });
+
+            const successUrl = `/check-in-success?${params.toString()}`;
+            setIsLoading(false);
+            window.location.href = successUrl;
+            return;
+          } else {
+            console.error('Check-in succeeded but no data returned');
+            showToast(
+              'warning',
+              'Check-in Issue',
+              'Check-in completed but failed to retrieve data. Please refresh the page.'
+            );
+            setIsLoading(false);
+          }
+        } catch (error) {
+          console.error('Check-in error:', error);
+          showToast('warning', 'Check-in Failed', 'Failed to check in. Please try again.');
+          setIsLoading(false);
+        }
+      },
+      (error) => {
+        // Handle geolocation errors
+        handleGeolocationError(error);
+        setIsLoading(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000, // 10 seconds
+        maximumAge: 0, // Don't use cached position
+      }
+    );
   };
 
   const handleCheckOutRequest = () => {

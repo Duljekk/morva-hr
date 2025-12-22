@@ -11,6 +11,11 @@ import {
   APP_TIMEZONE
 } from '@/lib/time/time-engine';
 import { formatDateISO, formatTimeWIB } from '@/lib/time/format';
+import {
+  validateCoordinates,
+  getOfficeLocation,
+  calculateDistance,
+} from '@/lib/utils/geolocation';
 
 /**
  * ATTENDANCE ACTIONS
@@ -94,13 +99,21 @@ export async function getTodaysAttendance(): Promise<
  * CHECK IN
  * 
  * Logic:
- * 1. Get user and their shift schedule from users table
- * 2. Record current time as check_in_time
- * 3. Compare with shift_start_hour to determine if 'late' or 'ontime'
- * 4. Insert new attendance record for today
- * 5. Revalidate page to show updated UI
+ * 1. Validate location is provided (required for check-in)
+ * 2. Validate coordinates are within valid ranges
+ * 3. Calculate distance from office using Haversine formula
+ * 4. Reject if distance > 50m radius
+ * 5. Get user and their shift schedule from users table
+ * 6. Record current time as check_in_time
+ * 7. Compare with shift_start_hour to determine if 'late' or 'ontime'
+ * 8. Insert new attendance record with location data
+ * 9. Revalidate page to show updated UI
  */
-export async function checkIn(): Promise<
+export async function checkIn(
+  latitude?: number,
+  longitude?: number,
+  accuracy?: number
+): Promise<
   | { data: any; error?: never }
   | { error: string; data?: never }
 > {
@@ -111,6 +124,32 @@ export async function checkIn(): Promise<
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return { error: 'Not authenticated' };
+    }
+
+    // LOCATION VALIDATION: Location is required for check-in
+    if (latitude === undefined || longitude === undefined) {
+      return { error: 'Location is required for check-in. Please enable location services.' };
+    }
+
+    // Validate coordinate ranges
+    if (!validateCoordinates(latitude, longitude)) {
+      return { error: 'Invalid location coordinates. Please try again.' };
+    }
+
+    // Calculate distance from office
+    const officeLocation = getOfficeLocation();
+    const distance = calculateDistance(
+      latitude,
+      longitude,
+      officeLocation.latitude,
+      officeLocation.longitude
+    );
+
+    // Check if within allowed radius (50m default)
+    if (distance > officeLocation.radius) {
+      return {
+        error: `You are ${Math.round(distance)}m away from the office. Please move within ${officeLocation.radius}m to check in.`,
+      };
     }
 
     const today = getTodayDateString();
@@ -155,7 +194,7 @@ export async function checkIn(): Promise<
     // tolerance of 1 minute: 09:00:00 to 09:00:59 is ontime, 09:01:00+ is late
     const checkInStatus = compareToShiftTime(shiftStartHour, 1) > 0 ? 'late' : 'ontime';
 
-    // Insert attendance record
+    // Insert attendance record with location data
     const { data, error } = await (supabase as any)
       .from('attendance_records')
       .insert({
@@ -163,6 +202,9 @@ export async function checkIn(): Promise<
         date: today,
         check_in_time: checkInTime,
         check_in_status: checkInStatus,
+        check_in_latitude: latitude,
+        check_in_longitude: longitude,
+        check_in_location_accuracy: accuracy || null,
       })
       .select()
       .single();
