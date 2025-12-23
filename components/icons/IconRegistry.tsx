@@ -62,6 +62,11 @@ const iconComponents: Record<IconName, () => Promise<{ default: ComponentType<SV
   EyeOpenIcon: () => import('./shared/EyeOpen'),
   EyeClosedIcon: () => import('./shared/EyeClosed'),
   PeopleIcon: () => import('./shared/People'),
+  BuildingIcon: () => import('./shared/Building'),
+  CoffeeIcon: () => import('./shared/Coffee'),
+  CalendarClockIcon: () => import('./shared/CalendarClock'),
+  TimerIcon: () => import('./shared/Timer'),
+  LinkIcon: () => import('./shared/Link'),
   
   // HR icons
   DashboardIcon: () => import('./hr/Dashboard'),

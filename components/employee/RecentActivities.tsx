@@ -1,10 +1,11 @@
 'use client';
 
 import { memo, useMemo } from 'react';
-import CheckInIcon from '@/components/icons/shared/CheckInIcon';
-import CheckoutIcon from '@/components/icons/shared/CheckoutIcon';
+import CheckInIllustration from '@/components/icons/employee/CheckInIllustration';
+import CheckOutIllustration from '@/components/icons/employee/CheckOutIllustration';
 import { SpriteIcon } from '@/components/shared/IconSprite';
-import AttendanceBadge, { type AttendanceStatus, type LeaveStatus } from '@/components/employee/AttendanceBadge';
+import ActivityStatusBadge, { type ActivityStatus } from '@/components/hr/employee/ActivityStatusBadge';
+import UnifiedBadge, { type UnifiedBadgeColor } from '@/components/shared/UnifiedBadge';
 
 // Leave icon imports
 import AnnualPendingIcon from '@/app/assets/icons/annual-pending.svg';
@@ -16,6 +17,9 @@ import SickRejectedIcon from '@/app/assets/icons/sick-rejected.svg';
 import UnpaidPendingIcon from '@/app/assets/icons/unpaid-pending.svg';
 import UnpaidApprovedIcon from '@/app/assets/icons/unpaid-approved.svg';
 import UnpaidRejectedIcon from '@/app/assets/icons/unpaid-rejected.svg';
+
+export type LeaveStatus = 'pending' | 'approved' | 'rejected';
+export type AttendanceStatus = 'late' | 'ontime' | 'overtime' | 'leftearly';
 
 export interface Activity {
   type: 'checkin' | 'checkout' | 'leave';
@@ -65,6 +69,32 @@ const getLeaveIcon = (leaveType: 'annual' | 'sick' | 'unpaid', status: LeaveStat
   if (status === 'pending') return UnpaidPendingIcon;
   if (status === 'approved') return UnpaidApprovedIcon;
   return UnpaidRejectedIcon;
+};
+
+/**
+ * Map attendance status to ActivityStatus for UnifiedBadge
+ */
+const mapToActivityStatus = (status: AttendanceStatus): ActivityStatus => {
+  switch (status) {
+    case 'ontime':
+      return 'onTime';
+    case 'late':
+    case 'leftearly':
+      return 'late';
+    case 'overtime':
+      return 'overtime';
+    default:
+      return 'onTime';
+  }
+};
+
+/**
+ * Map leave status to UnifiedBadge config
+ */
+const leaveStatusConfig: Record<LeaveStatus, { color: UnifiedBadgeColor; label: string }> = {
+  pending: { color: 'warning', label: 'Pending' },
+  approved: { color: 'success', label: 'Approved' },
+  rejected: { color: 'danger', label: 'Rejected' },
 };
 
 /**
@@ -151,7 +181,13 @@ function RecentActivities({ activities }: RecentActivitiesProps) {
 
                                 {/* Status Badge */}
                                 {activity.status && (
-                                  <AttendanceBadge status={activity.status as LeaveStatus} />
+                                  <UnifiedBadge
+                                    text={leaveStatusConfig[activity.status as LeaveStatus].label}
+                                    color={leaveStatusConfig[activity.status as LeaveStatus].color}
+                                    size="sm"
+                                    font="semibold"
+                                    padding="compact"
+                                  />
                                 )}
                               </div>
                             </div>
@@ -168,9 +204,9 @@ function RecentActivities({ activities }: RecentActivitiesProps) {
                               <div className={`flex items-center gap-2 ${actIndex > 0 ? 'pt-2.5' : ''} ${actIndex < attendance.length - 1 ? 'pb-3' : ''}`}>
                                 {/* Icon */}
                                 {activity.type === 'checkin' ? (
-                                  <CheckInIcon className="h-8 w-8 shrink-0 text-neutral-500" size={32} />
+                                  <CheckInIllustration size={32} />
                                 ) : (
-                                  <CheckoutIcon className="h-8 w-8 shrink-0 text-neutral-500" size={32} />
+                                  <CheckOutIllustration size={32} />
                                 )}
 
                                 {/* Text and Badge */}
@@ -186,7 +222,7 @@ function RecentActivities({ activities }: RecentActivitiesProps) {
 
                                   {/* Status Badge */}
                                   {activity.status && (
-                                    <AttendanceBadge status={activity.status as AttendanceStatus} />
+                                    <ActivityStatusBadge status={mapToActivityStatus(activity.status as AttendanceStatus)} />
                                   )}
                                 </div>
                               </div>

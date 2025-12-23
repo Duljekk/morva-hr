@@ -25,6 +25,7 @@ export interface CheckInLocation {
   googleMapsUrl: string | null;
   formattedAddress: string | null;
   isActive: boolean;
+  isSelected: boolean;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -135,6 +136,7 @@ export async function addCheckInLocation(
       googleMapsUrl: insertedLocation.google_maps_url,
       formattedAddress: insertedLocation.formatted_address,
       isActive: insertedLocation.is_active,
+      isSelected: insertedLocation.is_selected || false,
       createdBy: insertedLocation.created_by,
       createdAt: insertedLocation.created_at,
       updatedAt: insertedLocation.updated_at,
@@ -198,6 +200,7 @@ export async function getCheckInLocations(): Promise<{
       googleMapsUrl: loc.google_maps_url,
       formattedAddress: loc.formatted_address,
       isActive: loc.is_active,
+      isSelected: loc.is_selected || false,
       createdBy: loc.created_by,
       createdAt: loc.created_at,
       updatedAt: loc.updated_at,
@@ -297,5 +300,123 @@ export async function toggleLocationActive(
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error('[toggleLocationActive] Error:', errorMessage);
     return { success: false, error: errorMessage };
+  }
+}
+
+
+/**
+ * SELECT LOCATION FOR CHECK-IN
+ * 
+ * Marks a location as the selected/primary location for GPS check-in validation.
+ * Deselects all other locations first to ensure only one is selected.
+ * 
+ * Requirements: 3.1, 3.2, 3.3
+ */
+export async function selectLocation(
+  id: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Require HR admin role
+    const { supabase } = await requireHRAdmin();
+
+    if (!id || typeof id !== 'string') {
+      return { success: false, error: 'Location ID is required' };
+    }
+
+    // First, deselect all locations (Requirement 3.3: mutual exclusivity)
+    const { error: deselectError } = await supabase
+      .from('check_in_locations')
+      .update({ 
+        is_selected: false,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('is_selected', true);
+
+    if (deselectError) {
+      console.error('[selectLocation] Deselect error:', deselectError);
+      return { success: false, error: 'Failed to update location selection' };
+    }
+
+    // Then, select the specified location (Requirement 3.1, 3.2)
+    const { error: selectError } = await supabase
+      .from('check_in_locations')
+      .update({ 
+        is_selected: true,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id);
+
+    if (selectError) {
+      console.error('[selectLocation] Select error:', selectError);
+      return { success: false, error: 'Failed to select location' };
+    }
+
+    // Invalidate cache for both HR views and check-in validation
+    revalidateTag('check-in-locations', 'max');
+    revalidateTag('selected-location', 'max');
+
+    return { success: true };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('[selectLocation] Error:', errorMessage);
+    return { success: false, error: errorMessage };
+  }
+}
+
+/**
+ * GET SELECTED LOCATION FOR CHECK-IN VALIDATION
+ * 
+ * Fetches the currently selected location for GPS check-in validation.
+ * This is used by the check-in flow to validate employee location.
+ * Does NOT require HR admin role - any authenticated user can fetch this.
+ * 
+ * Returns null if no location is selected (falls back to hardcoded config).
+ */
+export async function getSelectedLocation(): Promise<{
+  data?: {
+    id: string;
+    name: string;
+    latitude: number;
+    longitude: number;
+    radiusMeters: number;
+  } | null;
+  error?: string;
+}> {
+  try {
+    // Use regular Supabase client (not HR admin restricted)
+    const { createClient } = await import('@/lib/supabase/server');
+    const supabase = await createClient();
+
+    // Fetch the selected location
+    const { data: location, error } = await supabase
+      .from('check_in_locations')
+      .select('id, name, latitude, longitude, radius_meters')
+      .eq('is_selected', true)
+      .eq('is_active', true)
+      .single();
+
+    if (error) {
+      // PGRST116 = no rows returned (no location selected)
+      if (error.code === 'PGRST116') {
+        console.log('[getSelectedLocation] No location selected, will use fallback');
+        return { data: null };
+      }
+      console.error('[getSelectedLocation] Query error:', error);
+      return { error: 'Failed to fetch selected location' };
+    }
+
+    return {
+      data: {
+        id: location.id,
+        name: location.name,
+        latitude: Number(location.latitude),
+        longitude: Number(location.longitude),
+        radiusMeters: location.radius_meters,
+      },
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('[getSelectedLocation] Error:', errorMessage);
+    return { error: errorMessage };
   }
 }

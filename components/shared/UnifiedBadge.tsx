@@ -19,8 +19,9 @@ export type UnifiedBadgeColor = 'neutral' | 'success' | 'warning' | 'danger' | '
  * 
  * - sm: 20px height (compact)
  * - md: 22px height (standard)
+ * - lg: 24px height (large)
  */
-export type UnifiedBadgeSize = 'sm' | 'md';
+export type UnifiedBadgeSize = 'sm' | 'md' | 'lg';
 
 /**
  * UnifiedBadge Font Weight Variants
@@ -83,6 +84,18 @@ export interface UnifiedBadgeProps {
      * @default "normal"
      */
     padding?: UnifiedBadgePadding;
+
+    /**
+     * Custom icon container size in pixels
+     * @default 12
+     */
+    iconSize?: number;
+
+    /**
+     * Custom text container horizontal padding in pixels
+     * @default 2
+     */
+    textPadding?: number;
 }
 
 // Color configuration matching Figma design exactly
@@ -117,6 +130,7 @@ const colorConfig: Record<UnifiedBadgeColor, { bg: string; text: string }> = {
 const sizeConfig: Record<UnifiedBadgeSize, { height: string }> = {
     sm: { height: 'h-[20px]' },
     md: { height: 'h-[22px]' },
+    lg: { height: 'h-[24px]' },
 };
 
 // Font configuration
@@ -163,6 +177,8 @@ const UnifiedBadge = memo(function UnifiedBadge({
     size = 'md',
     className = '',
     padding = 'normal',
+    iconSize = 12,
+    textPadding = 2,
 }: UnifiedBadgeProps) {
     const colors = colorConfig[color];
     const sizeStyle = sizeConfig[size];
@@ -194,7 +210,8 @@ const UnifiedBadge = memo(function UnifiedBadge({
             {/* Icon Container */}
             {hasIcon && icon && (
                 <div
-                    className="overflow-clip relative shrink-0 size-[12px] flex items-center justify-center"
+                    className="overflow-clip relative shrink-0 flex items-center justify-center"
+                    style={{ width: iconSize, height: iconSize }}
                     data-name="Icon Container"
                 >
                     {icon}
@@ -203,7 +220,8 @@ const UnifiedBadge = memo(function UnifiedBadge({
 
             {/* Text Container */}
             <div
-                className="flex items-center justify-center px-[2px] py-0 shrink-0"
+                className="flex items-center justify-center py-0 shrink-0"
+                style={{ paddingLeft: textPadding, paddingRight: textPadding }}
                 data-name="Text Container"
             >
                 <p

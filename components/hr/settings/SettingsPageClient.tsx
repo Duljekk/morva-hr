@@ -7,6 +7,7 @@ import SettingsRightSection, { OfficeLocation } from './SettingsRightSection';
 import {
   getCheckInLocations,
   addCheckInLocation,
+  selectLocation,
   CheckInLocation,
 } from '@/lib/actions/hr/locations';
 
@@ -76,8 +77,11 @@ export default function SettingsPageClient() {
         const uiLocations = result.data.map(transformToOfficeLocation);
         setOfficeLocations(uiLocations);
 
-        // Select first location by default if available
-        if (uiLocations.length > 0 && !selectedOfficeId) {
+        // Find the selected location from database, or default to first
+        const selectedLocation = result.data.find(loc => loc.isSelected);
+        if (selectedLocation) {
+          setSelectedOfficeId(selectedLocation.id);
+        } else if (uiLocations.length > 0 && !selectedOfficeId) {
           setSelectedOfficeId(uiLocations[0].id);
         }
       }
@@ -99,8 +103,31 @@ export default function SettingsPageClient() {
     setActiveTab(tab);
   };
 
-  const handleOfficeSelect = (officeId: string) => {
+  /**
+   * Handle office location selection
+   * Persists the selection to the database for check-in validation
+   * Requirements: 3.1, 3.2, 3.3
+   */
+  const handleOfficeSelect = async (officeId: string) => {
+    // Optimistically update UI
     setSelectedOfficeId(officeId);
+    
+    try {
+      // Persist selection to database
+      const result = await selectLocation(officeId);
+      
+      if (!result.success) {
+        console.error('[SettingsPageClient] Failed to select location:', result.error);
+        setLocationError(result.error || 'Failed to select location');
+        // Revert on error - refetch to get correct state
+        fetchLocations();
+      }
+    } catch (error) {
+      console.error('[SettingsPageClient] Error selecting location:', error);
+      setLocationError('Failed to select location. Please try again.');
+      // Revert on error
+      fetchLocations();
+    }
   };
 
   /**

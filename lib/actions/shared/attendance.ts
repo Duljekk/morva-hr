@@ -13,7 +13,7 @@ import {
 import { formatDateISO, formatTimeWIB } from '@/lib/time/format';
 import {
   validateCoordinates,
-  getOfficeLocation,
+  getOfficeLocationFromDB,
   calculateDistance,
 } from '@/lib/utils/geolocation';
 
@@ -136,8 +136,8 @@ export async function checkIn(
       return { error: 'Invalid location coordinates. Please try again.' };
     }
 
-    // Calculate distance from office
-    const officeLocation = getOfficeLocation();
+    // Calculate distance from office (using database location)
+    const officeLocation = await getOfficeLocationFromDB();
     const distance = calculateDistance(
       latitude,
       longitude,

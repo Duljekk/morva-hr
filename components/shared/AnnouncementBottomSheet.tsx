@@ -4,12 +4,11 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import useLockBodyScroll from '@/app/hooks/useLockBodyScroll';
 import { announcementBackdropVariants, announcementSheetVariants, announcementContentVariants, ANNOUNCEMENT_ANIMATION_SPEC } from '@/app/lib/animations/announcementBottomSheetVariants';
-import Badge from '@/components/shared/Badge';
+import UnifiedBadge from '@/components/shared/UnifiedBadge';
 import EmojiChip from '@/components/employee/EmojiChip';
 import ButtonLarge from '@/components/shared/ButtonLarge';
 import AnnouncementIcon from '@/app/assets/icons/announcement.svg';
-import TimerIcon from '@/app/assets/icons/timer.svg';
-import CalendarIcon from '@/app/assets/icons/calendar-1.svg';
+import { ClockOutlineIcon, CalendarOutlineIcon } from '@/components/icons';
 import EmojiIcon from '@/app/assets/icons/emoji.svg';
 import { useAnnouncementReactions } from '@/lib/hooks/useAnnouncementReactions';
 
@@ -481,12 +480,26 @@ export default function AnnouncementBottomSheet({
 
                       {/* Date and Time Badges */}
                       <div className="flex gap-[8px] items-start">
-                        <Badge variant="neutral" size="sm" icon={CalendarIcon} showIcon={true}>
-                          {announcement.date}
-                        </Badge>
-                        <Badge variant="neutral" size="sm" icon={TimerIcon} showIcon={true}>
-                          {announcement.time}
-                        </Badge>
+                        <UnifiedBadge
+                          text={announcement.date}
+                          color="neutral"
+                          size="lg"
+                          font="semibold"
+                          hasIcon={true}
+                          icon={<CalendarOutlineIcon size={14} className="text-neutral-600 opacity-60" />}
+                          iconSize={14}
+                          textPadding={4}
+                        />
+                        <UnifiedBadge
+                          text={announcement.time}
+                          color="neutral"
+                          size="lg"
+                          font="semibold"
+                          hasIcon={true}
+                          icon={<ClockOutlineIcon size={14} className="text-neutral-600 opacity-60" />}
+                          iconSize={14}
+                          textPadding={4}
+                        />
                       </div>
                     </div>
                   </div>

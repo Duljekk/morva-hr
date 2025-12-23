@@ -4,7 +4,7 @@
  * Functions for GPS-based check-in validation including:
  * - Distance calculation using Haversine formula
  * - Coordinate validation
- * - Office location retrieval
+ * - Office location retrieval from database
  */
 
 import { HR_WEATHER_LOCATION } from '@/lib/weather/config';
@@ -103,8 +103,8 @@ export function validateCoordinates(lat: number, lon: number): boolean {
 /**
  * Get office location for check-in validation
  * 
- * Currently uses HR_WEATHER_LOCATION from config.
- * Future: Can be extended to query database for active locations.
+ * Returns the hardcoded fallback location.
+ * For dynamic location from database, use getOfficeLocationFromDB().
  * 
  * @returns Office location with coordinates and radius
  */
@@ -115,6 +115,41 @@ export function getOfficeLocation(): OfficeLocation {
     radius: DEFAULT_CHECK_IN_RADIUS,
     label: HR_WEATHER_LOCATION.label,
   };
+}
+
+/**
+ * Get office location from database for check-in validation
+ * 
+ * Fetches the selected location from the database.
+ * Falls back to hardcoded HR_WEATHER_LOCATION if no location is selected.
+ * 
+ * This is an async function that should be used in server actions.
+ * 
+ * @returns Office location with coordinates and radius
+ */
+export async function getOfficeLocationFromDB(): Promise<OfficeLocation> {
+  try {
+    // Dynamic import to avoid circular dependencies
+    const { getSelectedLocation } = await import('@/lib/actions/hr/locations');
+    const result = await getSelectedLocation();
+
+    if (result.data) {
+      return {
+        latitude: result.data.latitude,
+        longitude: result.data.longitude,
+        radius: result.data.radiusMeters,
+        label: result.data.name,
+      };
+    }
+
+    // Fallback to hardcoded location if no database location is selected
+    console.log('[getOfficeLocationFromDB] No selected location, using fallback');
+    return getOfficeLocation();
+  } catch (error) {
+    console.error('[getOfficeLocationFromDB] Error fetching location:', error);
+    // Fallback to hardcoded location on error
+    return getOfficeLocation();
+  }
 }
 
 /**

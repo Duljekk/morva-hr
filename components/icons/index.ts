@@ -56,6 +56,9 @@ export type { ClockIconProps } from './shared/Clock';
 export { default as Clock18Icon } from './shared/Clock18';
 export type { Clock18IconProps } from './shared/Clock18';
 
+export { default as ClockOutlineIcon } from './shared/ClockOutline';
+export type { ClockOutlineIconProps } from './shared/ClockOutline';
+
 export { default as CheckInIcon } from './shared/CheckInIcon';
 export type { CheckInIconProps } from './shared/CheckInIcon';
 
@@ -162,7 +165,12 @@ export type { PayrollIconProps } from './hr/Payroll';
 // ============================================================================
 // Employee Icons - Employee-specific icons
 // ============================================================================
-// (To be added as employee icons are migrated)
+
+export { default as CheckInIllustration } from './employee/CheckInIllustration';
+export type { CheckInIllustrationProps } from './employee/CheckInIllustration';
+
+export { default as CheckOutIllustration } from './employee/CheckOutIllustration';
+export type { CheckOutIllustrationProps } from './employee/CheckOutIllustration';
 
 // ============================================================================
 // Type Exports - All icon prop types
@@ -214,6 +222,7 @@ export type IconName =
   | 'EyeOpenIcon'
   | 'EyeClosedIcon'
   | 'PeopleIcon'
+  | 'LinkIcon'
   | 'GrabberIcon'
   | 'DotGrid1x3HorizontalIcon'
   // HR icons
