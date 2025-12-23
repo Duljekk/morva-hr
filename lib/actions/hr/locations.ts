@@ -66,7 +66,7 @@ export async function addCheckInLocation(
     // Require HR admin role
     const { userId, supabase } = await requireHRAdmin();
 
-    const { googleMapsUrl, name, radiusMeters = 50 } = input;
+    const { googleMapsUrl, name, radiusMeters = 100 } = input; // Changed default from 50 to 100
 
     // Validate input
     if (!googleMapsUrl || typeof googleMapsUrl !== 'string') {

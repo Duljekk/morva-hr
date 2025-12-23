@@ -8,6 +8,8 @@ import EmployeesTableHeaderRow from '@/components/hr/employees/EmployeesTableHea
 import EmployeesGroupingRow from '@/components/hr/employees/EmployeesGroupingRow';
 import EmployeeTableRow, { Employee } from '@/components/hr/employees/EmployeeTableRow';
 import InviteUserModal from '@/components/hr/users/InviteUserModal';
+import DeleteEmployeeModal from '@/components/hr/employees/DeleteEmployeeModal';
+import { deleteEmployee } from '@/lib/actions/hr/employees';
 import type { ViewType } from '@/components/shared/ToggleView';
 
 interface EmployeesPageClientProps {
@@ -26,9 +28,11 @@ interface EmployeesPageClientProps {
  * - Sorting
  * - Employee selection
  * - Modal state
+ * - Delete employee functionality
  */
-export default function EmployeesPageClient({ employees }: EmployeesPageClientProps) {
+export default function EmployeesPageClient({ employees: initialEmployees }: EmployeesPageClientProps) {
   const router = useRouter();
+  const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
   const [searchValue, setSearchValue] = useState('');
   const [viewType, setViewType] = useState<ViewType>('grid');
   const [sortValue, setSortValue] = useState('name-asc');
@@ -36,6 +40,11 @@ export default function EmployeesPageClient({ employees }: EmployeesPageClientPr
   const [allSelected, setAllSelected] = useState(false);
   const [selectedEmployees, setSelectedEmployees] = useState<Set<string>>(new Set());
   const [showInviteModal, setShowInviteModal] = useState(false);
+  
+  // Delete modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Filter and sort employees based on current state
   const filteredEmployees = useMemo(() => {
@@ -105,6 +114,56 @@ export default function EmployeesPageClient({ employees }: EmployeesPageClientPr
     console.log('Action clicked for employee:', id);
   };
 
+  const handleEmployeeEdit = (id: string) => {
+    // Navigate to employee edit page
+    router.push(`/admin/employees/${id}/edit`);
+  };
+
+  const handleEmployeeDeleteClick = (id: string) => {
+    const employee = employees.find((emp) => emp.id === id);
+    if (employee) {
+      setEmployeeToDelete(employee);
+      setShowDeleteModal(true);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!employeeToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      const result = await deleteEmployee(employeeToDelete.id);
+      
+      if (result.error) {
+        console.error('Failed to delete employee:', result.error);
+        // TODO: Show error toast notification
+        return;
+      }
+      
+      // Remove employee from local state
+      setEmployees((prev) => prev.filter((emp) => emp.id !== employeeToDelete.id));
+      
+      // Close modal and reset state
+      setShowDeleteModal(false);
+      setEmployeeToDelete(null);
+      
+      // Refresh the page data
+      router.refresh();
+    } catch (error) {
+      console.error('Unexpected error deleting employee:', error);
+      // TODO: Show error toast notification
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteModalClose = () => {
+    if (!isDeleting) {
+      setShowDeleteModal(false);
+      setEmployeeToDelete(null);
+    }
+  };
+
   const handleEmployeeNameClick = (id: string) => {
     router.push(`/admin/employees/${id}`);
   };
@@ -126,6 +185,8 @@ export default function EmployeesPageClient({ employees }: EmployeesPageClientPr
               isSelected={selectedEmployees.has(employee.id)}
               onSelectionChange={handleEmployeeSelectionChange}
               onActionClick={handleEmployeeActionClick}
+              onEdit={handleEmployeeEdit}
+              onDelete={handleEmployeeDeleteClick}
               onNameClick={handleEmployeeNameClick}
             />
           ))}
@@ -182,6 +243,15 @@ export default function EmployeesPageClient({ employees }: EmployeesPageClientPr
       <InviteUserModal 
         isOpen={showInviteModal}
         onClose={() => setShowInviteModal(false)}
+      />
+
+      {/* Delete Employee Modal */}
+      <DeleteEmployeeModal
+        isOpen={showDeleteModal}
+        onClose={handleDeleteModalClose}
+        onConfirm={handleDeleteConfirm}
+        employeeName={employeeToDelete?.name || ''}
+        isLoading={isDeleting}
       />
     </div>
   );

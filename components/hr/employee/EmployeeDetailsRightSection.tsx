@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import StatisticWidget from '@/components/hr/StatisticWidget';
+import StatisticSection from '@/components/hr/StatisticSection';
 import EmployeeActivitiesPanel, { type ActivityGroupData } from './EmployeeActivitiesPanel';
 import EmployeeDetailsRightSkeleton from './EmployeeDetailsRightSkeleton';
 import Clock18Icon from '@/components/icons/shared/Clock18';
@@ -97,28 +97,28 @@ export default function EmployeeDetailsRightSection({
       ) : (
         <>
           {/* Statistics Section */}
-          <div className="flex gap-4">
-            <StatisticWidget
-              title="Avg. Hours Worked"
-              value={avgHoursDisplay}
-              unit="hours"
-              trend={totalHoursTrend}
-              comparison="vs last month"
-              trendDirection="up"
-              icon={<HourglassIcon className="w-[18px] h-[18px]" />}
-              className="flex-1"
-            />
-            <StatisticWidget
-              title="Avg. Check-In Time"
-              value={checkInDisplay.time}
-              unit={checkInDisplay.meridiem || 'AM'}
-              trend={avgCheckInTrend}
-              comparison="vs last month"
-              trendDirection="down"
-              icon={<Clock18Icon className="w-[18px] h-[18px]" />}
-              className="flex-1"
-            />
-          </div>
+          <StatisticSection
+            statistics={[
+              {
+                title: 'Avg. Hours Worked',
+                value: avgHoursDisplay,
+                unit: 'hrs/day',
+                trend: totalHoursTrend,
+                comparison: 'vs last month',
+                trendDirection: 'up',
+                icon: <HourglassIcon className="w-[18px] h-[18px]" />,
+              },
+              {
+                title: 'Avg. Check-In Time',
+                value: checkInDisplay.time,
+                unit: checkInDisplay.meridiem || 'AM',
+                trend: avgCheckInTrend,
+                comparison: 'vs last month',
+                trendDirection: 'up',
+                icon: <Clock18Icon className="w-[18px] h-[18px]" />,
+              },
+            ]}
+          />
 
           {/* Activities Section */}
           {error ? (

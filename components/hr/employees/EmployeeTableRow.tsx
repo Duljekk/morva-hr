@@ -5,6 +5,7 @@ import Checkbox from '@/components/shared/Checkbox';
 import Avatar from '@/components/shared/Avatar';
 import RoleBadge, { RoleBadgeVariant } from '@/components/shared/RoleBadge';
 import Bar from '@/components/shared/Bar';
+import DropdownActionMenu from '@/components/shared/DropdownActionMenu';
 import { DotGrid1x3HorizontalIcon } from '@/components/shared/Icons';
 
 export interface Employee {
@@ -79,8 +80,19 @@ export interface EmployeeTableRowProps {
 
   /**
    * Callback when row action is clicked (3-dot menu)
+   * @deprecated Use onEdit and onDelete instead
    */
   onActionClick?: (id: string) => void;
+
+  /**
+   * Callback when Edit action is clicked
+   */
+  onEdit?: (id: string) => void;
+
+  /**
+   * Callback when Delete action is clicked
+   */
+  onDelete?: (id: string) => void;
 
   /**
    * Callback when row is clicked
@@ -358,16 +370,31 @@ const EmployeeTableRow = memo(function EmployeeTableRow({
   isSelected = false,
   onSelectionChange,
   onActionClick,
+  onEdit,
+  onDelete,
   onRowClick,
   onNameClick,
   className = '',
 }: EmployeeTableRowProps) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
   const handleCheckboxChange = (checked: boolean) => {
     onSelectionChange?.(employee.id, checked);
   };
 
   const handleActionClick = () => {
+    // Toggle menu open state
+    setIsMenuOpen((prev) => !prev);
+    // Also call legacy callback if provided
     onActionClick?.(employee.id);
+  };
+
+  const handleEdit = () => {
+    onEdit?.(employee.id);
+  };
+
+  const handleDelete = () => {
+    onDelete?.(employee.id);
   };
 
   const handleRowClick = () => {
@@ -530,10 +557,19 @@ const EmployeeTableRow = memo(function EmployeeTableRow({
         data-node-id="557:3088"
         onClick={(e) => e.stopPropagation()}
       >
-        <GhostButton
-          onClick={handleActionClick}
-          aria-label={`Actions for ${employee.name}`}
-        />
+        <div className="relative">
+          <GhostButton
+            onClick={handleActionClick}
+            aria-label={`Actions for ${employee.name}`}
+          />
+          <DropdownActionMenu
+            isOpen={isMenuOpen}
+            onClose={() => setIsMenuOpen(false)}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            position="bottom-right"
+          />
+        </div>
       </div>
     </div>
   );

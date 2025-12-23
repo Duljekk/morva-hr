@@ -137,6 +137,12 @@ export type { PeopleIconProps } from './shared/People';
 export { default as LinkIcon } from './shared/Link';
 export type { LinkIconProps } from './shared/Link';
 
+export { default as EditIcon } from './shared/Edit';
+export type { EditIconProps } from './shared/Edit';
+
+export { default as TrashIcon } from './shared/Trash';
+export type { TrashIconProps } from './shared/Trash';
+
 // Icons from shared/Icons.tsx (direct exports)
 export { GrabberIcon, DotGrid1x3HorizontalIcon } from '../shared/Icons';
 
@@ -223,6 +229,8 @@ export type IconName =
   | 'EyeClosedIcon'
   | 'PeopleIcon'
   | 'LinkIcon'
+  | 'EditIcon'
+  | 'TrashIcon'
   | 'GrabberIcon'
   | 'DotGrid1x3HorizontalIcon'
   // HR icons

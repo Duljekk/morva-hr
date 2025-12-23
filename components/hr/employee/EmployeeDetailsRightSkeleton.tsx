@@ -99,9 +99,20 @@ const EmployeeDetailsRightSkeleton = memo(function EmployeeDetailsRightSkeleton(
             aria-live="polite"
         >
             {/* Statistics Section */}
-            <div className="flex gap-4 animate-pulse">
-                <StatisticWidgetSkeleton />
-                <StatisticWidgetSkeleton />
+            <div className="flex flex-col gap-3 animate-pulse">
+                {/* Header + Dropdown Skeleton */}
+                <div className="flex items-center justify-between w-full">
+                    <div className="h-[24px] w-[80px] bg-neutral-200 rounded-[4px]" />
+                    <div className="flex gap-2 items-center">
+                        <div className="h-[36px] w-[100px] bg-neutral-200 rounded-[8px]" />
+                        <div className="h-[36px] w-[70px] bg-neutral-200 rounded-[8px]" />
+                    </div>
+                </div>
+                {/* Statistic Widgets */}
+                <div className="flex gap-4">
+                    <StatisticWidgetSkeleton />
+                    <StatisticWidgetSkeleton />
+                </div>
             </div>
 
             {/* Activities Panel Skeleton */}

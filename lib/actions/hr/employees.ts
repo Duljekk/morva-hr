@@ -55,6 +55,53 @@ interface AttendanceRecord {
  * 
  * @returns Object containing employee data array or error message
  */
+/**
+ * Delete (soft delete) an employee by setting is_active to false
+ * 
+ * @param employeeId - The UUID of the employee to delete
+ * @returns Object containing success status or error message
+ */
+export async function deleteEmployee(employeeId: string): Promise<{ success?: boolean; error?: string }> {
+  try {
+    const { supabase } = await requireHRAdmin();
+    
+    // Validate employeeId
+    if (!employeeId || typeof employeeId !== 'string') {
+      return { error: 'Invalid employee ID' };
+    }
+    
+    // Soft delete by setting is_active to false
+    const { error } = await supabase
+      .from('users')
+      .update({ 
+        is_active: false,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', employeeId)
+      .eq('role', 'employee'); // Ensure we only delete employees, not HR admins
+    
+    if (error) {
+      console.error('[deleteEmployee] Error deleting employee:', error.message);
+      return { error: 'Failed to delete employee' };
+    }
+    
+    return { success: true };
+  } catch (error) {
+    console.error('[deleteEmployee] Unexpected error:', error);
+    
+    if (error instanceof Error && error.message.includes('Unauthorized')) {
+      return { error: error.message };
+    }
+    
+    return { error: 'An unexpected error occurred while deleting employee' };
+  }
+}
+
+/**
+ * Fetch all employees with their leave balances and attendance status
+ * 
+ * @returns Object containing employee data array or error message
+ */
 export async function getEmployees(): Promise<{ data?: Employee[]; error?: string }> {
   try {
     const { supabase } = await requireHRAdmin();
