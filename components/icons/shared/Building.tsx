@@ -1,5 +1,5 @@
-interface BuildingProps {
-  size?: number;
+export interface BuildingIconProps {
+  size?: number | string;
   className?: string;
 }
 
@@ -7,7 +7,7 @@ interface BuildingProps {
  * Building Icon - Represents office/headquarters
  * Used for primary office locations (Morva HQ)
  */
-export default function Building({ size = 24, className = '' }: BuildingProps) {
+export default function Building({ size = 24, className = '' }: BuildingIconProps) {
   return (
     <svg
       width={size}

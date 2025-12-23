@@ -67,6 +67,8 @@ const iconComponents: Record<IconName, () => Promise<{ default: ComponentType<SV
   CalendarClockIcon: () => import('./shared/CalendarClock'),
   TimerIcon: () => import('./shared/Timer'),
   LinkIcon: () => import('./shared/Link'),
+  EditIcon: () => import('./shared/Edit'),
+  TrashIcon: () => import('./shared/Trash'),
   
   // HR icons
   DashboardIcon: () => import('./hr/Dashboard'),
