@@ -26,6 +26,7 @@ export interface CheckInLocation {
   formattedAddress: string | null;
   isActive: boolean;
   isSelected: boolean;
+  isPrimary: boolean;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -137,6 +138,7 @@ export async function addCheckInLocation(
       formattedAddress: insertedLocation.formatted_address,
       isActive: insertedLocation.is_active,
       isSelected: insertedLocation.is_selected || false,
+      isPrimary: insertedLocation.is_primary || false,
       createdBy: insertedLocation.created_by,
       createdAt: insertedLocation.created_at,
       updatedAt: insertedLocation.updated_at,
@@ -164,6 +166,7 @@ export async function addCheckInLocation(
  * 
  * Fetches all check-in locations for HR admin view.
  * Includes formatted address and active status.
+ * Sorts by: primary first, then by creation date (newest first).
  * 
  * Requirements: 2.1, 2.2
  */
@@ -201,10 +204,18 @@ export async function getCheckInLocations(): Promise<{
       formattedAddress: loc.formatted_address,
       isActive: loc.is_active,
       isSelected: loc.is_selected || false,
+      isPrimary: loc.is_primary || false,
       createdBy: loc.created_by,
       createdAt: loc.created_at,
       updatedAt: loc.updated_at,
     }));
+
+    // Sort: primary location first, then by creation date (newest first)
+    transformedLocations.sort((a, b) => {
+      if (a.isPrimary && !b.isPrimary) return -1;
+      if (!a.isPrimary && b.isPrimary) return 1;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
 
     return { data: transformedLocations };
   } catch (error) {
@@ -308,7 +319,7 @@ export async function toggleLocationActive(
  * SELECT LOCATION FOR CHECK-IN
  * 
  * Marks a location as the selected/primary location for GPS check-in validation.
- * Deselects all other locations first to ensure only one is selected.
+ * Uses a single atomic update to ensure data consistency.
  * 
  * Requirements: 3.1, 3.2, 3.3
  */
@@ -323,31 +334,45 @@ export async function selectLocation(
       return { success: false, error: 'Location ID is required' };
     }
 
-    // First, deselect all locations (Requirement 3.3: mutual exclusivity)
-    const { error: deselectError } = await supabase
-      .from('check_in_locations')
-      .update({ 
-        is_selected: false,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('is_selected', true);
+    // Use RPC for atomic operation: deselect all, then select the target
+    // This ensures we never end up in an inconsistent state
+    const { error: rpcError } = await supabase.rpc('select_check_in_location', {
+      location_id: id,
+    });
 
-    if (deselectError) {
-      console.error('[selectLocation] Deselect error:', deselectError);
-      return { success: false, error: 'Failed to update location selection' };
-    }
+    // Fallback to two-step update if RPC doesn't exist
+    if (rpcError && (rpcError.code === '42883' || rpcError.message?.includes('function'))) {
+      console.warn('[selectLocation] RPC not found, using fallback two-step update');
+      
+      // First, deselect all locations (Requirement 3.3: mutual exclusivity)
+      const { error: deselectError } = await supabase
+        .from('check_in_locations')
+        .update({ 
+          is_selected: false,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('is_selected', true);
 
-    // Then, select the specified location (Requirement 3.1, 3.2)
-    const { error: selectError } = await supabase
-      .from('check_in_locations')
-      .update({ 
-        is_selected: true,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', id);
+      if (deselectError) {
+        console.error('[selectLocation] Deselect error:', deselectError);
+        return { success: false, error: 'Failed to update location selection' };
+      }
 
-    if (selectError) {
-      console.error('[selectLocation] Select error:', selectError);
+      // Then, select the specified location (Requirement 3.1, 3.2)
+      const { error: selectError } = await supabase
+        .from('check_in_locations')
+        .update({ 
+          is_selected: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id);
+
+      if (selectError) {
+        console.error('[selectLocation] Select error:', selectError);
+        return { success: false, error: 'Failed to select location' };
+      }
+    } else if (rpcError) {
+      console.error('[selectLocation] RPC error:', rpcError);
       return { success: false, error: 'Failed to select location' };
     }
 

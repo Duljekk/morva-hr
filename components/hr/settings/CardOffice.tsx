@@ -141,7 +141,7 @@ const CardOffice = memo(function CardOffice({
   // Determine background and shadow based on state
   const containerStyles = isSelected
     ? 'bg-neutral-50'
-    : 'bg-white shadow-[0px_4px_4px_-2px_rgba(0,0,0,0.05),0px_0px_1px_1px_rgba(0,0,0,0.1)] hover:bg-[rgba(250,250,250,0.5)]';
+    : 'bg-white shadow-[0px_4px_4px_-2px_rgba(0,0,0,0.05),0px_0px_1px_1px_rgba(0,0,0,0.1)] hover:bg-[rgba(250,250,250,0.35)]';
   
   // Icon container background
   const iconContainerStyles = isSelected
@@ -158,7 +158,7 @@ const CardOffice = memo(function CardOffice({
       className={`
         flex flex-col gap-3 items-start
         p-5 rounded-2xl
-        w-full max-w-[536.5px]
+        w-full
         relative overflow-clip
         transition-all duration-200
         cursor-pointer

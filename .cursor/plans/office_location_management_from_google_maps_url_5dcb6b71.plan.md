@@ -192,4 +192,3 @@ sequenceDiagram
 
 - Validate Google Maps URL format before processing
 - Sanitize user input
-- Rate limit Geocoding API calls

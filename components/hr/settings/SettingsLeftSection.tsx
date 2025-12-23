@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { DotGrid1x3HorizontalIcon } from '@/components/icons';
 import LinkIcon from '@/components/icons/shared/Link';
 import MailIcon from '@/components/icons/shared/Mail';
+import Logo from '@/app/assets/icons/logo-large.svg';
 
 export interface CompanyData {
   /**
@@ -139,9 +140,7 @@ const SettingsLeftSection = memo(function SettingsLeftSection({
                 className="object-cover size-24 rounded-full"
               />
             ) : (
-              <span className="text-2xl font-semibold text-neutral-600">
-                {name.charAt(0).toUpperCase()}
-              </span>
+              <Logo className="size-24" />
             )}
           </div>
 

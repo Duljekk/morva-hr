@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import FormInput from '@/components/shared/FormInput';
 import CardOffice from './CardOffice';
+import BuildingIcon from '@/components/icons/shared/Building';
 
 export interface OfficeLocation {
   id: string;
@@ -23,6 +24,10 @@ export interface OfficeLocation {
    * Requirement 7.3
    */
   longitude: number;
+  /**
+   * Whether this is the primary/headquarters location
+   */
+  isPrimary: boolean;
 }
 
 interface SettingsRightSectionProps {
@@ -123,12 +128,28 @@ export default function SettingsRightSection({
     }
   }, [successMessage, warningMessage, onClearMessages]);
 
+  const [validationError, setValidationError] = useState<string | null>(null);
+
   const handleAddLocation = () => {
-    if (googleMapsLink.trim()) {
-      onAddLocation(googleMapsLink.trim());
-      setGoogleMapsLink('');
+    // Clear previous validation error
+    setValidationError(null);
+    
+    // Validate input is not empty
+    if (!googleMapsLink.trim()) {
+      setValidationError('Please enter a Google Maps URL');
+      return;
     }
+    
+    onAddLocation(googleMapsLink.trim());
+    setGoogleMapsLink('');
   };
+
+  // Clear validation error when user starts typing
+  useEffect(() => {
+    if (googleMapsLink && validationError) {
+      setValidationError(null);
+    }
+  }, [googleMapsLink, validationError]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -152,7 +173,7 @@ export default function SettingsRightSection({
             value={googleMapsLink}
             onChange={(e) => setGoogleMapsLink(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Insert Google Maps link here..."
+            placeholder="Google Maps URL"
             bgColor="white"
             className="w-[222px]"
           />
@@ -161,7 +182,7 @@ export default function SettingsRightSection({
           <button
             type="button"
             onClick={handleAddLocation}
-            disabled={isAddingLocation || !googleMapsLink.trim()}
+            disabled={isAddingLocation}
             className="
               flex items-center justify-center
               h-10 px-5 py-1.5
@@ -179,6 +200,40 @@ export default function SettingsRightSection({
       </div>
 
       {/* Messages Section - Requirements 1.5, 7.2 */}
+      {/* Validation Error - Empty input field */}
+      {validationError && (
+        <div 
+          className="flex items-start gap-2 w-full p-3 bg-red-50 border border-red-200 rounded-lg"
+          role="alert"
+          aria-live="polite"
+        >
+          <svg 
+            className="w-5 h-5 text-red-500 shrink-0 mt-0.5" 
+            fill="none" 
+            viewBox="0 0 24 24" 
+            stroke="currentColor"
+          >
+            <path 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              strokeWidth={2} 
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
+            />
+          </svg>
+          <p className="text-red-700 text-sm flex-1">{validationError}</p>
+          <button
+            type="button"
+            onClick={() => setValidationError(null)}
+            className="text-red-500 hover:text-red-700 transition-colors"
+            aria-label="Dismiss validation error"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       {/* Error Message - Requirement 1.5: Display error for invalid URL */}
       {errorMessage && (
         <div 
@@ -292,6 +347,7 @@ export default function SettingsRightSection({
             longitude={location.longitude}
             isSelected={selectedLocationId === location.id}
             onClick={() => onLocationSelect(location.id)}
+            icon={location.isPrimary ? <BuildingIcon size={24} className="text-[#404040]" /> : undefined}
           />
         ))}
 

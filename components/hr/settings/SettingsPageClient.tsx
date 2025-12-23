@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import SettingsPageHeader, { SettingsTab } from './SettingsPageHeader';
 import SettingsLeftSection, { CompanyData } from './SettingsLeftSection';
 import SettingsRightSection, { OfficeLocation } from './SettingsRightSection';
+import SetWFCConfirmationModal from './SetWFCConfirmationModal';
 import {
   getCheckInLocations,
   addCheckInLocation,
@@ -32,6 +33,7 @@ function transformToOfficeLocation(location: CheckInLocation): OfficeLocation {
     formattedAddress: location.formattedAddress,
     latitude: location.latitude,
     longitude: location.longitude,
+    isPrimary: location.isPrimary,
   };
 }
 
@@ -57,6 +59,12 @@ export default function SettingsPageClient() {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [locationWarning, setLocationWarning] = useState<string | null>(null);
   const [locationSuccess, setLocationSuccess] = useState<string | null>(null);
+
+  // WFC Confirmation Modal state
+  const [isWFCModalOpen, setIsWFCModalOpen] = useState(false);
+  const [pendingLocationId, setPendingLocationId] = useState<string | null>(null);
+  const [pendingLocationName, setPendingLocationName] = useState<string>('');
+  const [isSelectingLocation, setIsSelectingLocation] = useState(false);
 
   /**
    * Fetch locations from database on mount
@@ -105,29 +113,81 @@ export default function SettingsPageClient() {
 
   /**
    * Handle office location selection
+   * Shows confirmation modal for non-primary locations (WFC)
    * Persists the selection to the database for check-in validation
+   * Uses optimistic update with rollback on error
    * Requirements: 3.1, 3.2, 3.3
    */
-  const handleOfficeSelect = async (officeId: string) => {
+  const handleOfficeSelect = (officeId: string) => {
+    // Find the location being selected
+    const location = officeLocations.find((loc) => loc.id === officeId);
+    if (!location) return;
+
+    // If selecting a non-primary location, show confirmation modal
+    if (!location.isPrimary) {
+      setPendingLocationId(officeId);
+      setPendingLocationName(location.locationName);
+      setIsWFCModalOpen(true);
+      return;
+    }
+
+    // For primary location, select directly without confirmation
+    performLocationSelect(officeId);
+  };
+
+  /**
+   * Perform the actual location selection (called directly or after modal confirmation)
+   */
+  const performLocationSelect = async (officeId: string) => {
+    // Store previous state for rollback
+    const previousSelectedId = selectedOfficeId;
+
     // Optimistically update UI
     setSelectedOfficeId(officeId);
-    
+    setIsSelectingLocation(true);
+
     try {
       // Persist selection to database
       const result = await selectLocation(officeId);
-      
+
       if (!result.success) {
-        console.error('[SettingsPageClient] Failed to select location:', result.error);
+        console.error(
+          '[SettingsPageClient] Failed to select location:',
+          result.error
+        );
+        // Rollback to previous state
+        setSelectedOfficeId(previousSelectedId);
         setLocationError(result.error || 'Failed to select location');
-        // Revert on error - refetch to get correct state
-        fetchLocations();
       }
     } catch (error) {
       console.error('[SettingsPageClient] Error selecting location:', error);
+      // Rollback to previous state
+      setSelectedOfficeId(previousSelectedId);
       setLocationError('Failed to select location. Please try again.');
-      // Revert on error
-      fetchLocations();
+    } finally {
+      setIsSelectingLocation(false);
     }
+  };
+
+  /**
+   * Handle WFC modal confirmation
+   */
+  const handleWFCConfirm = async () => {
+    if (pendingLocationId) {
+      await performLocationSelect(pendingLocationId);
+      setIsWFCModalOpen(false);
+      setPendingLocationId(null);
+      setPendingLocationName('');
+    }
+  };
+
+  /**
+   * Handle WFC modal close/cancel
+   */
+  const handleWFCModalClose = () => {
+    setIsWFCModalOpen(false);
+    setPendingLocationId(null);
+    setPendingLocationName('');
   };
 
   /**
@@ -220,7 +280,7 @@ export default function SettingsPageClient() {
             id="company-panel"
             role="tabpanel"
             aria-labelledby="company-tab"
-            className="flex gap-7 items-start justify-center pt-7 px-8 pb-0"
+            className="flex gap-7 items-start justify-center pt-12 px-[64px] pb-0"
           >
             {/* Left Section - Company Profile */}
             <div className="flex-[1_0_0] min-w-0 min-h-0">
@@ -291,6 +351,15 @@ export default function SettingsPageClient() {
           </div>
         )}
       </div>
+
+      {/* WFC Confirmation Modal */}
+      <SetWFCConfirmationModal
+        isOpen={isWFCModalOpen}
+        onClose={handleWFCModalClose}
+        onConfirm={handleWFCConfirm}
+        locationName={pendingLocationName}
+        isLoading={isSelectingLocation}
+      />
     </div>
   );
 }
