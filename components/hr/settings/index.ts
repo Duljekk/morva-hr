@@ -7,3 +7,11 @@ export { default as SettingsRightSection } from './SettingsRightSection';
 export type { OfficeLocation } from './SettingsRightSection';
 export { default as SettingsLeftSection } from './SettingsLeftSection';
 export type { CompanyData, SettingsLeftSectionProps } from './SettingsLeftSection';
+
+// Skeleton components
+export { default as CardOfficeSkeleton } from './CardOfficeSkeleton';
+export type { CardOfficeSkeletonProps } from './CardOfficeSkeleton';
+export { default as SettingsLeftSectionSkeleton } from './SettingsLeftSectionSkeleton';
+export type { SettingsLeftSectionSkeletonProps } from './SettingsLeftSectionSkeleton';
+export { default as SettingsRightSectionSkeleton } from './SettingsRightSectionSkeleton';
+export type { SettingsRightSectionSkeletonProps } from './SettingsRightSectionSkeleton';

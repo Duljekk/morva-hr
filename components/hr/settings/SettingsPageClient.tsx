@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import SettingsPageHeader, { SettingsTab } from './SettingsPageHeader';
 import SettingsLeftSection, { CompanyData } from './SettingsLeftSection';
 import SettingsRightSection, { OfficeLocation } from './SettingsRightSection';
+import SettingsLeftSectionSkeleton from './SettingsLeftSectionSkeleton';
+import SettingsRightSectionSkeleton from './SettingsRightSectionSkeleton';
 import SetWFCConfirmationModal from './SetWFCConfirmationModal';
 import {
   getCheckInLocations,
@@ -284,29 +286,21 @@ export default function SettingsPageClient() {
           >
             {/* Left Section - Company Profile */}
             <div className="flex-[1_0_0] min-w-0 min-h-0">
-              <SettingsLeftSection
-                company={COMPANY_DATA}
-                onMenuClick={handleCompanyMenuClick}
-              />
+              {isLoadingLocations ? (
+                <SettingsLeftSectionSkeleton />
+              ) : (
+                <SettingsLeftSection
+                  company={COMPANY_DATA}
+                  onMenuClick={handleCompanyMenuClick}
+                />
+              )}
             </div>
 
             {/* Right Section - Office Locations */}
-            {isLoadingLocations ? (
-              <div className="flex-[1_0_0] min-w-0 min-h-0 flex flex-col gap-[18px] items-start">
-                <div className="flex items-center justify-between w-full">
-                  <h2 className="font-['Mona_Sans'] text-xl font-semibold leading-[30px] tracking-[-0.2px] text-[#404040]">
-                    Office
-                  </h2>
-                </div>
-                <div className="flex items-center justify-center w-full py-12 bg-neutral-50 rounded-2xl">
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-neutral-300 border-t-neutral-600 rounded-full animate-spin" />
-                    <p className="text-neutral-500 text-sm">Loading locations...</p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="flex-[1_0_0] min-w-0 min-h-0">
+            <div className="flex-[1_0_0] min-w-0 min-h-0">
+              {isLoadingLocations ? (
+                <SettingsRightSectionSkeleton count={3} />
+              ) : (
                 <SettingsRightSection
                   locations={officeLocations}
                   selectedLocationId={selectedOfficeId}
@@ -318,8 +312,8 @@ export default function SettingsPageClient() {
                   successMessage={locationSuccess}
                   onClearMessages={handleClearMessages}
                 />
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )}
 
