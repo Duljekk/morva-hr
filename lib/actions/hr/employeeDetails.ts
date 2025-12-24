@@ -8,7 +8,6 @@
  */
 
 import { requireHRAdmin } from '@/lib/auth/server';
-import { getCurrentYear } from '@/lib/utils/timezone';
 import {
   toEmployeeLeftSectionData,
   type DbUserDetail,
@@ -258,6 +257,8 @@ import {
   formatDateISO,
   formatTimeShort,
   APP_TIMEZONE,
+  getCurrentMonth,
+  getCurrentYear,
 } from '@/lib/utils/timezone';
 import type { ActivityGroupData, ActivityEntry } from '@/components/hr/employee/EmployeeActivitiesPanel';
 import type { ActivityStatus } from '@/components/hr/employee/ActivityStatusBadge';
@@ -566,36 +567,44 @@ export async function getEmployeeActivities(
 
 
 /**
- * Fetch employee attendance statistics for the last 30 days
+ * Fetch employee attendance statistics for a specific month/year
  * 
  * Calculates:
  * - Average hours worked per day (from total_hours field)
  * - Average check-in time as minutes from midnight in GMT+7
  * 
  * @param employeeId - The employee's user ID
+ * @param month - Month to filter by (1-12), defaults to current month
+ * @param year - Year to filter by (e.g., 2025), defaults to current year
  * @returns Promise with attendance stats or error
  */
 export async function getEmployeeAttendanceStats(
-  employeeId: string
+  employeeId: string,
+  month?: number,
+  year?: number
 ): Promise<{ data?: EmployeeAttendanceStats; error?: string }> {
   try {
     const { supabase } = await requireHRAdmin();
 
-    // Calculate date range: last 30 days in GMT+7
-    const nowParts = getNowPartsInGMT7();
-    const today = getTodayDateString();
+    // Use provided month/year or default to current month/year in GMT+7
+    const selectedMonth = month ?? getCurrentMonth();
+    const selectedYear = year ?? getCurrentYear();
 
-    // Calculate 30 days ago
-    const thirtyDaysAgoDate = new Date(nowParts.year, nowParts.month - 1, nowParts.day - 30);
-    const startDate = formatDateISO(thirtyDaysAgoDate);
+    // Calculate first day of month (startDate) and last day of month (endDate) in GMT+7
+    // Month is 1-indexed (1 = January), so we subtract 1 for JavaScript Date
+    const firstDayOfMonth = new Date(selectedYear, selectedMonth - 1, 1);
+    const lastDayOfMonth = new Date(selectedYear, selectedMonth, 0); // Day 0 of next month = last day of current month
 
-    // Fetch attendance records for the period
+    const startDate = formatDateISO(firstDayOfMonth);
+    const endDate = formatDateISO(lastDayOfMonth);
+
+    // Fetch attendance records for the selected month/year
     const { data: records, error: queryError } = await supabase
       .from('attendance_records')
       .select('total_hours, check_in_time')
       .eq('user_id', employeeId)
       .gte('date', startDate)
-      .lte('date', today);
+      .lte('date', endDate);
 
     if (queryError) {
       console.error('[getEmployeeAttendanceStats] Query error:', queryError);
@@ -634,11 +643,18 @@ export async function getEmployeeAttendanceStats(
       avgCheckInTimeMinutes = Math.round(totalMinutes / checkInRecords.length);
     }
 
+    // Generate period label (e.g., "December 2025")
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    const periodLabel = `${monthNames[selectedMonth - 1]} ${selectedYear}`;
+
     return {
       data: {
         avgHoursWorked: avgHoursWorked !== null ? Math.round(avgHoursWorked * 10) / 10 : null, // Round to 1 decimal
         avgCheckInTimeMinutes,
-        periodLabel: 'Last 30 days',
+        periodLabel,
       },
     };
   } catch (error) {

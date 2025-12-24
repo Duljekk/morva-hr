@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import StatisticSection from '@/components/hr/StatisticSection';
-import EmployeeActivitiesPanel, { type ActivityGroupData } from './EmployeeActivitiesPanel';
+import EmployeeActivitiesPanel from './EmployeeActivitiesPanel';
 import EmployeeDetailsRightSkeleton from './EmployeeDetailsRightSkeleton';
+import EmptyStatePlaceholder from './EmptyStatePlaceholder';
+import Dropdown from '@/components/shared/Dropdown';
 import Clock18Icon from '@/components/icons/shared/Clock18';
 import HourglassIcon from '@/components/icons/shared/HourglassIcon';
 import {
@@ -13,6 +15,19 @@ import {
   type EmployeeAttendanceStats,
 } from '@/lib/actions/hr/employeeDetails';
 import { formatCheckInTimeDisplay } from '@/lib/utils/attendanceStats';
+import { getCurrentMonth, getCurrentYear } from '@/lib/utils/timezone';
+
+/** Month names for display */
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
+
+/** Month options for dropdown */
+const MONTH_OPTIONS = MONTH_NAMES.map((name, index) => ({
+  value: String(index + 1),
+  label: name,
+}));
 
 export interface EmployeeDetailsRightSectionProps {
   /** Employee ID to fetch activities for */
@@ -26,6 +41,11 @@ export interface EmployeeDetailsRightSectionProps {
  * 
  * Right section of the employee details page containing statistics and activities.
  * Based on Figma design node 587:1499.
+ * 
+ * Features:
+ * - Month/year filter for statistics (Requirements 1.1, 1.2, 1.3)
+ * - Dynamic statistics re-fetch on filter change (Requirements 1.4, 2.1, 2.2)
+ * - Empty state placeholder when no data exists (Requirements 3.1, 3.2, 3.3)
  */
 export default function EmployeeDetailsRightSection({
   employeeId,
@@ -34,7 +54,12 @@ export default function EmployeeDetailsRightSection({
   const [activities, setActivities] = useState<EmployeeActivitiesResult | null>(null);
   const [stats, setStats] = useState<EmployeeAttendanceStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Filter state for month/year selection (Requirements 1.1, 1.2, 1.3)
+  const [selectedMonth, setSelectedMonth] = useState<number>(() => getCurrentMonth());
+  const [selectedYear, setSelectedYear] = useState<number>(() => getCurrentYear());
 
   // Placeholder comparison values (to be implemented later per user request)
   const avgCheckInTrend = '1 minute';
@@ -46,6 +71,41 @@ export default function EmployeeDetailsRightSection({
     ? stats.avgHoursWorked.toFixed(1)
     : '--';
 
+  // Check if stats has no data (for empty state display)
+  const hasNoStatsData = stats !== null && 
+    stats.avgHoursWorked === null && 
+    stats.avgCheckInTimeMinutes === null;
+
+  // Generate year options (current year and 4 years back)
+  const yearOptions = useMemo(() => {
+    const currentYear = getCurrentYear();
+    const years = [];
+    for (let y = currentYear; y >= currentYear - 4; y--) {
+      years.push({ value: String(y), label: String(y) });
+    }
+    return years;
+  }, []);
+
+  // Handler for month change (Requirements 1.1)
+  const handleMonthChange = useCallback((month: number) => {
+    setSelectedMonth(month);
+  }, []);
+
+  // Handler for year change (Requirements 1.2)
+  const handleYearChange = useCallback((year: number) => {
+    setSelectedYear(year);
+  }, []);
+
+  // Dropdown change handlers (convert string to number)
+  const handleMonthDropdownChange = useCallback((value: string) => {
+    handleMonthChange(parseInt(value, 10));
+  }, [handleMonthChange]);
+
+  const handleYearDropdownChange = useCallback((value: string) => {
+    handleYearChange(parseInt(value, 10));
+  }, [handleYearChange]);
+
+  // Initial data fetch (activities and stats)
   useEffect(() => {
     if (!employeeId) {
       setLoading(false);
@@ -60,7 +120,7 @@ export default function EmployeeDetailsRightSection({
         // Fetch activities and stats in parallel
         const [activitiesResult, statsResult] = await Promise.all([
           getEmployeeActivities(employeeId!),
-          getEmployeeAttendanceStats(employeeId!),
+          getEmployeeAttendanceStats(employeeId!, selectedMonth, selectedYear),
         ]);
 
         // Handle activities result
@@ -87,7 +147,39 @@ export default function EmployeeDetailsRightSection({
     }
 
     fetchData();
-  }, [employeeId]);
+  }, [employeeId]); // Only re-run on employeeId change for initial load
+
+  // Re-fetch statistics when month/year filter changes (Requirements 1.4, 2.1, 2.2)
+  useEffect(() => {
+    if (!employeeId || loading) {
+      return;
+    }
+
+    async function fetchStats() {
+      try {
+        setStatsLoading(true);
+
+        const statsResult = await getEmployeeAttendanceStats(employeeId!, selectedMonth, selectedYear);
+
+        if (statsResult.error) {
+          console.warn('[EmployeeDetailsRightSection] Stats error:', statsResult.error);
+          setStats(null);
+        } else if (statsResult.data) {
+          setStats(statsResult.data);
+        }
+      } catch (err) {
+        console.error('[EmployeeDetailsRightSection] Stats fetch error:', err);
+        setStats(null);
+      } finally {
+        setStatsLoading(false);
+      }
+    }
+
+    fetchStats();
+  }, [employeeId, selectedMonth, selectedYear, loading]);
+
+  // Get month name for empty state display
+  const selectedMonthName = MONTH_NAMES[selectedMonth - 1] || 'Unknown';
 
   return (
     <div className={`flex flex-col gap-6 ${className}`.trim()}>
@@ -96,29 +188,65 @@ export default function EmployeeDetailsRightSection({
         <EmployeeDetailsRightSkeleton />
       ) : (
         <>
-          {/* Statistics Section */}
-          <StatisticSection
-            statistics={[
-              {
-                title: 'Avg. Hours Worked',
-                value: avgHoursDisplay,
-                unit: 'hrs/day',
-                trend: totalHoursTrend,
-                comparison: 'vs last month',
-                trendDirection: 'up',
-                icon: <HourglassIcon className="w-[18px] h-[18px]" />,
-              },
-              {
-                title: 'Avg. Check-In Time',
-                value: checkInDisplay.time,
-                unit: checkInDisplay.meridiem || 'AM',
-                trend: avgCheckInTrend,
-                comparison: 'vs last month',
-                trendDirection: 'up',
-                icon: <Clock18Icon className="w-[18px] h-[18px]" />,
-              },
-            ]}
-          />
+          {/* Statistics Section with filter controls */}
+          {/* Requirements 3.1, 3.2, 3.3: Show empty state when no data, but keep dropdowns functional */}
+          {hasNoStatsData ? (
+            <div className="flex flex-col gap-3 items-start w-full" data-name="Statistic">
+              {/* Header + Dropdown - same layout as StatisticSection for consistency */}
+              <div className="flex items-center justify-between w-full">
+                <h2 className="font-semibold text-xl leading-[30px] text-neutral-700 tracking-[-0.2px]">
+                  Statistic
+                </h2>
+                <div className="flex gap-2 items-center">
+                  <Dropdown
+                    text={selectedMonthName}
+                    options={MONTH_OPTIONS}
+                    value={String(selectedMonth)}
+                    onChange={handleMonthDropdownChange}
+                    hasIcon={false}
+                  />
+                  <Dropdown
+                    text={String(selectedYear)}
+                    options={yearOptions}
+                    value={String(selectedYear)}
+                    onChange={handleYearDropdownChange}
+                    hasIcon={false}
+                  />
+                </div>
+              </div>
+              <EmptyStatePlaceholder
+                month={selectedMonthName}
+                year={selectedYear}
+              />
+            </div>
+          ) : (
+            <StatisticSection
+              statistics={[
+                {
+                  title: 'Avg. Hours Worked',
+                  value: statsLoading ? '--' : avgHoursDisplay,
+                  unit: 'hrs/day',
+                  trend: totalHoursTrend,
+                  comparison: 'vs last month',
+                  trendDirection: 'up',
+                  icon: <HourglassIcon className="w-[18px] h-[18px]" />,
+                },
+                {
+                  title: 'Avg. Check-In Time',
+                  value: statsLoading ? '--' : checkInDisplay.time,
+                  unit: statsLoading ? '' : (checkInDisplay.meridiem || 'AM'),
+                  trend: avgCheckInTrend,
+                  comparison: 'vs last month',
+                  trendDirection: 'up',
+                  icon: <Clock18Icon className="w-[18px] h-[18px]" />,
+                },
+              ]}
+              selectedMonth={selectedMonth}
+              selectedYear={selectedYear}
+              onMonthChange={handleMonthChange}
+              onYearChange={handleYearChange}
+            />
+          )}
 
           {/* Activities Section */}
           {error ? (
