@@ -37,6 +37,7 @@ const AnnouncementBottomSheet = dynamic(
 
 const SHIFT_START_HOUR = 11;
 const SHIFT_END_HOUR = 19;
+const EARLY_CHECKIN_HOURS = 1; // Allow check-in 1 hour before shift start
 
 const setToHour = (reference: Date, hour: number) => {
   const date = new Date(reference);
@@ -163,6 +164,11 @@ export default function EmployeeDashboardClient() {
     return setToHour(nowRef.current, SHIFT_END_HOUR);
   }, [currentDateKey]);
 
+  // Earliest time employees can check in (1 hour before shift start)
+  const earliestCheckInTime = useMemo(() => {
+    return setToHour(nowRef.current, SHIFT_START_HOUR - EARLY_CHECKIN_HOURS);
+  }, [currentDateKey]);
+
   // PERFORMANCE OPTIMIZATION: Adaptive timer updates
   const isActivelyTiming = !!checkInDateTime && !checkOutDateTime;
 
@@ -208,8 +214,8 @@ export default function EmployeeDashboardClient() {
   const isCheckedIn = !!checkInDateTime && !checkOutDateTime;
 
   const canCheckIn = useMemo(() => {
-    return !checkInDateTime && nowRef.current.getTime() >= shiftStart.getTime();
-  }, [checkInDateTime, shiftStart, now]);
+    return !checkInDateTime && nowRef.current.getTime() >= earliestCheckInTime.getTime();
+  }, [checkInDateTime, earliestCheckInTime, now]);
 
   const canCheckOut = isCheckedIn;
 

@@ -56,12 +56,10 @@ function CheckInSuccessContent() {
         };
         
         if (minutesDiff < 0) {
-          // Early
-          const minutesEarly = Math.abs(minutesDiff);
-          const durationText = formatDuration(minutesEarly);
+          // Early - treat as on time (no "early" status per requirements)
           setTimeMessage({
-            text: `You arrived ${durationText}`,
-            status: 'early',
+            text: 'You arrived on time at',
+            status: 'ontime',
             time: formattedTime,
           });
         } else if (minutesDiff === 0) {
@@ -154,7 +152,7 @@ function CheckInSuccessContent() {
                   <>
                     <p className="font-normal break-words">{timeMessage.text}</p>
                     <p className="font-normal break-words">
-                      {timeMessage.status === 'early' ? 'early' : 'late'} at <span className="font-medium">{timeMessage.time}</span>.
+                      late at <span className="font-medium">{timeMessage.time}</span>.
                     </p>
                   </>
                 )}
