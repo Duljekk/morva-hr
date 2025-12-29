@@ -36,6 +36,7 @@ const iconComponents: Record<IconName, () => Promise<{ default: ComponentType<SV
   TriangleWarningIcon: () => import('./shared/TriangleWarning'),
   ClockIcon: () => import('./shared/Clock'),
   Clock18Icon: () => import('./shared/Clock18'),
+  ClockOutlineIcon: () => import('./shared/ClockOutline'),
   CheckInIcon: () => import('./shared/CheckInIcon'),
   CheckoutIcon: () => import('./shared/CheckoutIcon'),
   CheckIcon: () => import('./shared/Check'),
@@ -43,6 +44,7 @@ const iconComponents: Record<IconName, () => Promise<{ default: ComponentType<SV
   CrossIcon: () => import('./shared/Cross'),
   CalendarIcon: () => import('./shared/Calendar'),
   CalendarOutlineIcon: () => import('./shared/CalendarOutline'),
+  CalendarClockIcon: () => import('./shared/CalendarClock'),
   InfoCircleIcon: () => import('./shared/InfoCircle'),
   BubbleInfoIcon: () => import('./shared/BubbleInfo'),
   CopyIcon: () => import('./shared/Copy'),
@@ -62,9 +64,9 @@ const iconComponents: Record<IconName, () => Promise<{ default: ComponentType<SV
   EyeOpenIcon: () => import('./shared/EyeOpen'),
   EyeClosedIcon: () => import('./shared/EyeClosed'),
   PeopleIcon: () => import('./shared/People'),
+  HomeIcon: () => import('./shared/Home'),
   BuildingIcon: () => import('./shared/Building'),
   CoffeeIcon: () => import('./shared/Coffee'),
-  CalendarClockIcon: () => import('./shared/CalendarClock'),
   TimerIcon: () => import('./shared/Timer'),
   LinkIcon: () => import('./shared/Link'),
   EditIcon: () => import('./shared/Edit'),
@@ -77,6 +79,12 @@ const iconComponents: Record<IconName, () => Promise<{ default: ComponentType<SV
   AnnouncementsIcon: () => import('./hr/Announcements'),
   LeaveRequestsIcon: () => import('./hr/LeaveRequests'),
   PayrollIcon: () => import('./hr/Payroll'),
+  
+  // Employee Floating Navbar icons
+  EmployeeHomeIcon: () => import('./employee/HomeIcon'),
+  EmployeeAttendanceIcon: () => import('./employee/AttendanceIcon'),
+  EmployeePayslipIcon: () => import('./employee/PayslipIcon'),
+  EmployeeProfileIcon: () => import('./employee/ProfileIcon'),
 };
 
 // Create lazy-loaded components

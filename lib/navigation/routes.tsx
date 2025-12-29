@@ -1,5 +1,9 @@
-import { ReactNode } from 'react';
+import { ReactNode, ComponentType } from 'react';
 import { BellIcon, CalendarIcon, CheckInIcon } from '@/components/shared/Icons';
+import HomeIcon from '@/components/icons/employee/HomeIcon';
+import AttendanceIcon from '@/components/icons/employee/AttendanceIcon';
+import PayslipIcon from '@/components/icons/employee/PayslipIcon';
+import ProfileIcon from '@/components/icons/employee/ProfileIcon';
 
 // Document icon for payslips
 const DocumentIcon = ({ className = "" }: { className?: string }) => (
@@ -23,6 +27,49 @@ export interface RouteConfig {
   permissions?: string[];
   exact?: boolean;
 }
+
+/**
+ * Floating navbar route configuration interface
+ * Defines the structure for floating navigation bar routes
+ */
+export interface FloatingNavRouteConfig {
+  path: string;
+  label: string;
+  icon: ComponentType<{ className?: string; active?: boolean }>;
+  exact?: boolean;
+}
+
+/**
+ * Employee floating navbar routes configuration
+ * Routes for the pill-shaped floating navigation bar
+ * Requirements: 4.1, 4.2, 4.3, 4.4
+ */
+export const employeeFloatingNavRoutes: FloatingNavRouteConfig[] = [
+  {
+    path: '/',
+    label: 'Home',
+    icon: HomeIcon,
+    exact: true,
+  },
+  {
+    path: '/attendance',
+    label: 'Attendance',
+    icon: AttendanceIcon,
+    exact: false,
+  },
+  {
+    path: '/payslip',
+    label: 'Payslip',
+    icon: PayslipIcon,
+    exact: false,
+  },
+  {
+    path: '/profile',
+    label: 'Profile',
+    icon: ProfileIcon,
+    exact: false,
+  },
+];
 
 /**
  * Employee routes configuration

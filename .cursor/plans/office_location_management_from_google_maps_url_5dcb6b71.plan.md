@@ -36,7 +36,7 @@ Enable HR admins to add office locations by pasting a Google Maps URL. The syste
 
 ## High-Level Flow
 
-```mermaid
+````mermaid
 sequenceDiagram
     participant HR as HR Admin
     participant UI as Location Management UI
@@ -191,4 +191,5 @@ sequenceDiagram
 ## Security Considerations
 
 - Validate Google Maps URL format before processing
-- Sanitize user input
+
+````

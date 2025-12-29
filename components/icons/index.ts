@@ -134,6 +134,9 @@ export type { EyeClosedIconProps } from './shared/EyeClosed';
 export { default as PeopleIcon } from './shared/People';
 export type { PeopleIconProps } from './shared/People';
 
+export { default as HomeIcon } from './shared/Home';
+export type { HomeIconProps } from './shared/Home';
+
 export { default as LinkIcon } from './shared/Link';
 export type { LinkIconProps } from './shared/Link';
 
@@ -178,6 +181,19 @@ export type { CheckInIllustrationProps } from './employee/CheckInIllustration';
 export { default as CheckOutIllustration } from './employee/CheckOutIllustration';
 export type { CheckOutIllustrationProps } from './employee/CheckOutIllustration';
 
+// Employee Floating Navbar Icons
+export { default as EmployeeHomeIcon } from './employee/HomeIcon';
+export type { HomeIconProps as EmployeeHomeIconProps } from './employee/HomeIcon';
+
+export { default as EmployeeAttendanceIcon } from './employee/AttendanceIcon';
+export type { AttendanceIconProps as EmployeeAttendanceIconProps } from './employee/AttendanceIcon';
+
+export { default as EmployeePayslipIcon } from './employee/PayslipIcon';
+export type { PayslipIconProps as EmployeePayslipIconProps } from './employee/PayslipIcon';
+
+export { default as EmployeeProfileIcon } from './employee/ProfileIcon';
+export type { ProfileIconProps as EmployeeProfileIconProps } from './employee/ProfileIcon';
+
 // ============================================================================
 // Type Exports - All icon prop types
 // ============================================================================
@@ -203,6 +219,7 @@ export type IconName =
   | 'TriangleWarningIcon'
   | 'ClockIcon'
   | 'Clock18Icon'
+  | 'ClockOutlineIcon'
   | 'CheckInIcon'
   | 'CheckoutIcon'
   | 'CheckIcon'
@@ -228,6 +245,7 @@ export type IconName =
   | 'EyeOpenIcon'
   | 'EyeClosedIcon'
   | 'PeopleIcon'
+  | 'HomeIcon'
   | 'LinkIcon'
   | 'EditIcon'
   | 'TrashIcon'
@@ -239,7 +257,12 @@ export type IconName =
   | 'EmployeesIcon'
   | 'AnnouncementsIcon'
   | 'LeaveRequestsIcon'
-  | 'PayrollIcon';
+  | 'PayrollIcon'
+  // Employee Floating Navbar icons
+  | 'EmployeeHomeIcon'
+  | 'EmployeeAttendanceIcon'
+  | 'EmployeePayslipIcon'
+  | 'EmployeeProfileIcon';
 
 // ============================================================================
 // Icon Registry - Lazy loading support

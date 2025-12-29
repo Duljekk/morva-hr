@@ -6,6 +6,13 @@ export interface CalendarIconProps extends React.SVGProps<SVGSVGElement> {
    * @default 16
    */
   size?: number | string;
+  /**
+   * Whether the icon is in active state
+   * When active, icon is white (#FFFFFF)
+   * When inactive, icon is neutral-500 (#525252)
+   * @default false
+   */
+  active?: boolean;
 }
 
 /**
@@ -17,20 +24,27 @@ export interface CalendarIconProps extends React.SVGProps<SVGSVGElement> {
  * @example
  * ```tsx
  * <CalendarIcon className="w-5 h-5 text-green-600" />
+ * <CalendarIcon active={true} size={24} />
  * ```
  */
 const CalendarIcon = memo(function CalendarIcon({
   size = 16,
+  active,
   className = '',
   ...props
 }: CalendarIconProps) {
+  // If active prop is provided, use active/inactive colors, otherwise use className
+  const colorClass = active !== undefined 
+    ? (active ? 'text-white' : 'text-neutral-500')
+    : '';
+
   return (
     <svg
       viewBox="0 0 24 24"
       width={size}
       height={size}
       fill="none"
-      className={className}
+      className={`${colorClass} ${className}`}
       aria-hidden="true"
       xmlns="http://www.w3.org/2000/svg"
       {...props}

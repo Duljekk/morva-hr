@@ -350,7 +350,8 @@ export default function RequestLeavePage() {
   return (
     <div className="relative min-h-screen w-full bg-white">
       {/* Main Content Container */}
-      <div className="mx-auto w-full max-w-[402px] pb-8 overflow-visible">
+      {/* pb-[110px] accounts for: 94px navbar height + 16px extra spacing */}
+      <div className="mx-auto w-full max-w-[402px] pb-[110px] overflow-visible">
         {/* Sticky Header */}
         <div className={`sticky top-0 z-10 h-16 bg-white flex items-center justify-center px-6 rounded-b-[18px] transition-shadow duration-200 ${isScrolled ? 'shadow-[0px_1px_2px_0px_rgba(28,28,28,0.08)]' : ''}`}>
           <button
