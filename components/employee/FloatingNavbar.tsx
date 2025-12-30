@@ -84,44 +84,44 @@ const FloatingNavbar = memo(function FloatingNavbar({
     >
       {/* Progressive blur background - multiple layers with increasing blur intensity */}
       <div className="relative w-full h-[94px] flex items-start justify-center px-6">
-        {/* Layer 1: Lightest blur at top */}
-        <div 
-          className="absolute inset-0 backdrop-blur-[1px]"
-          style={{
-            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0) 25%)',
-            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0) 25%)',
-          }}
-        />
-        {/* Layer 2: Light blur */}
+        {/* Layer 1: Light blur at top */}
         <div 
           className="absolute inset-0 backdrop-blur-[2px]"
           style={{
-            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.2) 25%, rgba(0,0,0,0) 50%)',
-            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.2) 25%, rgba(0,0,0,0) 50%)',
+            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0) 30%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0) 30%)',
+          }}
+        />
+        {/* Layer 2: Medium-light blur */}
+        <div 
+          className="absolute inset-0 backdrop-blur-[4px]"
+          style={{
+            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 10%, rgba(0,0,0,0.5) 35%, rgba(0,0,0,0) 55%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 10%, rgba(0,0,0,0.5) 35%, rgba(0,0,0,0) 55%)',
           }}
         />
         {/* Layer 3: Medium blur */}
         <div 
-          className="absolute inset-0 backdrop-blur-[4px]"
-          style={{
-            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 25%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0) 75%)',
-            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 25%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0) 75%)',
-          }}
-        />
-        {/* Layer 4: Strong blur near bottom */}
-        <div 
           className="absolute inset-0 backdrop-blur-[8px]"
           style={{
-            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 50%, rgba(0,0,0,0.6) 75%, rgba(0,0,0,0) 100%)',
-            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 50%, rgba(0,0,0,0.6) 75%, rgba(0,0,0,0) 100%)',
+            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 25%, rgba(0,0,0,0.7) 50%, rgba(0,0,0,0) 70%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 25%, rgba(0,0,0,0.7) 50%, rgba(0,0,0,0) 70%)',
+          }}
+        />
+        {/* Layer 4: Strong blur */}
+        <div 
+          className="absolute inset-0 backdrop-blur-[16px]"
+          style={{
+            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 40%, rgba(0,0,0,0.8) 65%, rgba(0,0,0,0) 85%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 40%, rgba(0,0,0,0.8) 65%, rgba(0,0,0,0) 85%)',
           }}
         />
         {/* Layer 5: Strongest blur at bottom */}
         <div 
-          className="absolute inset-0 backdrop-blur-[12px]"
+          className="absolute inset-0 backdrop-blur-[24px]"
           style={{
-            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 70%, rgba(0,0,0,1) 100%)',
-            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 70%, rgba(0,0,0,1) 100%)',
+            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 55%, rgba(0,0,0,1) 100%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 55%, rgba(0,0,0,1) 100%)',
           }}
         />
         {/* Linear gradient overlay matching Figma spec */}
