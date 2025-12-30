@@ -124,11 +124,11 @@ const FloatingNavbar = memo(function FloatingNavbar({
             WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 70%, rgba(0,0,0,1) 100%)',
           }}
         />
-        {/* Subtle gradient overlay for depth */}
+        {/* Linear gradient overlay: #0A0A0A from 0% opacity at top to 100% opacity at bottom, with 6% overall opacity */}
         <div 
-          className="absolute inset-0"
+          className="absolute inset-0 opacity-[0.06]"
           style={{
-            background: 'linear-gradient(to bottom, rgba(10, 10, 10, 0) 0%, rgba(10, 10, 10, 0.08) 100%)',
+            background: 'linear-gradient(to bottom, rgba(10, 10, 10, 0) 0%, rgba(10, 10, 10, 1) 100%)',
           }}
         />
         {/* Pill-shaped navbar: bg-neutral-900, rounded-[60px], p-2 (8px), gap-3 (12px) */}
