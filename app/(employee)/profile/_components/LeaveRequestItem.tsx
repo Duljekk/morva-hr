@@ -4,6 +4,7 @@
  * Leave Request Item Component
  * 
  * Displays a single leave request with type icon, name, date range, and status badge.
+ * Uses the same LeaveIllustration component as the HR Employee Details page.
  * 
  * Figma design: 788:1948
  */
@@ -11,11 +12,9 @@
 import { memo } from 'react';
 import Image from 'next/image';
 import UnifiedBadge from '@/components/shared/UnifiedBadge';
+import LeaveIllustration, { type LeaveVariant } from '@/components/hr/LeaveIllustration';
 
-// Import leave type icons from assets
-import LeaveAnnualIcon from '@/app/assets/icons/leave-annual.svg';
-import LeaveSickIcon from '@/app/assets/icons/leave-sick.svg';
-import LeaveUnpaidIcon from '@/app/assets/icons/leave-unpaid.svg';
+// WFH icon from assets (no TSX illustration exists for WFH)
 import LeaveWfhIcon from '@/app/assets/icons/leave-wfh.svg';
 
 export interface LeaveRequest {
@@ -58,16 +57,17 @@ const getLeaveTypeLabel = (type: LeaveRequest['type']): string => {
 };
 
 /**
- * Get the icon component for a leave type
+ * Get the LeaveIllustration variant for a leave type
+ * Returns null for WFH since it uses a different icon
  */
-const getLeaveTypeIcon = (type: LeaveRequest['type']) => {
-  const icons: Record<LeaveRequest['type'], typeof LeaveAnnualIcon> = {
-    annual: LeaveAnnualIcon,
-    sick: LeaveSickIcon,
-    wfh: LeaveWfhIcon,
-    unpaid: LeaveUnpaidIcon,
+const getLeaveVariant = (type: LeaveRequest['type']): LeaveVariant | null => {
+  const variants: Record<LeaveRequest['type'], LeaveVariant | null> = {
+    annual: 'annual',
+    sick: 'sick',
+    wfh: null, // WFH uses SVG asset, not LeaveIllustration
+    unpaid: 'unpaid',
   };
-  return icons[type];
+  return variants[type];
 };
 
 /**
@@ -131,7 +131,7 @@ const formatDateRange = (startDate: string, endDate: string, isHalfDay?: boolean
  * LeaveRequestItem Component
  * 
  * Specifications from Figma:
- * - Leave type icon: 36px, rounded-[9px], neutral-100 bg
+ * - Leave type icon: 36px, rounded-[9px], uses LeaveIllustration (same as HR side)
  * - 10px gap between icon and content
  * - Leave type name: 14px medium, neutral-800
  * - Date range: 12px medium, neutral-400
@@ -144,7 +144,7 @@ const LeaveRequestItem = memo(function LeaveRequestItem({
   isFirst = false,
   isLast = false,
 }: LeaveRequestItemProps) {
-  const IconComponent = getLeaveTypeIcon(request.type);
+  const leaveVariant = getLeaveVariant(request.type);
   const statusColor = getStatusBadgeColor(request.status);
   const statusText = formatStatusText(request.status);
   const leaveTypeLabel = getLeaveTypeLabel(request.type);
@@ -171,14 +171,19 @@ const LeaveRequestItem = memo(function LeaveRequestItem({
       data-name="LeaveRequestItem"
     >
       {/* Leave Type Icon - 36px with rounded background */}
-      <div className="shrink-0 w-[36px] h-[36px] bg-neutral-100 rounded-[9px] overflow-clip flex items-center justify-center">
-        <Image
-          src={IconComponent}
-          alt={`${leaveTypeLabel} icon`}
-          width={20}
-          height={20}
-        />
-      </div>
+      {/* Uses LeaveIllustration for annual/sick/unpaid, SVG asset for WFH */}
+      {leaveVariant ? (
+        <LeaveIllustration variant={leaveVariant} size={36} />
+      ) : (
+        <div className="shrink-0 w-[36px] h-[36px] bg-neutral-100 rounded-[8px] overflow-clip flex items-center justify-center">
+          <Image
+            src={LeaveWfhIcon}
+            alt={`${leaveTypeLabel} icon`}
+            width={20}
+            height={20}
+          />
+        </div>
+      )}
 
       {/* Content: Name + Date + Badge */}
       <div className="flex flex-1 items-start min-w-0">
