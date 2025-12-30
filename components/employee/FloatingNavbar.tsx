@@ -82,15 +82,57 @@ const FloatingNavbar = memo(function FloatingNavbar({
       className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none"
       aria-label="Main navigation"
     >
-      {/* Background gradient container with blur - matches Figma 94px height with fade effect */}
-      <div 
-        className="w-full h-[94px] flex items-start justify-center px-6 backdrop-blur-sm"
-        style={{
-          background: 'linear-gradient(to bottom, rgba(10, 10, 10, 0) 0%, rgba(10, 10, 10, 0.06) 100%)',
-        }}
-      >
+      {/* Progressive blur background - multiple layers with increasing blur intensity */}
+      <div className="relative w-full h-[94px] flex items-start justify-center px-6">
+        {/* Layer 1: Lightest blur at top */}
+        <div 
+          className="absolute inset-0 backdrop-blur-[1px]"
+          style={{
+            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0) 25%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0) 25%)',
+          }}
+        />
+        {/* Layer 2: Light blur */}
+        <div 
+          className="absolute inset-0 backdrop-blur-[2px]"
+          style={{
+            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.2) 25%, rgba(0,0,0,0) 50%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.2) 25%, rgba(0,0,0,0) 50%)',
+          }}
+        />
+        {/* Layer 3: Medium blur */}
+        <div 
+          className="absolute inset-0 backdrop-blur-[4px]"
+          style={{
+            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 25%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0) 75%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 25%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0) 75%)',
+          }}
+        />
+        {/* Layer 4: Strong blur near bottom */}
+        <div 
+          className="absolute inset-0 backdrop-blur-[8px]"
+          style={{
+            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 50%, rgba(0,0,0,0.6) 75%, rgba(0,0,0,0) 100%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 50%, rgba(0,0,0,0.6) 75%, rgba(0,0,0,0) 100%)',
+          }}
+        />
+        {/* Layer 5: Strongest blur at bottom */}
+        <div 
+          className="absolute inset-0 backdrop-blur-[12px]"
+          style={{
+            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 70%, rgba(0,0,0,1) 100%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 70%, rgba(0,0,0,1) 100%)',
+          }}
+        />
+        {/* Subtle gradient overlay for depth */}
+        <div 
+          className="absolute inset-0"
+          style={{
+            background: 'linear-gradient(to bottom, rgba(10, 10, 10, 0) 0%, rgba(10, 10, 10, 0.08) 100%)',
+          }}
+        />
         {/* Pill-shaped navbar: bg-neutral-900, rounded-[60px], p-2 (8px), gap-3 (12px) */}
-        <div className="flex items-center gap-3 bg-neutral-900 rounded-[60px] p-2 pointer-events-auto">
+        <div className="relative flex items-center gap-3 bg-neutral-900 rounded-[60px] p-2 pointer-events-auto">
           {floatingNavRoutes.map((route) => {
             const isActive = isRouteActive(route.path, activePath, route.exact);
             const IconComponent = route.icon;
