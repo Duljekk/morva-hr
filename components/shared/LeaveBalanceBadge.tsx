@@ -1,7 +1,7 @@
 'use client';
 
 import { memo } from 'react';
-import { calculateFilledBars } from './LeaveBalanceIndicator';
+import { getBarVariant } from './LeaveBalanceIndicator';
 
 export interface LeaveBalanceBadgeProps {
   /**
@@ -21,7 +21,7 @@ export interface LeaveBalanceBadgeProps {
 }
 
 /**
- * Badge style variants based on filled bars
+ * Badge style variants based on balance ratio
  */
 export type BadgeVariant = 'high' | 'medium' | 'low';
 
@@ -44,27 +44,23 @@ const badgeStyles: Record<BadgeVariant, { bg: string; text: string }> = {
 };
 
 /**
- * Determine badge variant based on number of filled bars
- * 
- * Color variants match the bar indicator:
- * - 6-10 bars: high (Green)
- * - 3-5 bars: medium (Amber)
- * - 0-2 bars: low (Red)
+ * Map bar variant to badge variant
  */
-export function getBadgeVariant(filledBars: number): BadgeVariant {
-  if (filledBars <= 2) return 'low';
-  if (filledBars <= 5) return 'medium';
-  return 'high';
+function getBadgeVariant(current: number, total: number): BadgeVariant {
+  const barVariant = getBarVariant(current, total);
+  if (barVariant === 'High') return 'high';
+  if (barVariant === 'Medium') return 'medium';
+  return 'low';
 }
 
 /**
  * Leave Balance Badge Component
  * 
  * Shows the fraction as text in a colored badge.
- * Color variants match the LeaveBalanceIndicator (based on filled bars):
- * - 6-10 bars: High (Green) - bg-emerald-50, text-emerald-600
- * - 3-5 bars: Medium (Amber) - bg-amber-50, text-amber-600
- * - 0-2 bars: Low (Red) - bg-red-50, text-red-600
+ * Color variants match the LeaveBalanceIndicator (based on ratio):
+ * - > 50%: High (Green) - bg-emerald-50, text-emerald-600
+ * - 25-50%: Medium (Amber) - bg-amber-50, text-amber-600
+ * - < 25%: Low (Red) - bg-red-50, text-red-600
  * 
  * @example
  * ```tsx
@@ -72,10 +68,10 @@ export function getBadgeVariant(filledBars: number): BadgeVariant {
  * <LeaveBalanceBadge current={10} total={12} />
  * 
  * // Medium balance (amber badge)
- * <LeaveBalanceBadge current={5} total={12} />
+ * <LeaveBalanceBadge current={3} total={12} />
  * 
  * // Low balance (red badge)
- * <LeaveBalanceBadge current={2} total={12} />
+ * <LeaveBalanceBadge current={1} total={12} />
  * ```
  */
 const LeaveBalanceBadge = memo(function LeaveBalanceBadge({
@@ -83,29 +79,19 @@ const LeaveBalanceBadge = memo(function LeaveBalanceBadge({
   total,
   className = '',
 }: LeaveBalanceBadgeProps) {
-  const filledBars = calculateFilledBars(current, total);
-  const variant = getBadgeVariant(filledBars);
+  const variant = getBadgeVariant(current, total);
   const styles = badgeStyles[variant];
 
   return (
     <div
-      className={`${styles.bg} content-stretch flex h-[20px] items-center justify-center px-[6px] relative rounded-[32px] shrink-0 ${className}`.trim()}
+      className={`${styles.bg} flex h-[20px] items-center justify-center px-[6px] rounded-[32px] shrink-0 ${className}`.trim()}
       data-name="Badge"
-      data-node-id="557:2378"
     >
-      <div
-        className="content-stretch flex h-[14px] items-center justify-center relative shrink-0"
-        data-name="Container"
-        data-node-id="557:2379"
+      <p
+        className={`font-sans font-medium leading-[16px] ${styles.text} text-[12px] text-center whitespace-nowrap`}
       >
-        <p
-          className={`font-sans font-medium leading-[16px] relative shrink-0 ${styles.text} text-[12px] text-center text-nowrap whitespace-pre`}
-          data-node-id="557:2380"
-          style={{ fontVariationSettings: "'wdth' 100" }}
-        >
-          {current}/{total}
-        </p>
-      </div>
+        {current}/{total}
+      </p>
     </div>
   );
 });

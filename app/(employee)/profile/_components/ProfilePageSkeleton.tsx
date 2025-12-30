@@ -31,15 +31,37 @@ const ProfilePageSkeleton = memo(function ProfilePageSkeleton() {
       {/* Content sections skeleton */}
       <div className="flex flex-col gap-3 px-6 -mt-4">
         {/* Leave Balances Card Skeleton */}
-        <div className="bg-white rounded-[10px] shadow-sm border border-neutral-100 p-4">
-          <div className="h-5 w-28 bg-neutral-200 rounded mb-3" />
-          <div className="flex flex-col gap-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center justify-between">
-                <div className="h-4 w-24 bg-neutral-200 rounded" />
-                <div className="h-4 w-16 bg-neutral-200 rounded" />
+        <div className="bg-white/60 rounded-[10px] shadow-[0px_2px_2px_-1px_rgba(0,0,0,0.05),0px_0px_0.5px_1px_rgba(0,0,0,0.08)] pt-[18px] pb-[20px] px-[20px]">
+          <div className="h-5 w-28 bg-neutral-200 rounded mb-4" />
+          <div className="flex flex-col gap-4">
+            {/* PTO row skeleton */}
+            <div className="flex flex-col gap-[6px]">
+              <div className="h-[18px] w-24 bg-neutral-200 rounded" />
+              <div className="flex gap-2 items-center">
+                <div className="flex gap-1">
+                  {Array.from({ length: 12 }).map((_, i) => (
+                    <div key={i} className="w-[6px] h-4 bg-neutral-200 rounded" />
+                  ))}
+                </div>
+                <div className="h-5 w-10 bg-neutral-200 rounded-full" />
               </div>
-            ))}
+            </div>
+            {/* WFH & Sick Leave row skeleton */}
+            <div className="flex gap-4">
+              {[1, 2].map((j) => (
+                <div key={j} className="flex flex-col gap-[6px]">
+                  <div className="h-[18px] w-24 bg-neutral-200 rounded" />
+                  <div className="flex gap-2 items-center">
+                    <div className="flex gap-1">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <div key={i} className="w-[6px] h-4 bg-neutral-200 rounded" />
+                      ))}
+                    </div>
+                    <div className="h-5 w-8 bg-neutral-200 rounded-full" />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
