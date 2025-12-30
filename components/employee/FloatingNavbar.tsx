@@ -30,6 +30,11 @@ const floatingNavRoutes: NavItem[] = [
 ];
 
 /**
+ * Routes where the floating navbar should be hidden
+ */
+const hiddenRoutes = ['/request-leave'];
+
+/**
  * Check if a route is active based on current path
  * @param routePath - Route path to check
  * @param currentPath - Current pathname
@@ -45,6 +50,13 @@ function isRouteActive(
     return routePath === currentPath;
   }
   return currentPath.startsWith(routePath);
+}
+
+/**
+ * Check if navbar should be hidden on current path
+ */
+function shouldHideNavbar(currentPath: string): boolean {
+  return hiddenRoutes.some(route => currentPath.startsWith(route));
 }
 
 export interface FloatingNavbarProps {
@@ -65,6 +77,8 @@ export interface FloatingNavbarProps {
  * - Active state indication (white icon for current route)
  * - Accessible navigation with proper ARIA attributes
  * - Safe area padding for devices with home indicators
+ * - Hidden on specific routes (e.g., /request-leave)
+ * - z-index 40 to appear below modals and bottom sheets (z-50)
  *
  * @example
  * ```tsx
@@ -77,9 +91,14 @@ const FloatingNavbar = memo(function FloatingNavbar({
   const pathname = usePathname();
   const activePath = currentPath || pathname;
 
+  // Hide navbar on specific routes
+  if (shouldHideNavbar(activePath)) {
+    return null;
+  }
+
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none"
+      className="fixed bottom-0 left-0 right-0 z-40 pointer-events-none"
       aria-label="Main navigation"
     >
       {/* Progressive blur background - multiple layers with increasing blur intensity */}

@@ -4,15 +4,14 @@
  * Profile Header Component
  * 
  * Displays the user's profile picture, name, role badge, and email
- * with a sky-blue banner background and settings button.
+ * in a left-aligned layout.
  * 
- * Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 2.1, 2.2, 2.3
+ * Figma design: 788:1884
  */
 
 import { memo } from 'react';
-import Avatar from '@/components/shared/Avatar';
+import Image from 'next/image';
 import RoleBadge, { type RoleBadgeVariant } from '@/components/shared/RoleBadge';
-import SettingsIcon from '@/components/icons/shared/Settings';
 import MailIcon from '@/components/icons/shared/Mail';
 
 export interface ProfileHeaderProps {
@@ -35,72 +34,76 @@ export interface ProfileHeaderProps {
    * Optional avatar URL
    */
   avatarUrl?: string | null;
-  
-  /**
-   * Callback when settings button is clicked
-   */
-  onSettingsClick?: () => void;
 }
+
+/**
+ * Get initials from full name for avatar fallback
+ */
+const getInitials = (name: string): string => {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) {
+    return parts[0].charAt(0).toUpperCase();
+  }
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+};
 
 /**
  * ProfileHeader Component
  * 
- * Layout specifications:
- * - Sky-blue banner (bg-sky-50) at top spanning full width
- * - Settings button (30px ghost button) in top-right corner
- * - 96px circular avatar with white border
- * - Name in 18px semibold text (neutral-800)
- * - RoleBadge next to name
- * - Email with MailIcon in 14px regular text (neutral-500)
+ * Layout specifications from Figma:
+ * - 96px circular avatar with 3px white border
+ * - 12px gap between avatar and content below
+ * - Name (18px semibold, neutral-800) + RoleBadge on same line with 10px gap
+ * - 6px gap between name row and email
+ * - Email with 14px MailIcon (neutral-400) + 4px gap + text (14px regular, neutral-500)
  */
 const ProfileHeader = memo(function ProfileHeader({
   fullName,
   email,
   role,
   avatarUrl,
-  onSettingsClick,
 }: ProfileHeaderProps) {
+  const initials = getInitials(fullName);
+
   return (
-    <div className="bg-sky-50 px-6 pt-4 pb-12 relative">
-      {/* Settings button - top right corner */}
-      <div className="absolute top-4 right-4">
-        <button
-          type="button"
-          onClick={onSettingsClick}
-          className="w-[30px] h-[30px] flex items-center justify-center rounded-lg hover:bg-sky-100 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-300"
-          aria-label="Open settings"
-        >
-          <SettingsIcon size={18} className="text-neutral-600" />
-        </button>
+    <div className="flex flex-col gap-[12px] items-start">
+      {/* Avatar - 96px with 3px white border */}
+      <div className="w-[96px] h-[96px] rounded-full bg-white p-[3px] shrink-0">
+        <div className="w-[90px] h-[90px] rounded-full overflow-hidden">
+          {avatarUrl ? (
+            <Image
+              src={avatarUrl}
+              alt={fullName}
+              width={90}
+              height={90}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-b from-neutral-200 to-neutral-50 flex items-center justify-center">
+              <span className="text-2xl font-semibold text-neutral-600">
+                {initials}
+              </span>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Profile content - centered */}
-      <div className="flex flex-col items-center gap-3 pt-8">
-        {/* Avatar - 96px with white border */}
-        <div className="relative">
-          <div className="w-24 h-24 rounded-full border-4 border-white shadow-sm overflow-hidden">
-            <Avatar
-              name={fullName}
-              imageUrl={avatarUrl}
-              size="xl"
-              className="!w-full !h-full"
-            />
-          </div>
-        </div>
-
-        {/* Name and role */}
-        <div className="flex flex-col items-center gap-1">
-          <div className="flex items-center gap-2">
-            <h1 className="text-lg font-semibold text-neutral-800">
+      {/* Container: Header + Cards spacing handled by parent */}
+      <div className="flex flex-col gap-[16px] w-full">
+        {/* Header: Name + Badge + Email */}
+        <div className="flex flex-col gap-[6px] items-start">
+          {/* Name + Badge row */}
+          <div className="flex items-center gap-[10px]">
+            <h1 className="text-[18px] font-semibold leading-[22px] text-neutral-800">
               {fullName}
             </h1>
             <RoleBadge role={role} />
           </div>
 
-          {/* Email with mail icon */}
-          <div className="flex items-center gap-1.5">
-            <MailIcon size={14} className="text-neutral-500" />
-            <span className="text-sm text-neutral-500">
+          {/* Email with icon */}
+          <div className="flex items-center gap-[4px]">
+            <MailIcon size={14} className="text-neutral-400" />
+            <span className="text-[14px] font-normal leading-[20px] text-neutral-500">
               {email}
             </span>
           </div>
