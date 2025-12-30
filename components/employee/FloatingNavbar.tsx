@@ -102,26 +102,26 @@ const FloatingNavbar = memo(function FloatingNavbar({
         />
         {/* Layer 3: Medium blur */}
         <div 
-          className="absolute inset-0 backdrop-blur-[8px]"
+          className="absolute inset-0 backdrop-blur-[12px]"
           style={{
-            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 25%, rgba(0,0,0,0.7) 50%, rgba(0,0,0,0) 70%)',
-            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 25%, rgba(0,0,0,0.7) 50%, rgba(0,0,0,0) 70%)',
+            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 20%, rgba(0,0,0,0.9) 50%, rgba(0,0,0,0) 70%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 20%, rgba(0,0,0,0.9) 50%, rgba(0,0,0,0) 70%)',
           }}
         />
         {/* Layer 4: Strong blur */}
         <div 
-          className="absolute inset-0 backdrop-blur-[16px]"
+          className="absolute inset-0 backdrop-blur-[24px]"
           style={{
-            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 40%, rgba(0,0,0,0.8) 65%, rgba(0,0,0,0) 85%)',
-            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 40%, rgba(0,0,0,0.8) 65%, rgba(0,0,0,0) 85%)',
+            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 35%, rgba(0,0,0,1) 60%, rgba(0,0,0,0) 80%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 35%, rgba(0,0,0,1) 60%, rgba(0,0,0,0) 80%)',
           }}
         />
         {/* Layer 5: Strongest blur at bottom */}
         <div 
-          className="absolute inset-0 backdrop-blur-[24px]"
+          className="absolute inset-0 backdrop-blur-[40px]"
           style={{
-            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 55%, rgba(0,0,0,1) 100%)',
-            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 55%, rgba(0,0,0,1) 100%)',
+            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 45%, rgba(0,0,0,1) 100%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 45%, rgba(0,0,0,1) 100%)',
           }}
         />
         {/* Linear gradient overlay matching Figma spec */}
