@@ -4,7 +4,8 @@ import { memo, useState } from 'react';
 import Checkbox from '@/components/shared/Checkbox';
 import Avatar from '@/components/shared/Avatar';
 import RoleBadge, { RoleBadgeVariant } from '@/components/shared/RoleBadge';
-import Bar from '@/components/shared/Bar';
+import LeaveBalanceIndicator from '@/components/shared/LeaveBalanceIndicator';
+import LeaveBalanceBadge from '@/components/shared/LeaveBalanceBadge';
 import DropdownActionMenu from '@/components/shared/DropdownActionMenu';
 import { DotGrid1x3HorizontalIcon } from '@/components/shared/Icons';
 
@@ -109,138 +110,6 @@ export interface EmployeeTableRowProps {
    */
   className?: string;
 }
-
-/**
- * Leave Balance Indicator Component
- * Shows bars representing leave balance (max 10 bars)
- * Each bar represents ~2.2 days (22 total / 10 bars)
- * 
- * Color variants based on current balance:
- * - <= 3: Low (Red)
- * - <= 6: Medium (Amber)
- * - > 6: High (Green)
- */
-const LeaveBalanceIndicator = memo(function LeaveBalanceIndicator({
-  current,
-  total,
-}: {
-  current: number;
-  total: number;
-}) {
-  const MAX_BARS = 10;
-
-  // Calculate filled bars proportionally
-  // Special cases: 0 bars only for 0 balance, full bars only for full balance
-  // Any non-zero balance shows at least 1 bar
-  const proportion = total > 0 ? current / total : 0;
-  let filledBars: number;
-  if (current === 0) {
-    filledBars = 0;
-  } else if (current === total) {
-    filledBars = MAX_BARS;
-  } else {
-    // Ensure at least 1 bar for any non-zero balance, max 9 for non-full
-    filledBars = Math.max(1, Math.floor(proportion * MAX_BARS));
-  }
-  const emptyBars = MAX_BARS - filledBars;
-
-  // Determine bar variant based on number of filled bars
-  // 6-10 bars: Green (High), 3-5 bars: Orange (Medium), 1-2 bars: Red (Low)
-  const getBarVariant = (): 'High' | 'Medium' | 'Low' => {
-    if (filledBars <= 2) return 'Low';
-    if (filledBars <= 5) return 'Medium';
-    return 'High';
-  };
-
-  const barVariant = getBarVariant();
-
-  return (
-    <div className="content-stretch flex gap-[4px] h-[16px] items-center relative shrink-0" data-name="Bars">
-      {/* Filled bars with appropriate variant */}
-      {Array.from({ length: filledBars }).map((_, i) => (
-        <Bar key={`filled-${i}`} color={barVariant} />
-      ))}
-      {/* Empty bars */}
-      {Array.from({ length: emptyBars }).map((_, i) => (
-        <Bar key={`empty-${i}`} color="Empty" />
-      ))}
-    </div>
-  );
-});
-
-/**
- * Leave Balance Badge Component
- * Shows the fraction as text in a badge
- * 
- * Color variants match the bar indicator (based on filled bars):
- * - 6-10 bars: High (Green) - bg-[#ecfdf5], text-[#009966]
- * - 3-5 bars: Medium (Amber) - bg-[#fffbeb], text-[#d97706]
- * - 1-2 bars: Low (Red) - bg-[#fef2f2], text-[#dc2626]
- */
-const LeaveBalanceBadge = memo(function LeaveBalanceBadge({
-  current,
-  total,
-}: {
-  current: number;
-  total: number;
-}) {
-  const MAX_BARS = 10;
-
-  // Calculate filled bars (same logic as LeaveBalanceIndicator)
-  const proportion = total > 0 ? current / total : 0;
-  let filledBars: number;
-  if (current === 0) {
-    filledBars = 0;
-  } else if (current === total) {
-    filledBars = MAX_BARS;
-  } else {
-    filledBars = Math.max(1, Math.floor(proportion * MAX_BARS));
-  }
-
-  // Determine badge variant based on number of filled bars
-  const getBadgeStyles = () => {
-    if (filledBars <= 2) {
-      return {
-        bg: 'bg-[#fef2f2]', // red-50
-        text: 'text-[#dc2626]', // red-600
-      };
-    }
-    if (filledBars <= 5) {
-      return {
-        bg: 'bg-[#fffbeb]', // amber-50
-        text: 'text-[#d97706]', // amber-600
-      };
-    }
-    return {
-      bg: 'bg-[#ecfdf5]', // emerald-50
-      text: 'text-[#009966]', // emerald-600
-    };
-  };
-
-  const styles = getBadgeStyles();
-
-  return (
-    <div
-      className={`${styles.bg} content-stretch flex h-[20px] items-center justify-center px-[6px] relative rounded-[32px] shrink-0`}
-      data-name="Badge"
-      data-node-id="557:2378"
-    >
-      <div
-        className="content-stretch flex h-[14px] items-center justify-center relative shrink-0"
-        data-name="Container"
-        data-node-id="557:2379"
-      >
-        <p
-          className={`font-sans font-medium leading-[16px] relative shrink-0 ${styles.text} text-[12px] text-center text-nowrap whitespace-pre`}
-          data-node-id="557:2380"
-          style={{ fontVariationSettings: "'wdth' 100" }}
-        >
-          {current}/{total}
-        </p>
-      </div>
-    </div>
-  );
-});
 
 /**
  * Status Indicator Component

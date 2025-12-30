@@ -12,6 +12,7 @@ import { bottomSheetBackdropVariants, bottomSheetVariants } from '@/app/lib/anim
 import LeaveSickIcon from '@/app/assets/icons/leave-sick.svg';
 import LeaveAnnualIcon from '@/app/assets/icons/leave-annual.svg';
 import LeaveUnpaidIcon from '@/app/assets/icons/leave-unpaid.svg';
+import LeaveWfhIcon from '@/app/assets/icons/leave-wfh.svg';
 
 interface LeaveType {
   id: string;
@@ -38,7 +39,7 @@ export const leaveTypes: LeaveType[] = [
   { 
     id: 'wfh', 
     name: 'Work from Home', 
-    icon: LeaveUnpaidIcon
+    icon: LeaveWfhIcon
   },
 ];
 
