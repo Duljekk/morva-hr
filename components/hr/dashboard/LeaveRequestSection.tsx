@@ -2,6 +2,7 @@
 
 import { memo, useMemo } from 'react';
 import LeaveRequestItem from '../LeaveRequestItem';
+import EmptyStateIllustration from '@/app/assets/icons/empty-state.svg';
 
 export interface LeaveRequest {
   /**
@@ -44,28 +45,6 @@ export interface LeaveRequest {
    */
   createdAt?: string;
 }
-
-// Placeholder data matching Figma design
-const PLACEHOLDER_LEAVE_REQUESTS: LeaveRequest[] = [
-  {
-    id: 'placeholder-1',
-    name: 'Achmad Rafi',
-    dateRange: '25-26 Nov 2025',
-    leaveType: 'Annual Leave',
-  },
-  {
-    id: 'placeholder-2',
-    name: 'Abdul Zaki',
-    dateRange: '27 Nov 2025 (Full Day)',
-    leaveType: 'Unpaid Leave',
-  },
-  {
-    id: 'placeholder-3',
-    name: 'Naufal Daffa',
-    dateRange: '28 Nov 2025 (Half Day)',
-    leaveType: 'Sick Leave',
-  },
-];
 
 export interface LeaveRequestSectionProps {
   /**
@@ -157,13 +136,10 @@ const LeaveRequestSection = memo(function LeaveRequestSection({
   disabled = false,
   onOpenDetails,
 }: LeaveRequestSectionProps) {
-  // Use placeholder data if no requests provided
-  const requestsToDisplay = requests ?? PLACEHOLDER_LEAVE_REQUESTS;
-
   // Limit requests to maxItems
   const displayedRequests = useMemo(() => {
-    return requestsToDisplay.slice(0, maxItems);
-  }, [requestsToDisplay, maxItems]);
+    return (requests ?? []).slice(0, maxItems);
+  }, [requests, maxItems]);
 
   return (
     <div
@@ -173,25 +149,27 @@ const LeaveRequestSection = memo(function LeaveRequestSection({
     >
       {/* Header */}
       <div
-        className="content-stretch flex font-semibold gap-[8px] h-[28px] items-center relative shrink-0 text-nowrap w-full whitespace-pre"
+        className="content-stretch flex font-semibold gap-[8px] h-[32px] items-center relative shrink-0 text-nowrap w-full whitespace-pre"
         data-name="Header"
-        data-node-id="428:2763"
+        data-node-id="798:2016"
       >
         {/* Title */}
         <p
           className="font-semibold leading-[22px] relative shrink-0 text-neutral-700 text-lg"
-          data-node-id="428:2765"
+          data-node-id="798:2017"
         >
           Leave Request
         </p>
 
-        {/* Number */}
-        <p
-          className="font-semibold leading-[20px] relative shrink-0 text-neutral-400 text-md text-center"
-          data-node-id="428:2766"
-        >
-          {displayedRequests.length}
-        </p>
+        {/* Number - only show when there are requests */}
+        {displayedRequests.length > 0 && (
+          <p
+            className="font-semibold leading-[20px] relative shrink-0 text-neutral-400 text-md text-center"
+            data-node-id="428:2766"
+          >
+            {displayedRequests.length}
+          </p>
+        )}
       </div>
 
       {/* Leave Request Item Group */}
@@ -273,8 +251,40 @@ const LeaveRequestSection = memo(function LeaveRequestSection({
             );
           })
         ) : (
-          <div className="flex items-center justify-center py-8 text-neutral-500">
-            No pending leave requests
+          /* Empty State - Figma node 800:2052 */
+          <div
+            className="content-stretch flex flex-col gap-[18px] items-center pb-[32px] pt-[28px] relative shrink-0 w-full"
+            data-name="Container"
+            data-node-id="800:2052"
+          >
+            {/* Empty State Illustration */}
+            <div
+              className="h-[78px] relative shrink-0 w-[258px]"
+              data-name="empty-state 3"
+              data-node-id="800:2053"
+            >
+              <EmptyStateIllustration className="w-full h-full" />
+            </div>
+
+            {/* Contents */}
+            <div
+              className="content-stretch flex flex-col gap-[6px] items-center text-sm text-center w-[266px]"
+              data-name="Contents"
+              data-node-id="800:2065"
+            >
+              <p
+                className="font-medium leading-[18px] text-neutral-700"
+                data-node-id="800:2066"
+              >
+                No pending leave requests
+              </p>
+              <p
+                className="font-normal leading-[20px] text-neutral-500 w-[266px]"
+                data-node-id="800:2067"
+              >
+                All leave requests have been reviewed.
+              </p>
+            </div>
           </div>
         )}
       </div>

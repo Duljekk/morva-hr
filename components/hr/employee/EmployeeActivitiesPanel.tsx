@@ -8,7 +8,8 @@ import ActivityGroup, { type ActivityEntry } from './ActivityGroup';
 import PendingLeaveRequestCard from './PendingLeaveRequestCard';
 import LeaveRequestHistorySection from './LeaveRequestHistorySection';
 import RejectLeaveRequestDialog from '@/components/hr/dashboard/RejectLeaveRequestDialog';
-import { CalendarOutlineIcon } from '@/components/icons';
+import AttendanceEmptyState from './AttendanceEmptyState';
+import LeaveRequestEmptyState from './LeaveRequestEmptyState';
 import {
   getEmployeePendingLeaveRequest,
   getEmployeeLeaveHistory,
@@ -265,30 +266,14 @@ const EmployeeActivitiesPanel = memo(function EmployeeActivitiesPanel({
               />
             ))
           ) : (
-            /* Empty State for Attendance */
-            <div className="flex flex-col items-center justify-center w-full py-12">
-              <CalendarOutlineIcon size={48} className="text-[#d4d4d4] mb-3" />
-              <p className="text-[#737373] text-sm font-medium">
-                No attendance records
-              </p>
-              <p className="text-[#a3a3a3] text-xs mt-1">
-                Attendance records will appear here
-              </p>
-            </div>
+            /* Empty State for Attendance - Figma node 807:2436 */
+            <AttendanceEmptyState className="py-12" />
           )
         )}
 
         {/* Empty State for Leave Requests - only show if no pending request and no history */}
         {activeTab === 'leave' && !pendingRequest && leaveHistory.length === 0 && !pendingLoading && (
-          <div className="flex flex-col items-center justify-center w-full py-12">
-            <CalendarOutlineIcon size={48} className="text-[#d4d4d4] mb-3" />
-            <p className="text-[#737373] text-sm font-medium">
-              No leave requests
-            </p>
-            <p className="text-[#a3a3a3] text-xs mt-1">
-              Leave requests will appear here
-            </p>
-          </div>
+          <LeaveRequestEmptyState className="py-12" />
         )}
       </div>
 

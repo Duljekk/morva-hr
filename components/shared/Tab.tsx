@@ -3,6 +3,7 @@
 import { ButtonHTMLAttributes, ReactNode, KeyboardEvent } from 'react';
 
 export type TabState = 'active' | 'default';
+export type TabSize = 'medium' | 'small';
 
 export interface TabProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
   /**
@@ -15,6 +16,12 @@ export interface TabProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 
    * @default 'default'
    */
   state?: TabState;
+  
+  /**
+   * Size of the tab
+   * @default 'medium'
+   */
+  size?: TabSize;
   
   /**
    * Whether to show an icon before the label
@@ -85,9 +92,13 @@ export interface TabProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 
  * - Default: Transparent background, gray text (#737373)
  * - Hover (on default): Light gray background (rgba(212,212,212,0.2))
  * 
+ * Sizes:
+ * - Medium: 32px height, 14px text, 16px icon/badge
+ * - Small: 28px height, 12px text, 14px icon/badge
+ * 
  * Features:
- * - Optional icon support (16x16)
- * - Optional number badge (16x16, blue background)
+ * - Optional icon support
+ * - Optional number badge (blue background)
  * - Fully accessible with ARIA attributes
  * - Keyboard navigation support
  * 
@@ -95,9 +106,10 @@ export interface TabProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 
  * ```tsx
  * <Tab 
  *   label="Attendance" 
- *   state="active" 
+ *   state="active"
+ *   size="small"
  *   hasIcon={true}
- *   icon={<ClockIcon size={16} />}
+ *   icon={<ClockIcon size={14} />}
  *   hasNumber={true} 
  *   number={5}
  *   onClick={() => console.log('Tab clicked')}
@@ -107,6 +119,7 @@ export interface TabProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 
 export default function Tab({
   label,
   state = 'default',
+  size = 'medium',
   hasIcon = false,
   icon,
   hasNumber = false,
@@ -121,6 +134,7 @@ export default function Tab({
   ...props
 }: TabProps) {
   const isActive = state === 'active';
+  const isSmall = size === 'small';
   
   /**
    * Keyboard event handler for Enter and Space keys
@@ -137,10 +151,10 @@ export default function Tab({
     }
   };
   
-  // Container styles based on state
+  // Container styles based on state and size
   const containerStyles = `
     flex items-center justify-center
-    h-8
+    ${isSmall ? 'h-7' : 'h-8'}
     p-[10px]
     rounded-lg
     overflow-clip
@@ -155,9 +169,9 @@ export default function Tab({
     }
   `;
   
-  // Icon styles (16x16)
+  // Icon styles - 14px for small, 16px for medium
   const iconStyles = `
-    shrink-0 size-4
+    shrink-0 ${isSmall ? 'size-3.5' : 'size-4'}
     ${isActive ? 'text-neutral-500' : 'text-neutral-400'}
   `;
   
@@ -168,17 +182,17 @@ export default function Tab({
     shrink-0
   `;
   
-  // Text styles based on state
+  // Text styles based on state and size
   const textStyles = `
-    font-['Mona_Sans'] text-sm font-medium leading-[18px]
-    whitespace-nowrap
+    font-['Mona_Sans'] font-medium whitespace-nowrap
+    ${isSmall ? 'text-xs leading-4' : 'text-sm leading-[18px]'}
     ${isActive ? 'text-[#404040]' : 'text-[#737373]'}
   `;
   
-  // Number badge styles (16x16)
+  // Number badge styles - 14px for small, 16px for medium
   const badgeStyles = `
     flex flex-col items-center justify-center
-    size-4
+    ${isSmall ? 'size-3.5' : 'size-4'}
     rounded
     bg-[#2b7fff]
     shrink-0

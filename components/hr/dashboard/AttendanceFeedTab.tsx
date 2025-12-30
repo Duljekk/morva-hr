@@ -88,18 +88,18 @@ const AttendanceFeedTab = memo(function AttendanceFeedTab({
     switch (state) {
       case 'Active':
         return {
-          container: 'bg-[#f5f5f5]', // neutral-100
-          text: 'text-[#525252] font-semibold', // neutral-600
+          container: 'bg-white shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05),0px_0px_0px_0.75px_rgba(0,0,0,0.06)]',
+          text: 'text-neutral-700 font-medium', // neutral-700 (#404040)
         };
       case 'Hover':
         return {
-          container: 'bg-[#fafafa]', // neutral-50
-          text: 'text-[#737373] font-medium', // neutral-500
+          container: 'bg-neutral-50', // neutral-50
+          text: 'text-neutral-500 font-medium', // neutral-500
         };
       default:
         return {
           container: '',
-          text: 'text-[#737373] font-medium', // neutral-500
+          text: 'text-neutral-500 font-medium', // neutral-500
         };
     }
   };

@@ -191,7 +191,7 @@ export default function EmployeeDetailsRightSection({
           {/* Statistics Section with filter controls */}
           {/* Requirements 3.1, 3.2, 3.3: Show empty state when no data, but keep dropdowns functional */}
           {hasNoStatsData ? (
-            <div className="flex flex-col gap-3 items-start w-full" data-name="Statistic">
+            <div className="flex flex-col gap-[10px] items-start w-full" data-name="Statistic">
               {/* Header + Dropdown - same layout as StatisticSection for consistency */}
               <div className="flex items-center justify-between w-full">
                 <h2 className="font-semibold text-xl leading-[30px] text-neutral-700 tracking-[-0.2px]">
@@ -217,6 +217,7 @@ export default function EmployeeDetailsRightSection({
               <EmptyStatePlaceholder
                 month={selectedMonthName}
                 year={selectedYear}
+                className="py-8"
               />
             </div>
           ) : (

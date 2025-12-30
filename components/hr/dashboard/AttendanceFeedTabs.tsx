@@ -120,9 +120,9 @@ const AttendanceFeedTabs = memo(function AttendanceFeedTabs({
       <div
         role="tablist"
         aria-label={ariaLabel}
-        className="content-stretch flex items-center relative rounded-[10px] size-full"
+        className="bg-neutral-100 content-stretch flex gap-[2px] h-[32px] items-center px-[2px] relative rounded-[10px]"
         data-name="Tabs"
-        data-node-id="428:2665"
+        data-node-id="802:2093"
       >
         {tabs.map((tab, index) => (
           <AttendanceFeedTab

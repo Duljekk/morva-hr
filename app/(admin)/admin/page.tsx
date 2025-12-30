@@ -118,7 +118,7 @@ export default async function HRDashboard() {
   return (
     <>
       {/* Dashboard Container - Matching Figma layout */}
-      <div className="bg-white box-border content-stretch flex flex-col gap-[40px] items-center justify-center overflow-clip pb-[210px] pt-[140px] px-[142px] relative rounded-bl-[16px] rounded-tl-[16px] size-full" data-name="Dashboard" data-node-id="428:2646">
+      <div className="bg-white box-border content-stretch flex flex-col gap-[40px] items-center justify-center overflow-clip pb-[178px] pt-[172px] px-[142px] relative rounded-bl-[16px] rounded-tl-[16px] size-full" data-name="Dashboard" data-node-id="428:2646">
         {/* Dashboard Header */}
         <div className="content-stretch flex flex-col gap-[14px] items-center relative shrink-0 w-full" data-name="Header" data-node-id="428:2647">
           <HRDashboardHeader />

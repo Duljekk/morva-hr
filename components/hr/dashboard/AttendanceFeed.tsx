@@ -3,6 +3,7 @@
 import { memo, useState, useMemo } from 'react';
 import AttendanceFeedTabs from './AttendanceFeedTabs';
 import AttendanceFeedItem from './AttendanceFeedItem';
+import EmptyStateIllustration from '@/app/assets/icons/empty-state.svg';
 import type { AttendanceFeedStatus } from './AttendanceFeedBadge';
 
 export interface AttendanceFeedEntry {
@@ -99,54 +100,6 @@ const AttendanceFeed = memo(function AttendanceFeed({
     return entries.filter((entry) => entry.type === activeTab);
   }, [entries, activeTab]);
 
-  // Placeholder data matching Figma design
-  const placeholderEntries: AttendanceFeedEntry[] = [
-    {
-      id: '1',
-      name: 'Achmad Rafi',
-      type: 'check-in',
-      time: '09:27 AM',
-      status: 'Late',
-    },
-    {
-      id: '2',
-      name: 'Abdul Zaki',
-      type: 'check-in',
-      time: '09:27 AM',
-      status: 'Late',
-    },
-    {
-      id: '3',
-      name: 'Daffa Naufal',
-      type: 'check-in',
-      time: '09:27 AM',
-      status: 'On Time',
-    },
-    {
-      id: '4',
-      name: 'Arvin Aradhana',
-      type: 'check-in',
-      time: '09:27 AM',
-      status: 'On Time',
-    },
-    {
-      id: '5',
-      name: 'Mariatul Qibtiah',
-      type: 'check-in',
-      time: '09:27 AM',
-      status: 'On Time',
-    },
-    {
-      id: '6',
-      name: 'Nur Praditya',
-      type: 'check-in',
-      time: '09:27 AM',
-      status: 'On Time',
-    },
-  ];
-
-  const displayEntries = entries.length > 0 ? filteredEntries : placeholderEntries;
-
   return (
     <div
       className={`bg-white box-border content-stretch flex flex-col gap-[20px] items-start overflow-clip pb-[24px] pt-[20px] px-[24px] relative rounded-[12px] shadow-[0px_4px_4px_-2px_rgba(0,0,0,0.05),0px_0px_1px_1px_rgba(0,0,0,0.1)] size-full ${className}`}
@@ -157,31 +110,25 @@ const AttendanceFeed = memo(function AttendanceFeed({
       <div
         className="content-stretch flex items-center justify-between relative shrink-0 w-full"
         data-name="Header"
-        data-node-id="428:2663"
+        data-node-id="802:2091"
       >
         {/* Title */}
         <p
           className="font-semibold leading-[22px] relative shrink-0 text-neutral-600 text-lg text-nowrap whitespace-pre"
-          data-node-id="428:2664"
+          data-node-id="802:2092"
         >
           Attendance Feed
         </p>
 
         {/* Tabs */}
-        <div
-          className="content-stretch flex h-[28px] items-center relative rounded-[10px] shrink-0"
-          data-name="Tabs"
-          data-node-id="428:2665"
-        >
-          <AttendanceFeedTabs
-            tabs={[
-              { id: 'check-in', label: 'Check-In' },
-              { id: 'check-out', label: 'Check-Out' },
-            ]}
-            activeTabId={activeTab}
-            onTabChange={(tabId) => setActiveTab(tabId as 'check-in' | 'check-out')}
-          />
-        </div>
+        <AttendanceFeedTabs
+          tabs={[
+            { id: 'check-in', label: 'Check-In' },
+            { id: 'check-out', label: 'Check-Out' },
+          ]}
+          activeTabId={activeTab}
+          onTabChange={(tabId) => setActiveTab(tabId as 'check-in' | 'check-out')}
+        />
       </div>
 
       {/* Attendance Items Group */}
@@ -198,11 +145,11 @@ const AttendanceFeed = memo(function AttendanceFeed({
           <div className="flex items-center justify-center py-8 text-red-500 w-full">
             {error}
           </div>
-        ) : displayEntries.length > 0 ? (
-          displayEntries.map((entry, index) => {
+        ) : filteredEntries.length > 0 ? (
+          filteredEntries.map((entry, index) => {
             const isFirst = index === 0;
-            const isLast = index === displayEntries.length - 1;
-            const isSingle = displayEntries.length === 1;
+            const isLast = index === filteredEntries.length - 1;
+            const isSingle = filteredEntries.length === 1;
 
             // Border classes based on position
             const borderClasses = isSingle
@@ -245,8 +192,40 @@ const AttendanceFeed = memo(function AttendanceFeed({
             );
           })
         ) : (
-          <div className="flex items-center justify-center py-8 text-neutral-500 w-full">
-            No {activeTab === 'check-in' ? 'check-ins' : 'check-outs'} found
+          /* Empty State - Figma node 800:2069 */
+          <div
+            className="content-stretch flex flex-col gap-[18px] items-center pb-[32px] pt-[28px] relative shrink-0 w-full"
+            data-name="Container"
+            data-node-id="800:2069"
+          >
+            {/* Empty State Illustration */}
+            <div
+              className="h-[78px] relative shrink-0 w-[258px]"
+              data-name="empty-state"
+              data-node-id="800:2070"
+            >
+              <EmptyStateIllustration className="w-full h-full" />
+            </div>
+
+            {/* Contents */}
+            <div
+              className="content-stretch flex flex-col gap-[6px] items-center text-sm text-center w-[266px]"
+              data-name="Contents"
+              data-node-id="800:2082"
+            >
+              <p
+                className="font-medium leading-[18px] text-neutral-700"
+                data-node-id="800:2083"
+              >
+                No attendance activity yet
+              </p>
+              <p
+                className="font-normal leading-[20px] text-neutral-500 w-[266px]"
+                data-node-id="800:2084"
+              >
+                Employee check-ins and check-outs will appear here once the day starts.
+              </p>
+            </div>
           </div>
         )}
       </div>

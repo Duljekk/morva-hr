@@ -1,6 +1,7 @@
 'use client';
 
 import { memo } from 'react';
+import EmptyState2Illustration from '@/app/assets/icons/empty-state-2.svg';
 
 export interface EmptyStatePlaceholderProps {
   /** Month name (e.g., "December") */
@@ -17,13 +18,12 @@ export interface EmptyStatePlaceholderProps {
  * A placeholder component displayed when no attendance statistics data exists
  * for the selected month and year period.
  * 
- * Based on Requirements 3.1, 3.2:
- * - Displays when no Attendance_Records exist for the selected month and year
- * - Shows a message indicating no data is available for the selected period
+ * Based on Figma design node 809:2415.
  * 
- * Styling follows existing empty state patterns in the codebase:
- * - Centered text with neutral-500 color
- * - Consistent padding and typography
+ * Features:
+ * - Centered illustration using empty-state-2.svg (143x96px)
+ * - Title: "No statistics for this period"
+ * - Subtitle explaining no attendance during selected month
  */
 const EmptyStatePlaceholder = memo(function EmptyStatePlaceholder({
   month,
@@ -32,14 +32,37 @@ const EmptyStatePlaceholder = memo(function EmptyStatePlaceholder({
 }: EmptyStatePlaceholderProps) {
   return (
     <div
-      className={`flex items-center justify-center w-full py-8 px-4 bg-white rounded-xl border border-dashed border-neutral-200 ${className}`.trim()}
+      className={`flex flex-col items-center justify-center w-full ${className}`.trim()}
       data-name="EmptyStatePlaceholder"
+      data-node-id="809:2415"
       role="status"
-      aria-label={`No attendance data for ${month} ${year}`}
+      aria-label={`No statistics for ${month} ${year}`}
     >
-      <p className="text-neutral-500 text-sm text-center">
-        No attendance data for {month} {year}
-      </p>
+      <div className="flex flex-col gap-5 items-center justify-center w-[286px]" data-node-id="809:2416">
+        {/* Illustration - SVG actual size is 148x96 */}
+        <div className="flex items-center justify-center" data-node-id="809:2442">
+          <EmptyState2Illustration width={148} height={96} />
+        </div>
+
+        {/* Text */}
+        <div
+          className="flex flex-col gap-[6px] items-center text-center text-sm w-[286px]"
+          data-node-id="809:2427"
+        >
+          <p
+            className="font-medium leading-[18px] text-neutral-700"
+            data-node-id="809:2428"
+          >
+            No statistics for this period
+          </p>
+          <p
+            className="leading-5 text-neutral-500"
+            data-node-id="809:2429"
+          >
+            This employee didn't record any attendance during the selected month.
+          </p>
+        </div>
+      </div>
     </div>
   );
 });
