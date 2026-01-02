@@ -241,8 +241,7 @@ const EmployeeDetailsLeftSection = memo(function EmployeeDetailsLeftSection({
               <Avatar
                 name={name}
                 imageUrl={imageUrl}
-                size="xl"
-                className="!h-[80px] !w-[80px] !rounded-full"
+                size="2xl"
               />
             </div>
           </div>

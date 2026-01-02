@@ -32,16 +32,15 @@ const LeaveBalanceIndicator = memo(function LeaveBalanceIndicator({
   className = '',
 }: LeaveBalanceIndicatorProps) {
   const { filledBars, emptyBars, barVariant, displayTotal } = useMemo(() => {
-    const safeTotal = Math.max(total, 1);
-    const displayTotal = Math.min(safeTotal, MAX_BARS);
-    const filledBars = Math.min(calculateFilledBars(current, safeTotal), displayTotal);
+    const displayTotal = Math.min(total, MAX_BARS);
+    const filledBars = Math.min(calculateFilledBars(current, total), displayTotal);
     const emptyBars = displayTotal - filledBars;
-    const barVariant = getBarVariant(current, safeTotal);
+    const barVariant = getBarVariant(current, total);
     
     return { filledBars, emptyBars, barVariant, displayTotal };
   }, [current, total]);
 
-  if (total <= 0) {
+  if (displayTotal <= 0) {
     return null;
   }
 

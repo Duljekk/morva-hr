@@ -15,7 +15,13 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'i.pravatar.cc',
       },
+      {
+        protocol: 'https',
+        hostname: 'kvwmlhalbsiywjjzvoje.supabase.co',
+        pathname: '/storage/v1/object/public/**',
+      },
     ],
+    imageSizes: [24, 32, 40, 48, 64, 80, 96, 128, 256, 384],
   },
   // Increase body size limit for Server Actions to support file uploads
   experimental: {

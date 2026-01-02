@@ -21,7 +21,7 @@ export interface AvatarProps {
    * Size of the avatar
    * @default "md"
    */
-  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 
   /**
    * Shape of the avatar
@@ -74,6 +74,10 @@ const sizeConfig = {
   xl: {
     container: 'h-[64px] w-[64px]',
     pixels: 64,
+  },
+  '2xl': {
+    container: 'h-[80px] w-[80px]',
+    pixels: 80,
   },
 };
 
