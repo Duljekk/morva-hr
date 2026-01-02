@@ -12,8 +12,8 @@
  */
 
 import { memo } from 'react';
-import LeaveBalanceIndicator from '@/components/shared/LeaveBalanceIndicator';
-import LeaveBalanceBadge from '@/components/shared/LeaveBalanceBadge';
+import LeaveBalanceIndicator from './LeaveBalanceIndicator';
+import LeaveBalanceBadge from './LeaveBalanceBadge';
 
 export interface LeaveBalance {
   type: 'annual' | 'wfh' | 'sick';
