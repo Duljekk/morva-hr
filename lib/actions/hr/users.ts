@@ -55,7 +55,10 @@ async function initializeLeaveBalancesForUser(
 
   const { error } = await supabase
     .from('leave_balances')
-    .insert(balanceRows);
+    .upsert(balanceRows, {
+      onConflict: 'user_id,leave_type_id,year',
+      ignoreDuplicates: true,
+    });
 
   if (error) {
     console.error('[initializeLeaveBalancesForUser] Error:', error);
@@ -162,10 +165,10 @@ export async function inviteUserByEmail(
     }
 
     // Manually create user profile in users table
-    // (Trigger may not work reliably, so we create it manually)
+    // Use upsert to handle case where database trigger already created the profile
     const { error: profileError } = await supabase
       .from('users')
-      .insert({
+      .upsert({
         id: authUser.user.id,
         email: userData.email,
         username: userData.username,
@@ -175,6 +178,9 @@ export async function inviteUserByEmail(
         shift_start_hour: 11,
         shift_end_hour: 19,
         is_active: true,
+      }, {
+        onConflict: 'id',
+        ignoreDuplicates: false,
       });
 
     if (profileError) {
