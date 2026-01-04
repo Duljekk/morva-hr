@@ -49,7 +49,7 @@ async function initializeLeaveBalancesForUser(
     leave_type_id: q.leave_type_id,
     allocated: q.allocated,
     used: 0,
-    balance: q.allocated,
+    balance: q.leave_type_id === 'annual' ? 0 : q.allocated,
     year,
   }));
 

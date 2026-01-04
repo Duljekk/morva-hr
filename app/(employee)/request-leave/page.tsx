@@ -154,10 +154,9 @@ export default function RequestLeavePage() {
   // Check if both dates are the same
   const isSameDate = startDate.toDateString() === endDate.toDateString();
 
-  // Maximum consecutive days allowed for Paid Time Off (Annual Leave)
-  const PTO_MAX_CONSECUTIVE_DAYS = 2;
-  const isPTOLeaveType = selectedLeaveType.id === 'annual';
-  const isPTOExceedingLimit = isPTOLeaveType && days > PTO_MAX_CONSECUTIVE_DAYS;
+  // Maximum consecutive days allowed for all leave types
+  const MAX_CONSECUTIVE_DAYS = 2;
+  const isExceedingLimit = days > MAX_CONSECUTIVE_DAYS;
 
   const handleFileSelect = async (file: File) => {
     // Clear any previous form errors
@@ -266,9 +265,9 @@ export default function RequestLeavePage() {
       return;
     }
     
-    // Validate PTO max consecutive days limit
-    if (isPTOExceedingLimit) {
-      setFormError(`Paid Time Off (Annual Leave) is limited to a maximum of ${PTO_MAX_CONSECUTIVE_DAYS} consecutive days`);
+    // Validate max consecutive days limit
+    if (isExceedingLimit) {
+      setFormError(`Leave requests are limited to a maximum of ${MAX_CONSECUTIVE_DAYS} consecutive days`);
       return;
     }
     
@@ -410,10 +409,10 @@ export default function RequestLeavePage() {
             <DaysOffBadge days={days} />
           )}
 
-          {/* PTO Max Days Warning */}
-          {isPTOExceedingLimit && (
+          {/* Max Days Warning */}
+          {isExceedingLimit && (
             <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-700">
-              Paid Time Off (Annual Leave) is limited to a maximum of {PTO_MAX_CONSECUTIVE_DAYS} consecutive days. Please adjust your dates.
+              Leave requests are limited to a maximum of {MAX_CONSECUTIVE_DAYS} consecutive days. Please adjust your dates.
             </div>
           )}
 
@@ -478,7 +477,7 @@ export default function RequestLeavePage() {
             type="submit"
             variant="primary"
             className="mt-3"
-            disabled={isSubmitting || uploadedFiles.some(f => f.isUploading) || !!activeLeaveMessage || isPTOExceedingLimit}
+            disabled={isSubmitting || uploadedFiles.some(f => f.isUploading) || !!activeLeaveMessage || isExceedingLimit}
             isLoading={isSubmitting}
           >
             Send Request

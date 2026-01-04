@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
 import useLockBodyScroll from '@/app/hooks/useLockBodyScroll';
 import { backdropVariants, modalVariants } from '@/app/lib/animations/modalVariants';
+import ButtonLarge from '@/components/shared/ButtonLarge';
 
 interface HRLeaveRequestDetailsDialogProps {
   isOpen: boolean;
@@ -264,14 +265,15 @@ export default function HRLeaveRequestDetailsDialog({
                     Reject
                   </span>
                 </button>
-                <button
-                  type="button"
+                <ButtonLarge
+                  variant="primary"
+                  size="medium"
                   onClick={onApprove}
                   disabled={disabled}
-                  className="flex-1 h-10 px-5 py-1.5 rounded-[8px] flex items-center justify-center bg-neutral-800 text-white text-sm font-semibold leading-[18px] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-neutral-900 transition-colors"
+                  className="flex-1"
                 >
                   Approve
-                </button>
+                </ButtonLarge>
               </div>
             </div>
           </motion.div>

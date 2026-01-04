@@ -1,4 +1,4 @@
-﻿'use server';
+'use server';
 
 /**
  * Server actions for employee leave request management
@@ -604,8 +604,28 @@ export async function submitLeaveRequest(
       return { error: 'Start date must be before or equal to end date' };
     }
 
-    // Note: Leave balance checking is disabled (all leave types are unlimited)
-    console.log('[submitLeaveRequest] Skipping balance check - all leave types are unlimited');
+    // Check leave balance
+    const currentYear = new Date().getFullYear();
+    const { data: balanceData, error: balanceError } = await supabase
+      .from('leave_balances')
+      .select('balance')
+      .eq('user_id', user.id)
+      .eq('leave_type_id', requestData.leaveTypeId)
+      .eq('year', currentYear)
+      .single();
+
+    if (balanceError) {
+      console.error('[submitLeaveRequest] Balance lookup error:', balanceError);
+      return { error: 'Failed to check leave balance. Please try again.' };
+    }
+
+    if (!balanceData || balanceData.balance < requestData.totalDays) {
+      const available = balanceData?.balance ?? 0;
+      console.log('[submitLeaveRequest] Insufficient balance:', { available, requested: requestData.totalDays });
+      return { error: `Insufficient leave balance. You have ${available} day(s) remaining but requested ${requestData.totalDays} day(s).` };
+    }
+
+    console.log('[submitLeaveRequest] Balance check passed:', { balance: balanceData.balance, requested: requestData.totalDays });
 
     // Insert leave request
     const leaveRequestInsert: LeaveRequestInsert = {

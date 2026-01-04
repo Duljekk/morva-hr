@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import FormInput from '@/components/shared/FormInput';
+import ButtonLarge from '@/components/shared/ButtonLarge';
 import CardOffice from './CardOffice';
 import BuildingIcon from '@/components/icons/shared/Building';
 
@@ -179,23 +180,16 @@ export default function SettingsRightSection({
           />
 
           {/* Add Location Button */}
-          <button
-            type="button"
+          <ButtonLarge
+            variant="primary"
+            size="medium"
             onClick={handleAddLocation}
             disabled={isAddingLocation}
-            className="
-              flex items-center justify-center
-              h-10 px-5 py-1.5
-              bg-neutral-800 hover:bg-neutral-700
-              rounded-lg
-              transition-colors
-              disabled:opacity-50 disabled:cursor-not-allowed
-            "
+            isLoading={isAddingLocation}
+            className="w-auto whitespace-nowrap rounded-[8px]"
           >
-            <span className="font-['Mona_Sans'] text-sm font-semibold leading-[18px] text-white text-center whitespace-nowrap">
-              {isAddingLocation ? 'Adding...' : 'Add Location'}
-            </span>
-          </button>
+            {isAddingLocation ? 'Adding...' : 'Add Location'}
+          </ButtonLarge>
         </div>
       </div>
 

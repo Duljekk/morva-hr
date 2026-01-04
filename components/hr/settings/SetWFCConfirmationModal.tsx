@@ -8,6 +8,7 @@ import {
   backdropVariants,
   modalVariants,
 } from '@/app/lib/animations/modalVariants';
+import ButtonLarge from '@/components/shared/ButtonLarge';
 
 // Lazy load SVG icon - only load when modal is open
 const NeutralModalIcon = dynamic<SVGProps<SVGSVGElement>>(
@@ -175,23 +176,16 @@ export default function SetWFCConfirmationModal({
                 </button>
 
                 {/* Set as WFC Button - Primary */}
-                <button
-                  type="button"
+                <ButtonLarge
+                  variant="primary"
+                  size="medium"
                   onClick={handleConfirm}
                   disabled={isLoading}
-                  className="
-                    flex-1 h-10 px-5 py-1.5
-                    bg-neutral-800 hover:bg-neutral-700
-                    rounded-lg
-                    flex items-center justify-center
-                    transition-colors
-                    disabled:opacity-50 disabled:cursor-not-allowed
-                  "
+                  isLoading={isLoading}
+                  className="flex-1"
                 >
-                  <span className="font-['Mona_Sans'] text-sm font-semibold leading-[18px] text-white text-center">
-                    {isLoading ? 'Setting...' : 'Set as WFC'}
-                  </span>
-                </button>
+                  {isLoading ? 'Setting...' : 'Set as WFC'}
+                </ButtonLarge>
               </div>
             </div>
           </motion.div>

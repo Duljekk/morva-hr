@@ -6,6 +6,7 @@ import useLockBodyScroll from '@/app/hooks/useLockBodyScroll';
 import { backdropVariants, modalVariants } from '@/app/lib/animations/modalVariants';
 import { TriangleWarningIcon } from '@/components/icons';
 import FormInput from '@/components/shared/FormInput';
+import ButtonLarge from '@/components/shared/ButtonLarge';
 
 interface RejectLeaveRequestDialogProps {
   isOpen: boolean;
@@ -162,14 +163,15 @@ export default function RejectLeaveRequestDialog({
                     Cancel
                   </span>
                 </button>
-                <button
-                  type="button"
+                <ButtonLarge
+                  variant="primary"
+                  size="medium"
                   onClick={handleConfirm}
                   disabled={!isReasonValid}
-                  className="flex-1 h-10 px-5 py-1.5 rounded-[8px] flex items-center justify-center bg-neutral-800 text-white text-sm font-semibold leading-[18px] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-neutral-900 transition-colors"
+                  className="flex-1"
                 >
                   Reject Request
-                </button>
+                </ButtonLarge>
               </div>
             </div>
           </motion.div>

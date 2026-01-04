@@ -166,10 +166,10 @@ const SettingsLeftSection = memo(function SettingsLeftSection({
               href={`https://${website}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex gap-1 items-center hover:opacity-70 transition-opacity"
+              className="flex gap-1 items-center text-neutral-500 hover:text-neutral-600 transition-colors"
             >
-              <LinkIcon size={14} className="text-neutral-500" />
-              <span className="font-['Mona_Sans'] font-normal leading-5 text-neutral-500 text-sm">
+              <LinkIcon size={14} />
+              <span className="font-['Mona_Sans'] font-normal leading-5 text-sm">
                 {website}
               </span>
             </a>
@@ -179,10 +179,10 @@ const SettingsLeftSection = memo(function SettingsLeftSection({
           {email && (
             <a
               href={`mailto:${email}`}
-              className="flex gap-1 items-center hover:opacity-70 transition-opacity"
+              className="flex gap-1 items-center text-neutral-500 hover:text-neutral-600 transition-colors"
             >
-              <MailIcon size={14} className="text-neutral-500" />
-              <span className="font-['Mona_Sans'] font-normal leading-5 text-neutral-500 text-sm">
+              <MailIcon size={14} />
+              <span className="font-['Mona_Sans'] font-normal leading-5 text-sm">
                 {email}
               </span>
             </a>
