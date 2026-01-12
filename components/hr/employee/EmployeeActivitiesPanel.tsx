@@ -8,8 +8,10 @@ import ActivityGroup, { type ActivityEntry } from './ActivityGroup';
 import PendingLeaveRequestCard from './PendingLeaveRequestCard';
 import LeaveRequestHistorySection from './LeaveRequestHistorySection';
 import RejectLeaveRequestDialog from '@/components/hr/dashboard/RejectLeaveRequestDialog';
+import HRLeaveRequestDetailsDialog from '@/components/hr/dashboard/HRLeaveRequestDetailsDialog';
 import AttendanceEmptyState from './AttendanceEmptyState';
 import LeaveRequestEmptyState from './LeaveRequestEmptyState';
+import { useToast } from '@/app/contexts/ToastContext';
 import {
   getEmployeePendingLeaveRequest,
   getEmployeeLeaveHistory,
@@ -107,10 +109,16 @@ const EmployeeActivitiesPanel = memo(function EmployeeActivitiesPanel({
   const [pendingRequest, setPendingRequest] = useState<EmployeePendingLeaveRequest | null>(null);
   const [leaveHistory, setLeaveHistory] = useState<EmployeeLeaveHistoryItem[]>([]);
   const [pendingLoading, setPendingLoading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const { showToast } = useToast();
 
   // Reject dialog state
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [activeRejectId, setActiveRejectId] = useState<string | null>(null);
+
+  // Details dialog state
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
 
   // Fetch pending leave request and history when employeeId is available
   useEffect(() => {
@@ -144,9 +152,16 @@ const EmployeeActivitiesPanel = memo(function EmployeeActivitiesPanel({
 
   // Handle approve action
   const handleApprove = useCallback(async (requestId: string) => {
+    setIsProcessing(true);
     const result = await approveLeaveRequest(requestId);
     if (result.success) {
       setPendingRequest(null);
+      setIsDetailsDialogOpen(false);
+      showToast({
+        type: 'success',
+        title: 'Leave request approved',
+        message: 'The employee has been notified.',
+      });
       // Refetch history to show approved request
       if (employeeId) {
         const historyResult = await getEmployeeLeaveHistory(employeeId, 5);
@@ -154,8 +169,15 @@ const EmployeeActivitiesPanel = memo(function EmployeeActivitiesPanel({
           setLeaveHistory(historyResult.data);
         }
       }
+    } else {
+      showToast({
+        type: 'error',
+        title: 'Failed to approve',
+        message: 'Please try again.',
+      });
     }
-  }, [employeeId]);
+    setIsProcessing(false);
+  }, [employeeId, showToast]);
 
   // Open reject dialog
   const handleReject = useCallback(async (requestId: string) => {
@@ -168,9 +190,16 @@ const EmployeeActivitiesPanel = memo(function EmployeeActivitiesPanel({
     if (!activeRejectId) return;
 
     setIsRejectDialogOpen(false);
+    setIsProcessing(true);
     const result = await rejectLeaveRequest(activeRejectId, reason);
     if (result.success) {
       setPendingRequest(null);
+      setIsDetailsDialogOpen(false);
+      showToast({
+        type: 'success',
+        title: 'Leave request rejected',
+        message: 'The employee has been notified.',
+      });
       // Refetch history to show rejected request
       if (employeeId) {
         const historyResult = await getEmployeeLeaveHistory(employeeId, 5);
@@ -178,9 +207,23 @@ const EmployeeActivitiesPanel = memo(function EmployeeActivitiesPanel({
           setLeaveHistory(historyResult.data);
         }
       }
+    } else {
+      showToast({
+        type: 'error',
+        title: 'Failed to reject',
+        message: 'Please try again.',
+      });
     }
     setActiveRejectId(null);
-  }, [activeRejectId, employeeId]);
+    setIsProcessing(false);
+  }, [activeRejectId, employeeId, showToast]);
+
+  // Open details dialog
+  const handleOpenDetails = useCallback(() => {
+    if (pendingRequest) {
+      setIsDetailsDialogOpen(true);
+    }
+  }, [pendingRequest]);
 
   const activeGroups = activeTab === 'attendance' ? attendanceGroups : leaveRequestGroups;
 
@@ -241,6 +284,8 @@ const EmployeeActivitiesPanel = memo(function EmployeeActivitiesPanel({
             reason={pendingRequest.reason || undefined}
             onApprove={handleApprove}
             onReject={handleReject}
+            onClick={handleOpenDetails}
+            disabled={isProcessing}
           />
         )}
 
@@ -283,6 +328,26 @@ const EmployeeActivitiesPanel = memo(function EmployeeActivitiesPanel({
         onClose={() => setIsRejectDialogOpen(false)}
         onConfirm={handleConfirmReject}
       />
+
+      {/* Leave Request Details Dialog */}
+      {pendingRequest && (
+        <HRLeaveRequestDetailsDialog
+          isOpen={isDetailsDialogOpen}
+          onClose={() => setIsDetailsDialogOpen(false)}
+          startDate={pendingRequest.startDate}
+          endDate={pendingRequest.endDate}
+          status="pending"
+          requestedOn={pendingRequest.createdAt?.split('T')[0] ?? ''}
+          requestedAt={pendingRequest.createdAt}
+          approvedAt={undefined}
+          rejectionReason={undefined}
+          leaveType={pendingRequest.leaveType}
+          reason={pendingRequest.reason ?? ''}
+          onApprove={() => handleApprove(pendingRequest.id)}
+          onReject={() => handleReject(pendingRequest.id)}
+          disabled={isProcessing}
+        />
+      )}
     </div>
   );
 });

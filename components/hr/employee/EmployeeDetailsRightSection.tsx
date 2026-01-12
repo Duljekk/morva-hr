@@ -54,6 +54,7 @@ export default function EmployeeDetailsRightSection({
   const [activities, setActivities] = useState<EmployeeActivitiesResult | null>(null);
   const [stats, setStats] = useState<EmployeeAttendanceStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activitiesLoading, setActivitiesLoading] = useState(false);
   const [statsLoading, setStatsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -119,7 +120,7 @@ export default function EmployeeDetailsRightSection({
 
         // Fetch activities and stats in parallel
         const [activitiesResult, statsResult] = await Promise.all([
-          getEmployeeActivities(employeeId!),
+          getEmployeeActivities(employeeId!, selectedMonth, selectedYear),
           getEmployeeAttendanceStats(employeeId!, selectedMonth, selectedYear),
         ]);
 
@@ -176,6 +177,35 @@ export default function EmployeeDetailsRightSection({
     }
 
     fetchStats();
+  }, [employeeId, selectedMonth, selectedYear, loading]);
+
+  // Re-fetch activities when month/year filter changes
+  useEffect(() => {
+    if (!employeeId || loading) {
+      return;
+    }
+
+    async function fetchActivities() {
+      try {
+        setActivitiesLoading(true);
+
+        const activitiesResult = await getEmployeeActivities(employeeId!, selectedMonth, selectedYear);
+
+        if (activitiesResult.error) {
+          console.warn('[EmployeeDetailsRightSection] Activities error:', activitiesResult.error);
+          setActivities(null);
+        } else if (activitiesResult.data) {
+          setActivities(activitiesResult.data);
+        }
+      } catch (err) {
+        console.error('[EmployeeDetailsRightSection] Activities fetch error:', err);
+        setActivities(null);
+      } finally {
+        setActivitiesLoading(false);
+      }
+    }
+
+    fetchActivities();
   }, [employeeId, selectedMonth, selectedYear, loading]);
 
   // Get month name for empty state display

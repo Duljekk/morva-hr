@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import AttendanceFeed, { type AttendanceFeedEntry } from './AttendanceFeed';
 import AttendanceFeedSkeleton from './AttendanceFeedSkeleton';
 import { getAttendanceFeed, type AttendanceFeedEntry as ServerAttendanceFeedEntry } from '@/lib/actions/hr/dashboard';
@@ -26,19 +27,22 @@ export interface AttendanceFeedClientProps {
  * - Uses initialCount from server to show accurate skeleton loading
  */
 export default function AttendanceFeedClient({ initialCount = 10 }: AttendanceFeedClientProps) {
+  const router = useRouter();
   const [entries, setEntries] = useState<AttendanceFeedEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | undefined>();
   const { showToast } = useToast();
   
-  // Cache the last successful fetch timestamp to prevent unnecessary refetches
   const lastFetchRef = useRef<number>(0);
   const isFetchingRef = useRef(false);
+
+  const handleNameClick = useCallback((userId: string) => {
+    router.push(`/admin/employees/${userId}`);
+  }, [router]);
 
   // Map server-side attendance entry to UI entry
   // Memoized with useCallback to prevent recreation on every render
   const mapServerEntryToUI = useCallback((entry: ServerAttendanceFeedEntry): AttendanceFeedEntry => {
-    // Map server status values to badge statuses
     const statusMap = {
       late: 'Late',
       ontime: 'On Time',
@@ -48,6 +52,7 @@ export default function AttendanceFeedClient({ initialCount = 10 }: AttendanceFe
 
     return {
       id: entry.id,
+      userId: entry.user.id,
       name: entry.user.full_name,
       avatarUrl: undefined,
       type: entry.type === 'checkin' ? 'check-in' : 'check-out',
@@ -129,7 +134,7 @@ export default function AttendanceFeedClient({ initialCount = 10 }: AttendanceFe
     return <AttendanceFeedSkeleton count={initialCount} />;
   }
 
-  return <AttendanceFeed entries={entries} loading={loading} error={error} />;
+  return <AttendanceFeed entries={entries} loading={loading} error={error} onNameClick={handleNameClick} />;
 }
 
 

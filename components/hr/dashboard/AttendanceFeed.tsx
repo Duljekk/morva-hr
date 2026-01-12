@@ -13,6 +13,11 @@ export interface AttendanceFeedEntry {
   id: string;
 
   /**
+   * Employee user ID for navigation
+   */
+  userId: string;
+
+  /**
    * Employee full name
    */
   name: string;
@@ -58,6 +63,11 @@ export interface AttendanceFeedProps {
    * Additional CSS classes
    */
   className?: string;
+
+  /**
+   * Callback when employee name is clicked
+   */
+  onNameClick?: (userId: string) => void;
 }
 
 /**
@@ -92,6 +102,7 @@ const AttendanceFeed = memo(function AttendanceFeed({
   loading = false,
   error,
   className = '',
+  onNameClick,
 }: AttendanceFeedProps) {
   const [activeTab, setActiveTab] = useState<'check-in' | 'check-out'>('check-in');
 
@@ -187,6 +198,7 @@ const AttendanceFeed = memo(function AttendanceFeed({
                   type={entry.type}
                   time={entry.time}
                   status={entry.status}
+                  onNameClick={onNameClick ? () => onNameClick(entry.userId) : undefined}
                 />
               </div>
             );

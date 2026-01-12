@@ -33,7 +33,7 @@ export default async function EmployeeDetailPage(props: PageProps) {
   return (
     <div className="flex flex-col size-full">
       {/* Header with Breadcrumb Navigation */}
-      <div className="h-[66px] w-full border-b border-dashed border-[#e5e5e5] shrink-0">
+      <div className="sticky top-0 z-40 bg-white h-[66px] w-full border-b border-dashed border-[#e5e5e5] shrink-0">
         <div className="flex items-center h-full px-[28px]">
           <BreadcrumbList className="flex-1">
             <BreadcrumbItem

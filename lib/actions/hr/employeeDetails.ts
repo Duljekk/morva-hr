@@ -334,8 +334,7 @@ interface AttendanceRecord {
 function transformAttendanceToGroups(
   records: AttendanceRecord[],
   today: string,
-  yesterday: string,
-  dayBefore: string
+  yesterday: string
 ): ActivityGroupData[] {
   const groupsMap = new Map<string, ActivityEntry[]>();
 
@@ -347,7 +346,6 @@ function transformAttendanceToGroups(
 
     const activities = groupsMap.get(date)!;
 
-    // Add check-in activity
     if (record.check_in_time) {
       activities.push({
         id: `${record.date}-checkin`,
@@ -357,7 +355,6 @@ function transformAttendanceToGroups(
       });
     }
 
-    // Add check-out activity
     if (record.check_out_time) {
       activities.push({
         id: `${record.date}-checkout`,
@@ -368,14 +365,12 @@ function transformAttendanceToGroups(
     }
   });
 
-  // Convert to ActivityGroupData array, sorted by date (newest first)
-  const dateOrder = [today, yesterday, dayBefore];
+  const sortedDates = Array.from(groupsMap.keys()).sort((a, b) => b.localeCompare(a));
   const groups: ActivityGroupData[] = [];
 
-  dateOrder.forEach((date, index) => {
+  sortedDates.forEach((date) => {
     const activities = groupsMap.get(date);
     if (activities && activities.length > 0) {
-      // Sort activities: check-in before check-out
       activities.sort((a, b) => {
         if (a.type === 'checkIn' && b.type === 'checkOut') return -1;
         if (a.type === 'checkOut' && b.type === 'checkIn') return 1;
@@ -386,12 +381,11 @@ function transformAttendanceToGroups(
         id: date,
         label: formatDateLabel(date, today, yesterday),
         activities,
-        isLast: false, // Will be set later
+        isLast: false,
       });
     }
   });
 
-  // Mark the last group
   if (groups.length > 0) {
     groups[groups.length - 1].isLast = true;
   }
@@ -418,40 +412,33 @@ interface LeaveRequest {
 function transformLeaveRequestsToGroups(
   leaveRequests: LeaveRequest[],
   today: string,
-  yesterday: string,
-  dayBefore: string
+  yesterday: string
 ): ActivityGroupData[] {
   const groupsMap = new Map<string, ActivityEntry[]>();
-  const dateRange = [today, yesterday, dayBefore];
 
   leaveRequests.forEach(leave => {
-    // Group by created_at date
     const createdDate = formatDateISO(new Date(leave.created_at));
-    const date = dateRange.includes(createdDate) ? createdDate : null;
 
-    if (!date) return;
-
-    if (!groupsMap.has(date)) {
-      groupsMap.set(date, []);
+    if (!groupsMap.has(createdDate)) {
+      groupsMap.set(createdDate, []);
     }
 
-    const activities = groupsMap.get(date)!;
+    const activities = groupsMap.get(createdDate)!;
 
     activities.push({
       id: leave.id,
-      type: 'checkIn' as ActivityType, // Leave requests use checkIn type for display
+      type: 'checkIn' as ActivityType,
       time: formatTimeShort(leave.created_at),
-      status: 'onTime' as ActivityStatus, // Leave requests default to onTime
+      status: 'onTime' as ActivityStatus,
     });
   });
 
-  // Convert to ActivityGroupData array
+  const sortedDates = Array.from(groupsMap.keys()).sort((a, b) => b.localeCompare(a));
   const groups: ActivityGroupData[] = [];
 
-  dateRange.forEach((date) => {
+  sortedDates.forEach((date) => {
     const activities = groupsMap.get(date);
     if (activities && activities.length > 0) {
-      // Sort by time (newest first)
       activities.sort((a, b) => b.time.localeCompare(a.time));
 
       groups.push({
@@ -463,7 +450,6 @@ function transformLeaveRequestsToGroups(
     }
   });
 
-  // Mark the last group
   if (groups.length > 0) {
     groups[groups.length - 1].isLast = true;
   }
@@ -473,46 +459,46 @@ function transformLeaveRequestsToGroups(
 
 
 /**
- * Fetch employee activities for the last 3 days
+ * Fetch employee activities for the specified month
  * 
  * @param employeeId - The employee's user ID
+ * @param month - Month number (1-12)
+ * @param year - Year (e.g., 2024)
  * @returns Promise with activity groups or error
  */
 export async function getEmployeeActivities(
-  employeeId: string
+  employeeId: string,
+  month: number,
+  year: number
 ): Promise<{ data?: EmployeeActivitiesResult; error?: string }> {
   try {
     const { supabase } = await requireHRAdmin();
 
-    // Calculate date range (today, yesterday, day before) in GMT+7
-    const nowParts = getNowPartsInGMT7();
     const today = getTodayDateString();
-
-    // Calculate yesterday and day before
+    const nowParts = getNowPartsInGMT7();
     const yesterdayDate = new Date(nowParts.year, nowParts.month - 1, nowParts.day - 1);
-    const dayBeforeDate = new Date(nowParts.year, nowParts.month - 1, nowParts.day - 2);
     const yesterday = formatDateISO(yesterdayDate);
-    const dayBefore = formatDateISO(dayBeforeDate);
 
-    const dateRange = [today, yesterday, dayBefore];
+    const startOfMonth = `${year}-${String(month).padStart(2, '0')}-01`;
+    const lastDay = new Date(year, month, 0).getDate();
+    const endOfMonth = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
-    // Fetch attendance records and leave requests in parallel
     const [attendanceResult, leaveRequestsResult] = await Promise.all([
-      // Fetch attendance records for last 3 days
       supabase
         .from('attendance_records')
         .select('date, check_in_time, check_out_time, check_in_status, check_out_status')
         .eq('user_id', employeeId)
-        .in('date', dateRange)
+        .gte('date', startOfMonth)
+        .lte('date', endOfMonth)
         .order('date', { ascending: false }),
 
-      // Fetch leave requests created in last 3 days
       supabase
         .from('leave_requests')
         .select('id, created_at, start_date, end_date, status, leave_type_id')
         .eq('user_id', employeeId)
         .neq('status', 'cancelled')
-        .gte('created_at', `${dayBefore}T00:00:00`)
+        .gte('created_at', `${startOfMonth}T00:00:00`)
+        .lte('created_at', `${endOfMonth}T23:59:59`)
         .order('created_at', { ascending: false }),
     ]);
 
@@ -526,20 +512,16 @@ export async function getEmployeeActivities(
       return { error: 'Failed to fetch leave requests' };
     }
 
-    // Transform attendance records to ActivityGroupData
     const attendanceGroups = transformAttendanceToGroups(
       (attendanceResult.data || []) as AttendanceRecord[],
       today,
-      yesterday,
-      dayBefore
+      yesterday
     );
 
-    // Transform leave requests to ActivityGroupData
     const leaveRequestGroups = transformLeaveRequestsToGroups(
       (leaveRequestsResult.data || []) as LeaveRequest[],
       today,
-      yesterday,
-      dayBefore
+      yesterday
     );
 
     // Count pending leave requests

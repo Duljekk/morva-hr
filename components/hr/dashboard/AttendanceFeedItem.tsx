@@ -34,6 +34,11 @@ export interface AttendanceFeedItemProps {
    * Additional CSS classes
    */
   className?: string;
+
+  /**
+   * Callback when employee name is clicked
+   */
+  onNameClick?: () => void;
 }
 
 /**
@@ -65,7 +70,14 @@ const AttendanceFeedItem = memo(function AttendanceFeedItem({
   time,
   status,
   className = '',
+  onNameClick,
 }: AttendanceFeedItemProps) {
+  const handleNameClick = (e: React.MouseEvent) => {
+    if (onNameClick) {
+      e.stopPropagation();
+      onNameClick();
+    }
+  };
   const attendanceLabel = type === 'check-in' ? 'Checked in' : 'Checked out';
 
   return (
@@ -97,8 +109,9 @@ const AttendanceFeedItem = memo(function AttendanceFeedItem({
         >
           {/* Name */}
           <p
-            className="font-medium leading-[18px] min-w-full relative shrink-0 text-neutral-700 text-sm w-[min-content]"
+            className={`font-medium leading-[18px] min-w-full relative shrink-0 text-neutral-700 text-sm w-[min-content] ${onNameClick ? 'cursor-pointer hover:underline' : ''}`}
             data-node-id="451:1199"
+            onClick={onNameClick ? handleNameClick : undefined}
           >
             {name}
           </p>

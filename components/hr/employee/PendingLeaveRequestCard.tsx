@@ -42,6 +42,11 @@ export interface PendingLeaveRequestCardProps {
     onReject?: (id: string) => Promise<void>;
 
     /**
+     * Callback when the card is clicked (for opening details dialog)
+     */
+    onClick?: () => void;
+
+    /**
      * Whether the action buttons are disabled
      */
     disabled?: boolean;
@@ -119,6 +124,7 @@ const PendingLeaveRequestCard = memo(function PendingLeaveRequestCard({
     reason,
     onApprove,
     onReject,
+    onClick,
     disabled = false,
     className = '',
 }: PendingLeaveRequestCardProps) {
@@ -149,9 +155,10 @@ const PendingLeaveRequestCard = memo(function PendingLeaveRequestCard({
 
     return (
         <div
-            className={`bg-white/60 flex flex-col items-start overflow-clip p-[12px] relative rounded-[12px] shadow-[0px_2px_2px_-1px_rgba(0,0,0,0.05),0px_0px_0.5px_1px_rgba(0,0,0,0.08)] w-full ${className}`}
+            className={`bg-white/60 flex flex-col items-start overflow-clip p-[12px] relative rounded-[12px] shadow-[0px_2px_2px_-1px_rgba(0,0,0,0.05),0px_0px_0.5px_1px_rgba(0,0,0,0.08)] w-full ${onClick ? 'cursor-pointer hover:bg-white/80 transition-colors' : ''} ${className}`}
             data-name="Pending Request"
             data-node-id="689:1546"
+            onClick={onClick}
         >
             {/* Container */}
             <div
@@ -223,6 +230,7 @@ const PendingLeaveRequestCard = memo(function PendingLeaveRequestCard({
                     className="flex gap-[4px] items-center shrink-0"
                     data-name="Button Group"
                     data-node-id="689:1560"
+                    onClick={(e) => e.stopPropagation()}
                 >
                     <ButtonIconOnly
                         variant="Approve"
