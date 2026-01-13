@@ -103,6 +103,7 @@ export interface EmployeePendingLeaveRequest {
   startDate: string;
   endDate: string;
   reason: string | null;
+  createdAt: string | null;
 }
 
 /**
@@ -128,7 +129,8 @@ export async function getEmployeePendingLeaveRequest(
         start_date,
         end_date,
         reason,
-        leave_type:leave_types!leave_type_id (
+        created_at,
+        leave_type:leave_types(
           name
         )
       `)
@@ -156,6 +158,7 @@ export async function getEmployeePendingLeaveRequest(
         startDate: pendingRequest.start_date,
         endDate: pendingRequest.end_date,
         reason: pendingRequest.reason,
+        createdAt: pendingRequest.created_at,
       },
     };
   } catch (error) {

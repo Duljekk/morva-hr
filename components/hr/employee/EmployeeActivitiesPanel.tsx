@@ -157,11 +157,7 @@ const EmployeeActivitiesPanel = memo(function EmployeeActivitiesPanel({
     if (result.success) {
       setPendingRequest(null);
       setIsDetailsDialogOpen(false);
-      showToast({
-        type: 'success',
-        title: 'Leave request approved',
-        message: 'The employee has been notified.',
-      });
+      showToast('success', 'Leave request approved', 'The employee has been notified.');
       // Refetch history to show approved request
       if (employeeId) {
         const historyResult = await getEmployeeLeaveHistory(employeeId, 5);
@@ -170,11 +166,7 @@ const EmployeeActivitiesPanel = memo(function EmployeeActivitiesPanel({
         }
       }
     } else {
-      showToast({
-        type: 'error',
-        title: 'Failed to approve',
-        message: 'Please try again.',
-      });
+      showToast('danger', 'Failed to approve', 'Please try again.');
     }
     setIsProcessing(false);
   }, [employeeId, showToast]);
@@ -195,11 +187,7 @@ const EmployeeActivitiesPanel = memo(function EmployeeActivitiesPanel({
     if (result.success) {
       setPendingRequest(null);
       setIsDetailsDialogOpen(false);
-      showToast({
-        type: 'success',
-        title: 'Leave request rejected',
-        message: 'The employee has been notified.',
-      });
+      showToast('success', 'Leave request rejected', 'The employee has been notified.');
       // Refetch history to show rejected request
       if (employeeId) {
         const historyResult = await getEmployeeLeaveHistory(employeeId, 5);
@@ -208,11 +196,7 @@ const EmployeeActivitiesPanel = memo(function EmployeeActivitiesPanel({
         }
       }
     } else {
-      showToast({
-        type: 'error',
-        title: 'Failed to reject',
-        message: 'Please try again.',
-      });
+      showToast('danger', 'Failed to reject', 'Please try again.');
     }
     setActiveRejectId(null);
     setIsProcessing(false);
@@ -338,7 +322,7 @@ const EmployeeActivitiesPanel = memo(function EmployeeActivitiesPanel({
           endDate={pendingRequest.endDate}
           status="pending"
           requestedOn={pendingRequest.createdAt?.split('T')[0] ?? ''}
-          requestedAt={pendingRequest.createdAt}
+          requestedAt={pendingRequest.createdAt ?? undefined}
           approvedAt={undefined}
           rejectionReason={undefined}
           leaveType={pendingRequest.leaveType}
